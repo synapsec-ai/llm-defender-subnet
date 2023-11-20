@@ -34,6 +34,7 @@ def main(validator: PromptInjectionValidator):
                 # Construct a dummy query.
                 # All responses have the deserialize function called on them before returning.
                 deserialize=True,
+                timeout=24
             )
             # Log the results for monitoring purposes.
             if all(item is None for item in responses):

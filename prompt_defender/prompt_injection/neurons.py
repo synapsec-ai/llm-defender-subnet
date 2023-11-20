@@ -17,9 +17,13 @@ import bittensor as bt
 from datasets import load_dataset
 from prompt_defender.base.neuron import BaseNeuron
 from prompt_defender.prompt_injection.protocol import PromptInjectionProtocol
-from prompt_defender.prompt_injection.miner.engines import SqlEngine
+from prompt_defender.prompt_injection.miner.engines import (
+    HeuristicsEngine,
+    TextClassificationEngine,
+)
 from prompt_defender.base.common import EnginePrompt
 from prompt_defender.base.common import normalize_list
+
 
 class PromptInjectionMiner(BaseNeuron):
     """Summary of the class
@@ -64,8 +68,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
-            f"Initializing miner for subnet: {self.neuron_config.netuid} on network: \
-            {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
+            f"Initializing miner for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
         )
 
         # Setup the bittensor objects
@@ -159,14 +162,13 @@ class PromptInjectionMiner(BaseNeuron):
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
         engines = [
-            SqlEngine(
-                prompt=synapse.prompt, engine_weight=0.1, engine_name="Prompt Injection"
-            )
+            HeuristicsEngine(prompt=synapse.prompt, engine_weight=0.1),
+            TextClassificationEngine(prompt=synapse.prompt, engine_weight=0.9),
         ]
 
         for engine in engines:
             output.append(engine.get_response())
-
+        
         synapse.output = output
 
         return synapse
@@ -298,6 +300,8 @@ class PromptInjectionValidator(BaseNeuron):
                     )
                 ):
                     engine_scores.append(0.0)
+                elif engine_response["confidence"] > 0.4 and engine_response["confidence"] < 0.6:
+                    engine_scores.append(0.5)
                 else:
                     engine_scores.append(1.0)
 
