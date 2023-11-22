@@ -34,12 +34,10 @@ class EngineResponse:
         confidence: float,
         analyzed: bool,
         engine_data: dict,
-        engine_weight: float,
     ):
         self.prompt = prompt
         self.confidence = confidence
         self.analyzed = analyzed
-        self.engine_weight = engine_weight
         self.engine_data = engine_data
 
 

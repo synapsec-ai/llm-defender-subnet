@@ -162,8 +162,8 @@ class PromptInjectionMiner(BaseNeuron):
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
         engines = [
-            HeuristicsEngine(prompt=synapse.prompt, engine_weight=0.1),
-            TextClassificationEngine(prompt=synapse.prompt, engine_weight=0.9),
+            HeuristicsEngine(prompt=synapse.prompt),
+            TextClassificationEngine(prompt=synapse.prompt),
         ]
 
         for engine in engines:
@@ -258,10 +258,11 @@ class PromptInjectionValidator(BaseNeuron):
         bt.logging.info(f"Validator is running with UID: {validator_uid}")
 
         # Setup initial scoring weights
-        scores = torch.ones_like(metagraph.S, dtype=torch.float32)
+        scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
         bt.logging.info(f"Validation weights have been initialized: {scores}")
 
         return wallet, subtensor, dendrite, metagraph, scores
+
 
     def process_responses(self, query: dict, responses: list):
         """
@@ -280,11 +281,8 @@ class PromptInjectionValidator(BaseNeuron):
             # Enumerate the responses from the Engines used by the miner
             # and extract properties used for the scoring function
             engine_scores = []
-            engine_weights = []
             miner_score = []
             for engine_response in response:
-                # Set the engine weight received from the miner
-                engine_weights.append(engine_response["engine_weight"])
 
                 if (
                     engine_response["analyzed"] is False
@@ -305,10 +303,8 @@ class PromptInjectionValidator(BaseNeuron):
                 else:
                     engine_scores.append(1.0)
 
-            # Normalize engine weights
-            engine_weights = normalize_list(engine_weights)
 
-            miner_score = sum(x * y for x, y in zip(engine_scores, engine_weights))
+            miner_score = sum(engine_scores)
 
             bt.logging.info(f"Normalized scores: {miner_score}")
 

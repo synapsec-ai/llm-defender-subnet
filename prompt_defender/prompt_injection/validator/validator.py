@@ -22,19 +22,73 @@ def main(validator: PromptInjectionValidator):
     step = 0
     while True:
         try:
-            validator.valid_axons = validator.metagraph.axons
+            # Periodically sync subtensor state
+            if step % 5 == 0:
+                bt.logging.debug(f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}")
+                validator.metagraph.sync(subtensor=validator.subtensor)
+
+            # Get all axons
+            all_axons = validator.metagraph.axons
+            bt.logging.trace(f"All axons: {all_axons}")
+
+            # If there are more axons than scores, append the scores list
+            if len(validator.metagraph.uids.tolist()) > len(validator.scores):
+                bt.logging.info(
+                    f"Discovered new Axons, current scores: {validator.scores}"
+                )
+                validator.scores = torch.cat(
+                    (
+                        validator.scores,
+                        torch.zeros(
+                            (len(validator.metagraph.uids.tolist()) - len(validator.scores)),
+                            dtype=torch.float32,
+                        ),
+                    )
+                )
+                bt.logging.info(f"Updated scores, new scores: {validator.scores}")
+
+            # Filter out validators from the queryable Axons
+            validator_uids = validator.metagraph.total_stake == 0.0
+            bt.logging.trace(f"Validators UIDs to filter: {validator_uids}")
+
+            # Filter out axons with an IP address of 0.0.0.0
+            invalid_uids = torch.tensor(
+                [
+                    bool(value)
+                    for value in [
+                        ip != "0.0.0.0"
+                        for ip in [
+                            validator.metagraph.neurons[uid].axon_info.ip
+                            for uid in validator.metagraph.uids.tolist()
+                        ]
+                    ]
+                ],
+                dtype=torch.bool,
+            )
+            bt.logging.trace(f"Invalid UIDs to filter: {invalid_uids}")
+
+            # Define which UIDs to filter out from the valid list of Axons
+            uids_to_filter = torch.where(validator_uids == False, validator_uids, invalid_uids)
+
+            bt.logging.debug(f"UIDs to select for the query: {uids_to_filter}")
+
+            # Define UIDs to query
+            uids_to_query = [axon for axon, keep_flag in zip(all_axons, uids_to_filter) if keep_flag.item() ]
+            bt.logging.info(f"UIDs to query: {uids_to_query}")
+
+            # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()
 
             # Broadcast query to valid Axons
             responses = validator.dendrite.query(
                 # Send the query to all miners in the network.
-                validator.valid_axons,
+                uids_to_query,
                 # Construct a dummy query.
                 PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"]),
                 # Construct a dummy query.
                 # All responses have the deserialize function called on them before returning.
                 deserialize=True,
-                timeout=24
+                timeout=24,
             )
             # Log the results for monitoring purposes.
             if all(item is None for item in responses):
@@ -70,7 +124,9 @@ def main(validator: PromptInjectionValidator):
             # End the current step and prepare for the next iteration.
             step += 1
             # Resync our local state with the latest state from the blockchain.
-            validator.metagraph = validator.subtensor.metagraph(validator.neuron_config.netuid)
+            validator.metagraph = validator.subtensor.metagraph(
+                validator.neuron_config.netuid
+            )
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
             time.sleep(bt.__blocktime__)
 

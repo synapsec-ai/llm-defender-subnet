@@ -22,12 +22,11 @@ class BaseEngine:
     be implemented in child classes that inherit this parent class.
     """
 
-    def __init__(self, prompt: str, engine_weight: float, engine_name: str):
+    def __init__(self, prompt: str, engine_name: str):
         self.prompt = prompt
         self.confidence = 0.5
         self.analyzed = False
         self.engine_data = []
-        self.engine_weight = engine_weight
         self.engine_name = engine_name
 
     def get_response(self) -> EngineResponse:
@@ -39,14 +38,12 @@ class BaseEngine:
         """
 
         self.confidence = self._trim_value(self.confidence)
-        self.engine_weight = self._trim_value(self.engine_weight)
 
         response = EngineResponse(
             prompt=self.prompt,
             confidence=self.confidence,
             analyzed=self.analyzed,
             engine_data=self.engine_data,
-            engine_weight=self.engine_weight,
         )
 
         return response
@@ -87,10 +84,9 @@ class TextClassificationEngine(BaseEngine):
     def __init__(
         self,
         prompt: str,
-        engine_weight: float,
         engine_name: str = "Text Classification",
     ):
-        super().__init__(prompt, engine_weight, engine_name)
+        super().__init__(prompt, engine_name)
 
         self.engine_data = self.classification()
 
@@ -132,16 +128,12 @@ class TextClassificationEngine(BaseEngine):
 
 
 class HeuristicsEngine(BaseEngine):
-    def __init__(
-        self, prompt: str, engine_weight: float, engine_name: str = "Heuristics"
-    ):
-        super().__init__(prompt, engine_weight, engine_name)
+    def __init__(self, prompt: str, engine_name: str = "Heuristics"):
+        super().__init__(prompt, engine_name)
 
         self.confidence = 0.5
         self.engine_data = []
-        self.sub_engines = [
-            {"sub_engine": self.SqlSubEngine(prompt=self.prompt), "weight": 1.0}
-        ]
+        self.sub_engines = [{"sub_engine": self.SqlSubEngine(prompt=self.prompt)}]
 
         self.confidence = self.run_sub_engines()
 
@@ -154,16 +146,14 @@ class HeuristicsEngine(BaseEngine):
         for sub_engine in self.sub_engines:
             if sub_engine["sub_engine"].invoke():
                 self.engine_data.append(sub_engine["sub_engine"].get_results())
-        
+
         self.analyzed = True
 
         # Calculate the total confidence score
         confidence_scores = []
         for i, sub_engine in enumerate(self.sub_engines):
-            confidence_scores.append(
-                sub_engine["weight"] * self.engine_data[i]["confidence"]
-            )
-        
+            confidence_scores.append(self.engine_data[i]["confidence"])
+
         return sum(confidence_scores)
 
     class HeuristicsSubEngine:
