@@ -85,23 +85,21 @@ def main(validator: PromptInjectionValidator):
                 uids_to_query,
                 # Construct a dummy query.
                 PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"]),
-                # Construct a dummy query.
-                # All responses have the deserialize function called on them before returning.
-                deserialize=True,
                 timeout=24,
+                deserialize=True
             )
+ 
             # Log the results for monitoring purposes.
             if all(item is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
                 time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons we do not need to proceed further, as there is nothing to do
                 continue
-
+            
             bt.logging.info(f"Received responses: {responses}")
 
             # Process the responses
             validator.process_responses(query=query, responses=responses)
-
             # Periodically update the weights on the Bittensor blockchain.
             if (step + 1) % 10 == 0:
                 # TODO(developer): Define how the validator normalizes scores before setting weights.

@@ -20,4 +20,4 @@ class PromptInjectionProtocol(bt.Synapse):
         """
         Something
         """
-        return self.output
+        return self

@@ -168,7 +168,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         for engine in engines:
             output.append(engine.get_response())
-        
+
         synapse.output = output
 
         return synapse
@@ -263,57 +263,100 @@ class PromptInjectionValidator(BaseNeuron):
 
         return wallet, subtensor, dendrite, metagraph, scores
 
-
     def process_responses(self, query: dict, responses: list):
         """
         This function processes the responses received from the miners.
         """
 
+        # Determine target value for scoring
+        if query["data"]["isPromptInjection"] is True:
+            target = 1.0
+        else:
+            target = 0.0
+
+        bt.logging.debug(f"Target set to: {target}")
+
         for i, response in enumerate(responses):
+            bt.logging.debug(f"Processing response {i} with content: {response}")
             # Set the score for empty responses to 0
-            if not response:
+            if not response.output:
+                bt.logging.debug(f"Received an empty response: {response}")
                 self.scores[i] = (
                     self.neuron_config.alpha * self.scores[i]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
                 continue
 
-            # Enumerate the responses from the Engines used by the miner
-            # and extract properties used for the scoring function
-            engine_scores = []
-            miner_score = []
-            for engine_response in response:
+            response_time = response.dendrite.process_time
+            response_score = self.calculate_score(
+                response=response.output, target=target, response_time=response_time, hotkey=response.dendrite.hotkey
+            )
 
-                if (
-                    engine_response["analyzed"] is False
-                    or engine_response["confidence"] < 0.0
-                    or engine_response["confidence"] > 1.0
-                    or (
-                        query["data"]["isPromptInjection"] is False
-                        and engine_response["confidence"] > 0.6
-                    )
-                    or (
-                        query["data"]["isPromptInjection"] is True
-                        and engine_response["confidence"] < 0.4
-                    )
-                ):
-                    engine_scores.append(0.0)
-                elif engine_response["confidence"] > 0.4 and engine_response["confidence"] < 0.6:
-                    engine_scores.append(0.5)
-                else:
-                    engine_scores.append(1.0)
-
-
-            miner_score = sum(engine_scores)
-
-            bt.logging.info(f"Normalized scores: {miner_score}")
+            bt.logging.info(f"Response score for the request: {response_score}")
 
             bt.logging.info(f"Score before adjustment: {self.scores[i]}")
             self.scores[i] = (
                 self.neuron_config.alpha * self.scores[i]
-                + (1 - self.neuron_config.alpha) * miner_score
+                + (1 - self.neuron_config.alpha) * response_score
             )
             bt.logging.info(f"Score after adjustment: {self.scores[i]}")
+
+    def calculate_score(self, response, target: float, response_time: float, hotkey: str) -> float:
+        """This function sets the score based on the response.
+
+        Returns:
+            score: An instance of float depicting the score for the
+            response
+        """
+
+        # Calculate distances to target value for each engine and take the mean
+        distances = [
+            abs(target - confidence)
+            for confidence in [engine["confidence"] for engine in response]
+        ]
+        distance_score = 1 - sum(distances) / len(distances) if len(distances) > 0 else 1.0
+
+        # Calculate score for the speed of the response
+        max_duration = 24
+        speed_score = 1.0 - (response_time / max_duration)
+
+        # Calculate score for the number of engines used
+        max_engines = 2
+        engine_score = len(response) / max_engines
+
+        # Validate individual scores
+        if (
+            not (0.0 <= distance_score <= 1.0)
+            or not (0.0 <= speed_score <= 1.0)
+            or not (0.0 <= engine_score <= 1.0)
+        ):
+            bt.logging.error(
+                f"Calculated out-of-bounds individual scores:\nDistance: {distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
+            )
+
+            return 0.0
+
+        # Determine final score
+        distance_weight = 0.6
+        speed_weight = 0.2
+        num_engines_weight = 0.2
+
+        bt.logging.debug(f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}")
+
+        score = (
+            distance_weight * distance_score
+            + speed_weight * speed_score
+            + num_engines_weight * engine_score
+        )
+
+        if score > 1.0 or score < 0.0:
+            bt.logging.error(
+                f"Calculated out-of-bounds score: {score} for the response: {response} from hotkey: {hotkey}"
+            )
+
+            return 0.0
+
+        return score
 
     def penalty(self) -> bool:
         """
