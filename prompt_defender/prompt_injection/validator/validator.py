@@ -24,7 +24,9 @@ def main(validator: PromptInjectionValidator):
         try:
             # Periodically sync subtensor state
             if step % 5 == 0:
-                bt.logging.debug(f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}")
+                bt.logging.debug(
+                    f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
+                )
                 validator.metagraph.sync(subtensor=validator.subtensor)
 
             # Get all axons
@@ -40,7 +42,10 @@ def main(validator: PromptInjectionValidator):
                     (
                         validator.scores,
                         torch.zeros(
-                            (len(validator.metagraph.uids.tolist()) - len(validator.scores)),
+                            (
+                                len(validator.metagraph.uids.tolist())
+                                - len(validator.scores)
+                            ),
                             dtype=torch.float32,
                         ),
                     )
@@ -68,12 +73,18 @@ def main(validator: PromptInjectionValidator):
             bt.logging.trace(f"Invalid UIDs to filter: {invalid_uids}")
 
             # Define which UIDs to filter out from the valid list of Axons
-            uids_to_filter = torch.where(validator_uids == False, validator_uids, invalid_uids)
+            uids_to_filter = torch.where(
+                validator_uids == False, validator_uids, invalid_uids
+            )
 
             bt.logging.debug(f"UIDs to select for the query: {uids_to_filter}")
 
             # Define UIDs to query
-            uids_to_query = [axon for axon, keep_flag in zip(all_axons, uids_to_filter) if keep_flag.item() ]
+            uids_to_query = [
+                axon
+                for axon, keep_flag in zip(all_axons, uids_to_filter)
+                if keep_flag.item()
+            ]
             bt.logging.info(f"UIDs to query: {uids_to_query}")
 
             # Get the query to send to the valid Axons
@@ -85,17 +96,17 @@ def main(validator: PromptInjectionValidator):
                 uids_to_query,
                 # Construct a dummy query.
                 PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"]),
-                timeout=24,
-                deserialize=True
+                timeout=validator.timeout,
+                deserialize=True,
             )
- 
+
             # Log the results for monitoring purposes.
-            if all(item is None for item in responses):
+            if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
                 time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons we do not need to proceed further, as there is nothing to do
                 continue
-            
+
             bt.logging.info(f"Received responses: {responses}")
 
             # Process the responses

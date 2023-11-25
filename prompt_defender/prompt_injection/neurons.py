@@ -20,9 +20,9 @@ from prompt_defender.prompt_injection.protocol import PromptInjectionProtocol
 from prompt_defender.prompt_injection.miner.engines import (
     HeuristicsEngine,
     TextClassificationEngine,
+    VectorEngine
 )
 from prompt_defender.base.common import EnginePrompt
-from prompt_defender.base.common import normalize_list
 
 
 class PromptInjectionMiner(BaseNeuron):
@@ -164,6 +164,7 @@ class PromptInjectionMiner(BaseNeuron):
         engines = [
             HeuristicsEngine(prompt=synapse.prompt),
             TextClassificationEngine(prompt=synapse.prompt),
+            VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/")
         ]
 
         for engine in engines:
@@ -186,6 +187,8 @@ class PromptInjectionValidator(BaseNeuron):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser, profile="validator")
 
+        self.max_engines = 3
+        self.timeout = 60
         self.neuron_config = self.config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet]
         )
@@ -289,7 +292,10 @@ class PromptInjectionValidator(BaseNeuron):
 
             response_time = response.dendrite.process_time
             response_score = self.calculate_score(
-                response=response.output, target=target, response_time=response_time, hotkey=response.dendrite.hotkey
+                response=response.output,
+                target=target,
+                response_time=response_time,
+                hotkey=response.dendrite.hotkey,
             )
 
             bt.logging.info(f"Response score for the request: {response_score}")
@@ -301,7 +307,9 @@ class PromptInjectionValidator(BaseNeuron):
             )
             bt.logging.info(f"Score after adjustment: {self.scores[i]}")
 
-    def calculate_score(self, response, target: float, response_time: float, hotkey: str) -> float:
+    def calculate_score(
+        self, response, target: float, response_time: float, hotkey: str
+    ) -> float:
         """This function sets the score based on the response.
 
         Returns:
@@ -314,15 +322,15 @@ class PromptInjectionValidator(BaseNeuron):
             abs(target - confidence)
             for confidence in [engine["confidence"] for engine in response]
         ]
-        distance_score = 1 - sum(distances) / len(distances) if len(distances) > 0 else 1.0
+        distance_score = (
+            1 - sum(distances) / len(distances) if len(distances) > 0 else 1.0
+        )
 
         # Calculate score for the speed of the response
-        max_duration = 24
-        speed_score = 1.0 - (response_time / max_duration)
+        speed_score = 1.0 - (response_time / self.timeout)
 
         # Calculate score for the number of engines used
-        max_engines = 2
-        engine_score = len(response) / max_engines
+        engine_score = len(response) / self.max_engines
 
         # Validate individual scores
         if (
@@ -341,7 +349,9 @@ class PromptInjectionValidator(BaseNeuron):
         speed_weight = 0.2
         num_engines_weight = 0.2
 
-        bt.logging.debug(f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}")
+        bt.logging.debug(
+            f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
+        )
 
         score = (
             distance_weight * distance_score
@@ -377,9 +387,9 @@ class PromptInjectionValidator(BaseNeuron):
             prompt: An instance of EnginePrompt
         """
 
-        train_dataset = load_dataset("deepset/prompt-injections", split="train")
+        dataset = load_dataset("deepset/prompt-injections", split="test")
 
-        entry = choice(train_dataset)
+        entry = choice(dataset)
 
         prompt = EnginePrompt(
             engine="Prompt Injection",
