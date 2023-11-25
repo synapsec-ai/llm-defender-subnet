@@ -11,7 +11,9 @@ parse_arguments() {
             if [[ "$arg_name" == "logging"* ]]; then
                 shift
                 if [[ $1 != "--"* ]]; then
-                    args["$arg_name"]=$1
+                    IFS='.' read -ra parts <<< "$arg_name"
+                    echo ${parts[1]}
+                    args[${parts[0]}]=${parts[1]}
                 fi
             else
                 shift
@@ -25,6 +27,7 @@ parse_arguments() {
         echo "Argument: $key, Value: ${args[$key]}"
     done
 }
+
 pull_repo_and_checkout_branch() {
     local branch="${args['branch']}"
 
