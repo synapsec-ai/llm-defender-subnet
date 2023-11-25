@@ -14,9 +14,9 @@ class PromptInjectionProtocol(bt.Synapse):
     # Parse variables
     prompt: typing.Optional[str] = None
     engine: typing.Optional[str] = None
-    output: typing.Optional[list] = None
+    output: typing.Optional[dict] = None
 
-    def deserialize(self) -> list:
+    def deserialize(self) -> bt.Synapse:
         """
         Something
         """

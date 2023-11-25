@@ -4,6 +4,7 @@ feature of the prompt-defender-subnet.
 """
 import sys
 import uuid
+import glob
 import chromadb
 from re import sub
 from transformers import (
@@ -12,6 +13,7 @@ from transformers import (
     AutoModelForSequenceClassification,
 )
 import bittensor as bt
+import yara
 from datasets import load_dataset
 from transformers import pipeline
 from prompt_defender.base.common import EngineResponse
@@ -46,8 +48,8 @@ class BaseEngine:
 
         response = EngineResponse(
             prompt=self.prompt,
+            name=self.engine_name,
             confidence=self.confidence,
-            analyzed=self.analyzed,
             engine_data=self.engine_data,
         )
 
@@ -117,7 +119,7 @@ class VectorEngine(BaseEngine):
         self.confidence = self.calculate_confidence()
 
         if 0.0 <= self.confidence >= 1.0:
-            bt.logging.error(f'Confidence out-of-bounds: {self.confidence}')
+            bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
             self.confidence = 0.0
 
     def get_collection(self) -> chromadb.Collection:
@@ -188,10 +190,9 @@ class VectorEngine(BaseEngine):
         """
         self.analyzed = True
         confidence = 0.5
-        mean_distance = (
-                sum(sum(sublist) for sublist in self.engine_data["distances"])
-                / sum(len(sublist) for sublist in self.engine_data["distances"])
-            )
+        mean_distance = sum(
+            sum(sublist) for sublist in self.engine_data["distances"]
+        ) / sum(len(sublist) for sublist in self.engine_data["distances"])
         if not any(
             value < self.threshold
             for results in self.engine_data["distances"]
@@ -200,14 +201,16 @@ class VectorEngine(BaseEngine):
             bt.logging.debug(
                 f'None of the results {self.engine_data["distances"]} were belong the threshold: {self.threshold}'
             )
-            
+
             mean_distance = mean_distance - self.threshold
 
-            confidence  = max(0.0, 1-(mean_distance+0.5))
+            confidence = max(0.0, 1 - (mean_distance + 0.5))
             return confidence
 
         confidence = max(0.5, 1 - mean_distance)
-        bt.logging.debug(f'Confidence score set to {confidence} for prompt {self.prompt}')
+        bt.logging.debug(
+            f"Confidence score set to {confidence} for prompt {self.prompt}"
+        )
 
         return confidence
 
@@ -276,20 +279,39 @@ class TextClassificationEngine(BaseEngine):
 
 
 class HeuristicsEngine(BaseEngine):
+    """Heuristic-analysis for the prompt
+
+    This class and its subclasses implement several heuristic-analyzers
+    for the content of the prompt to determine if they are prompt
+    injections or not.
+    """
+
     def __init__(self, prompt: str, engine_name: str = "Heuristics"):
         super().__init__(prompt, engine_name)
 
         self.confidence = 0.5
         self.engine_data = []
-        self.sub_engines = [{"sub_engine": self.SqlSubEngine(prompt=self.prompt)}]
+        self.sub_engines = [
+            {"sub_engine": self.SqlSubEngine(prompt=self.prompt, weight=0.3)},
+            {"sub_engine": self.YaraSubEngine(prompt=self.prompt, weight=0.7)}
+        ]
+
+        if not self._validate_subengine_weights():
+            bt.logging.error("The weights of sub-engines do not sum up to 1.0")
+            sys.exit()
 
         self.confidence = self.run_sub_engines()
 
-    def run_sub_engines(self) -> float:
-        """Execute the sub engines and get their scores.
+    def _validate_subengine_weights(self) -> bool:
+        total_weight = sum(
+            entry["sub_engine"].weight
+            for entry in self.sub_engines
+            if "sub_engine" in entry
+        )
+        return abs(round(total_weight, 2) - 1.0) < 0.01
 
-        Long description
-        """
+    def run_sub_engines(self) -> float:
+        """Execute the sub engines and get their scores."""
 
         for sub_engine in self.sub_engines:
             if sub_engine["sub_engine"].invoke():
@@ -300,16 +322,18 @@ class HeuristicsEngine(BaseEngine):
         # Calculate the total confidence score
         confidence_scores = []
         for i, sub_engine in enumerate(self.sub_engines):
-            confidence_scores.append(self.engine_data[i]["confidence"])
+            confidence_scores.append(
+                self.engine_data[i]["confidence"] * sub_engine["sub_engine"].weight
+            )
 
         return sum(confidence_scores)
 
     class HeuristicsSubEngine:
-        def __init__(self, prompt: str, name: str):
+        def __init__(self, prompt: str, name: str, weight: float):
             self.prompt = prompt
             self.name = name
+            self.weight = weight
             self.confidence = 0.5
-            self.description = None
             self.output = None
 
         def invoke(self):
@@ -320,7 +344,6 @@ class HeuristicsEngine(BaseEngine):
                 "prompt": self.prompt,
                 "name": self.name,
                 "confidence": self.confidence,
-                "description": self.description,
                 "output": self.output,
             }
 
@@ -354,74 +377,17 @@ class HeuristicsEngine(BaseEngine):
         beneficial to utilize a different list of keywords.
         """
 
-        def __init__(self, prompt: str, name: str = "text-to-sql"):
-            super().__init__(prompt=prompt, name=name)
+        def __init__(self, prompt: str, weight: float, name: str = "text-to-sql"):
+            super().__init__(prompt=prompt, name=name, weight=weight)
 
             self.keywords = {
-                "ADD": 0.0,
-                "ALL": 0.0,
-                "ALTER": 0.0,
-                "AND": 0.0,
-                "ANY": 0.0,
-                "AS": 0.0,
-                "ASC": 0.0,
-                "BETWEEN": 0.0,
-                "BY": 0.0,
-                "CASE": 0.0,
-                "CAST": 0.0,
-                "CHECK": 0.0,
-                "COLUMN": 0.0,
-                "CONSTRAINT": 0.0,
                 "CREATE": 1.0,
-                "CURRENT_DATE": 0.0,
-                "CURRENT_TIME": 0.0,
-                "CURRENT_TIMESTAMP": 0.0,
-                "DEFAULT": 0.0,
                 "DELETE": 1.0,
-                "DESC": 0.0,
-                "DISTINCT": 0.0,
                 "DROP": 1.0,
-                "ELSE": 0.0,
-                "END": 0.0,
-                "ESCAPE": 0.0,
-                "EXISTS": 0.0,
-                "FOR": 0.0,
-                "FOREIGN": 0.0,
-                "FROM": 0.0,
-                "GROUP": 0.0,
-                "HAVING": 0.0,
-                "IN": 0.0,
-                "INNER": 0.0,
                 "INSERT": 1.0,
-                "INTO": 0.0,
-                "IS": 0.0,
-                "JOIN": 0.0,
-                "KEY": 0.0,
-                "LEFT": 0.0,
-                "LIKE": 0.0,
-                "NOT": 0.0,
-                "NULL": 0.0,
-                "ON": 0.0,
-                "OR": 0.0,
-                "ORDER": 0.0,
-                "OUTER": 0.0,
-                "PRIMARY": 0.0,
-                "REFERENCES": 0.0,
-                "RIGHT": 0.0,
-                "SELECT": 0.0,
-                "SET": 0.0,
-                "TABLE": 0.0,
-                "THEN": 0.0,
-                "TOP": 0.0,
+                "INTO": 1.0,
                 "TRUNCATE": 1.0,
-                "UNION": 0.0,
-                "UNIQUE": 0.0,
                 "UPDATE": 1.0,
-                "VALUES": 0.0,
-                "VIEW": 0.0,
-                "WHEN": 0.0,
-                "WHERE": 0.0,
-                "WITH": 0.0,
             }
 
             # Ensure the keywords are in lowercase
@@ -479,4 +445,71 @@ class HeuristicsEngine(BaseEngine):
 
             scores = [self.keywords.get(string, None) for string in self.clean()]
 
-            return max((score for score in scores if score is not None), default=0.0)
+            return max((score for score in scores if score is not None), default=0.5)
+
+    class YaraSubEngine(HeuristicsSubEngine):
+        """This subengine implements YARA-based heuristics.
+
+        The subengine reads all of the YARA rules from the yara-rules
+        directory, compiles them and performs a match operation against
+        the prompt given as an input for the engine.
+
+        The YARA rules are tailored to detect a very specific prompt
+        injection scenario based on robust pattern matching
+        capabilities.
+
+        """
+
+        def __init__(
+            self,
+            prompt: str,
+            weight: float,
+            name: str = "yara",
+            rule_glob: str = "./yara-rules/*.yar",
+        ):
+            super().__init__(prompt=prompt, name=name, weight=weight)
+
+            self.rule_glob = rule_glob
+
+        def invoke(self) -> bool:
+            self.output = self.compile_and_match()
+            self.confidence = self.calculate_confidence()
+
+            return True
+
+        def compile_and_match(self) -> list:
+            """Compiles and performs matching for YARA rules"""
+
+            try:
+                rule_files = glob.glob(self.rule_glob)
+                yara_rules = {
+                    file: open(file, "r", encoding="utf-8").read()
+                    for file in rule_files
+                }
+
+                compiled_rules = yara.compile(sources=yara_rules)
+            except Exception as e:
+                bt.logging.error(f"Unable to load and compile YARA rules: {e}")
+
+            matches = compiled_rules.match(data=self.prompt)
+
+            return [match.meta for match in matches]
+
+        def calculate_confidence(self) -> float:
+            """Calculates the confidence score.
+
+            Confidence score is calculated based on the accuracy defined
+            within the YARA rule.
+            """
+
+            if self.output:
+                match_accuracies = []
+                for match in self.output:
+                    if 0.0 <= match["accuracy"] >= 1.0:
+                        bt.logging.error(f"YARA accuracy out-of-bounds: {match}")
+                        return 0.5
+                    match_accuracies.append(match["accuracy"])
+
+                return 1.0 * max(match_accuracies)
+
+            return 0.5

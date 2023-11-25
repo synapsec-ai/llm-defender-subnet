@@ -43,7 +43,7 @@ install_packages() {
     local installed_version=$(pip show prompt-defender | grep -oP 'Version:\s*\K[^ ]+')
 
     if [[ "$cfg_version" == "$installed_version" ]]; then
-        echo "Versions match: No action required."
+        echo "Subnet versions are matching: No installation is required."
     else
         echo "Installing package with pip"
         pip install -e .

@@ -151,13 +151,18 @@ class PromptInjectionMiner(BaseNeuron):
 
         return priority
 
+
     def forward(self, synapse: PromptInjectionProtocol) -> PromptInjectionProtocol:
         """The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
         """
         # Responses are stored in a list
-        output = []
+        output = {
+            "confidence": 0.5,
+            "prompt": synapse.prompt,
+            "engines": []
+        }
 
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
@@ -167,9 +172,17 @@ class PromptInjectionMiner(BaseNeuron):
             VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/")
         ]
 
+        engine_confidences = []
         for engine in engines:
-            output.append(engine.get_response())
+            output["engines"].append(engine.get_response())
+            engine_confidences.append(engine.confidence)
 
+        if all(0.0 <= val <= 1.0 for val in engine_confidences):
+            output["confidence"] = sum(engine_confidences) / len(engine_confidences)
+        else:
+            bt.logging.error(f'Confidence scores received from engines are out-of-bound: {engine_confidences}')
+            sys.exit()
+        
         synapse.output = output
 
         return synapse
@@ -320,7 +333,7 @@ class PromptInjectionValidator(BaseNeuron):
         # Calculate distances to target value for each engine and take the mean
         distances = [
             abs(target - confidence)
-            for confidence in [engine["confidence"] for engine in response]
+            for confidence in [engine["confidence"] for engine in response["engines"]]
         ]
         distance_score = (
             1 - sum(distances) / len(distances) if len(distances) > 0 else 1.0

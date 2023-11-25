@@ -32,13 +32,13 @@ class EngineResponse:
         self,
         prompt: str,
         confidence: float,
-        analyzed: bool,
         engine_data: dict,
+        name: str
     ):
         self.prompt = prompt
         self.confidence = confidence
-        self.analyzed = analyzed
         self.engine_data = engine_data
+        self.name = name
 
 
 def normalize_list(input_list: list) -> list:
