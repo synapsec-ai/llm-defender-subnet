@@ -14,7 +14,7 @@ Due to the nature of the Bittensor network, the confidence score is a result of 
 
 ## Quickstart
 
-This repository requires python3.11 or higher. Each capability has a separate miner and validator script.
+This repository requires python3.10 or higher.
 
 Installation:
 ```
@@ -22,17 +22,17 @@ $ git clone https://github.com/ceterum1/prompt-defender-subnet.git
 $ cd prompt-defender-subnet
 $ python -m venv .venv
 $ source .venv/bin/activate
-$ pip install -e .
+$ sudo apt update && sudo apt install jq && sudo apt install npm && sudo npm install pm2 -g && pm2 update
 ```
 
-Run miner (Prompt Injection Capability):
+Run miner:
 ```
-$ python prompt_defender/prompt_injection/miner/miner.py --netuid X --subtensor.network test --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> --logging.debug
+pm2 start scripts/run.sh -- --netuid X --profile miner --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
 ```
 
-Run validator (Prompt Injection Capability):
+Run validator:
 ```
-$ python prompt_defender/prompt_injection/validator/validator.py --netuid X --subtensor.network test --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> --logging.debug
+pm2 start scripts/run.sh --netuid X --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
 ```
 ## Capabilities
 The subnet contains the following capabilities and engines
