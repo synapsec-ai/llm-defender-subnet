@@ -141,7 +141,7 @@ class PromptInjectionMiner(BaseNeuron):
         validator is processed faster.
         """
 
-        # Prioritize validators based on their stake
+        # Otherwise prioritize validators based on their stake
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         priority = float(self.metagraph.S[uid])
 

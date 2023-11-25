@@ -6,6 +6,7 @@ import sys
 import uuid
 import glob
 import chromadb
+import os
 from re import sub
 from transformers import (
     AutoTokenizer,
@@ -201,10 +202,9 @@ class VectorEngine(BaseEngine):
             bt.logging.debug(
                 f'None of the results {self.engine_data["distances"]} were belong the threshold: {self.threshold}'
             )
-
-            mean_distance = mean_distance - self.threshold
-
-            confidence = max(0.0, 1 - (mean_distance + 0.5))
+            
+            mean_distance = 1 - mean_distance + self.threshold
+            confidence = min(0.5, max(0.0, mean_distance))
             return confidence
 
         confidence = max(0.5, 1 - mean_distance)
@@ -465,7 +465,7 @@ class HeuristicsEngine(BaseEngine):
             prompt: str,
             weight: float,
             name: str = "yara",
-            rule_glob: str = "./yara-rules/*.yar",
+            rule_glob: str = f"{os.path.dirname(__file__)}/yara-rules/*.yar",
         ):
             super().__init__(prompt=prompt, name=name, weight=weight)
 
@@ -486,12 +486,17 @@ class HeuristicsEngine(BaseEngine):
                     file: open(file, "r", encoding="utf-8").read()
                     for file in rule_files
                 }
-
+                bt.logging.debug(f'Loaded YARA rules: {rule_files}')
                 compiled_rules = yara.compile(sources=yara_rules)
             except Exception as e:
                 bt.logging.error(f"Unable to load and compile YARA rules: {e}")
-
+            
             matches = compiled_rules.match(data=self.prompt)
+
+            if matches:
+                bt.logging.debug(f'Yara matches: {matches}')
+            else:
+                bt.logging.debug('No Yara matches found')
 
             return [match.meta for match in matches]
 
@@ -505,10 +510,10 @@ class HeuristicsEngine(BaseEngine):
             if self.output:
                 match_accuracies = []
                 for match in self.output:
-                    if 0.0 <= match["accuracy"] >= 1.0:
+                    if 0.0 <= float(match["accuracy"]) >= 1.0:
                         bt.logging.error(f"YARA accuracy out-of-bounds: {match}")
                         return 0.5
-                    match_accuracies.append(match["accuracy"])
+                    match_accuracies.append(float(match["accuracy"]))
 
                 return 1.0 * max(match_accuracies)
 

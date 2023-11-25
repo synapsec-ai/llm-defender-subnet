@@ -92,10 +92,8 @@ def main(validator: PromptInjectionValidator):
 
             # Broadcast query to valid Axons
             responses = validator.dendrite.query(
-                # Send the query to all miners in the network.
                 uids_to_query,
-                # Construct a dummy query.
-                PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"]),
+                PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"]),
                 timeout=validator.timeout,
                 deserialize=True,
             )
