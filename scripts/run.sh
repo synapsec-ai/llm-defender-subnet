@@ -39,18 +39,25 @@ pull_repo_and_checkout_branch() {
 }
 
 install_packages() {
-    echo "Installing package with pip"
-    pip install -e .
+    local cfg_version=$(grep -oP 'version\s*=\s*\K[^ ]+' setup.cfg)
+    local installed_version=$(pip show prompt-defender | grep -oP 'Version:\s*\K[^ ]+')
 
-    # Uvloop re-implements asyncio module which breaks bittensor. It is
-    # not needed by the default implementation of the
-    # prompt-defender-subnet, so we can uninstall it.
-    if pip show uvloop &>/dev/null; then
-        echo "Uninstalling conflicting module uvloop"
-        pip uninstall -y uvloop
+    if [[ "$cfg_version" == "$installed_version" ]]; then
+        echo "Versions match: No action required."
+    else
+        echo "Installing package with pip"
+        pip install -e .
+
+        # Uvloop re-implements asyncio module which breaks bittensor. It is
+        # not needed by the default implementation of the
+        # prompt-defender-subnet, so we can uninstall it.
+        if pip show uvloop &>/dev/null; then
+            echo "Uninstalling conflicting module uvloop"
+            pip uninstall -y uvloop
+        fi
+
+        echo "Packages installed successfully"
     fi
-    
-    echo "Packages installed succesfully"
 }
 
 run_neuron() {
