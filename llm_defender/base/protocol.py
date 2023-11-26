@@ -1,11 +1,12 @@
-import bittensor as bt
 import typing
+import bittensor as bt
 import pydantic
 
-class PromptInjectionProtocol(bt.Synapse):
+
+class LLMDefenderProtocol(bt.Synapse):
     """
     This class implements the protocol definition for the the
-    prompt-defender subnet.
+    llm-defender subnet.
 
     The protocol is a simple request-response communication protocol in
     which the validator sends a request to the miner for processing
@@ -20,12 +21,24 @@ class PromptInjectionProtocol(bt.Synapse):
     roles: typing.List[str] = pydantic.Field(
         ...,
         title="Roles",
-        description="An immutable list depicting the role",
+        description="An immutable list depicting the roles",
         allow_mutation=False,
-        regex=r'^(internal|external)$'
+        regex=r"^(internal|external)$",
     )
+
+    analyzer: typing.List[str] = pydantic.Field(
+        ...,
+        title="analyzer",
+        description="An immutable list depicting the analyzers to execute",
+        allow_mutation=False,
+        regex=r"^(Prompt Injection)$",
+    )
+
+    def get_analyzers(self) -> list:
+        """Returns the analyzers associated with the synapse"""
+
+        return self.analyzer
 
     def deserialize(self) -> bt.Synapse:
         """Deserialize the instance of the protocol"""
         return self
-    

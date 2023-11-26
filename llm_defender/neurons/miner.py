@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import traceback
 import bittensor as bt
 
-from prompt_defender.prompt_injection.neurons import PromptInjectionMiner
+from llm_defender.core.miners.miner import PromptInjectionMiner
 
 
 def main(miner: PromptInjectionMiner):

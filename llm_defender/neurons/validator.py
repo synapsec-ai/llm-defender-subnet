@@ -7,8 +7,8 @@ import sys
 from argparse import ArgumentParser
 import torch
 import bittensor as bt
-from prompt_defender.prompt_injection.protocol import PromptInjectionProtocol
-from prompt_defender.prompt_injection.neurons import PromptInjectionValidator
+from llm_defender.base.protocol import LLMDefenderProtocol
+from llm_defender.core.validators.validator import PromptInjectionValidator
 
 
 def main(validator: PromptInjectionValidator):
@@ -93,7 +93,7 @@ def main(validator: PromptInjectionValidator):
             # Broadcast query to valid Axons
             responses = validator.dendrite.query(
                 uids_to_query,
-                PromptInjectionProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"]),
+                LLMDefenderProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"]),
                 timeout=validator.timeout,
                 deserialize=True,
             )

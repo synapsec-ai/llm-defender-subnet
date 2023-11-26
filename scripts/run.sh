@@ -82,9 +82,9 @@ run_neuron() {
         exit 1
     fi
 
-    local script_path="prompt_defender/prompt_injection/miner/miner.py"
+    local script_path="llm_defender/neurons/miner.py"
     if [[ "$profile" == "validator" ]]; then
-        script_path="prompt_defender/prompt_injection/validator/validator.py"
+        script_path="llm_defender/neurons/validator.py"
     fi
 
     local command="python $script_path --netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey"
