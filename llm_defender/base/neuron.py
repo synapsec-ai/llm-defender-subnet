@@ -64,7 +64,7 @@ class BaseNeuron:
             bt.logging.error(
                 f"Unable to attach ArgumentParsers to Bittensor classes: {e}"
             )
-            sys.exit()
+            raise AttributeError from e
 
         config = bt.config(self.parser)
 
@@ -86,6 +86,6 @@ class BaseNeuron:
                 makedirs(config.full_path, exist_ok=True)
         except OSError as e:
             bt.logging.error(f"Unable to create log path: {e}")
-            sys.exit()
+            raise OSError from e
 
         return config

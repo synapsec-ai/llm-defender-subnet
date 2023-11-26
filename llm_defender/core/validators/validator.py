@@ -11,7 +11,6 @@ Typical example usage:
 from argparse import ArgumentParser
 from typing import Tuple
 from secrets import choice
-import sys
 import torch
 import bittensor as bt
 from datasets import load_dataset
@@ -33,21 +32,51 @@ class PromptInjectionValidator(BaseNeuron):
 
         self.max_engines = 3
         self.timeout = 60
-        self.neuron_config = self.config(
-            bt_classes=[bt.subtensor, bt.logging, bt.wallet]
-        )
-        (
-            self.wallet,
-            self.subtensor,
-            self.dendrite,
-            self.metagraph,
-            self.scores,
-        ) = self.setup()
+        self.neuron_config = None
+        self.wallet = None
+        self.subtensor = None
+        self.dendrite = None
+        self.metagraph = None
+        self.scores = None
 
-    def setup(
-        self,
-    ) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph, torch.Tensor]:
-        """This function setups the neuron.
+    def apply_config(self, bt_classes) -> bool:
+        """This method applies the configuration to specified bittensor classes"""
+        try:
+            self.neuron_config = self.config(bt_classes=bt_classes)
+        except AttributeError as e:
+            bt.logging.error(f"Unable to apply validator configuration: {e}")
+            raise AttributeError from e
+        except OSError as e:
+            bt.logging.error(f"Unable to create logging directory: {e}")
+            raise OSError from e
+
+        return True
+
+    def validator_validation(self, metagraph, wallet, subtensor) -> bool:
+        """This method validates the validator has registered correctly"""
+        if wallet.hotkey.ss58_address not in metagraph.hotkeys:
+            bt.logging.error(
+                f"Your validator: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
+            )
+            return False
+
+        return True
+
+    def setup_bittensor_objects(self, neuron_config) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
+        """Setups the bittensor objects"""
+        try:
+            wallet = bt.wallet(config=neuron_config)
+            subtensor = bt.subtensor(config=neuron_config)
+            dendrite = bt.dendrite(wallet=wallet)
+            metagraph = subtensor.metagraph(neuron_config.netuid)
+        except AttributeError as e:
+            bt.logging.error(f"Unable to setup bittensor objects: {e}")
+            raise AttributeError from e
+        
+        return wallet, subtensor, dendrite, metagraph
+
+    def initialize_neuron(self) -> bool:
+        """This function initializes the neuron.
 
         The setup function initializes the neuron by registering the
         configuration.
@@ -56,49 +85,30 @@ class PromptInjectionValidator(BaseNeuron):
             None
 
         Returns:
-            wallet:
-                An instance of bittensor.wallet containing information about
-                the wallet
-            subtensor:
-                An instance of bittensor.subtensor doing ?
-            dendrite:
-                An instance of bittensor.dendrite doing ?
-            metagraph:
-                An instance of bittensor.metagraph doing ?
-            scores:
-                An instance of torch.Tensor doing ?
-
+            Bool:
+                A boolean value indicating success/failure of the initialization.
         Raises:
             AttributeError:
+                AttributeError is raised if the neuron initialization failed
+            IndexError:
+                IndexError is raised if the hotkey cannot be found from the metagraph
         """
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
-            f"Initializing validator for subnet: {self.neuron_config.netuid} on network: \
-            {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
+            f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
 
         # Setup the bittensor objects
-        try:
-            wallet = bt.wallet(config=self.neuron_config)
-            subtensor = bt.subtensor(config=self.neuron_config)
-            dendrite = bt.dendrite(wallet=wallet)
-            metagraph = subtensor.metagraph(self.neuron_config.netuid)
-        except AttributeError as e:
-            bt.logging.error(f"Unable to setup bittensor objects: {e}")
-            sys.exit()
+        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(self.neuron_config)
 
         bt.logging.info(
             f"Bittensor objects initialized:\nMetagraph: {metagraph}\
             \nSubtensor: {subtensor}\nWallet: {wallet}"
         )
 
-        # Validate that our hotkey can be found from metagraph
-        if wallet.hotkey.ss58_address not in metagraph.hotkeys:
-            bt.logging.error(
-                f"Your validator: {wallet} is not registered to chain connection: \
-                {subtensor}. Run btcli register and try again"
-            )
-            sys.exit()
+        # Validate that the validator has registered to the metagraph correctly
+        if not self.validator_validation(metagraph, wallet, subtensor):
+            raise IndexError("Unable to find validator key from metagraph")
 
         # Get the unique identity (UID) from the network
         validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
@@ -108,7 +118,13 @@ class PromptInjectionValidator(BaseNeuron):
         scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
         bt.logging.info(f"Validation weights have been initialized: {scores}")
 
-        return wallet, subtensor, dendrite, metagraph, scores
+        self.wallet = wallet
+        self.subtensor = subtensor
+        self.dendrite = dendrite
+        self.metagraph = metagraph
+        self.scores = scores
+
+        return True
 
     def process_responses(self, query: dict, responses: list):
         """

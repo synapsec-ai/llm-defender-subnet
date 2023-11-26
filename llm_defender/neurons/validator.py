@@ -93,7 +93,12 @@ def main(validator: PromptInjectionValidator):
             # Broadcast query to valid Axons
             responses = validator.dendrite.query(
                 uids_to_query,
-                LLMDefenderProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"], analyzer=["Prompt Injection"]),
+                LLMDefenderProtocol(
+                    prompt=query["prompt"],
+                    engine=query["engine"],
+                    roles=["internal"],
+                    analyzer=["Prompt Injection"],
+                ),
                 timeout=validator.timeout,
                 deserialize=True,
             )
@@ -170,7 +175,15 @@ if __name__ == "__main__":
         help="Provide the log directory",
     )
 
-    # Create a validator based on the Class definitions
+    # Create a validator based on the Class definitions and initialize it
     subnet_validator = PromptInjectionValidator(parser=parser)
+    if (
+        not subnet_validator.apply_config(
+            bt_classes=[bt.subtensor, bt.logging, bt.wallet]
+        )
+        or not subnet_validator.initialize_neuron()
+    ):
+        bt.logging.error("Unable to initialize Validator. Exiting.")
+        sys.exit()
 
     main(subnet_validator)
