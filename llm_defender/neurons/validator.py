@@ -93,7 +93,7 @@ def main(validator: PromptInjectionValidator):
             # Broadcast query to valid Axons
             responses = validator.dendrite.query(
                 uids_to_query,
-                LLMDefenderProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"]),
+                LLMDefenderProtocol(prompt=query["prompt"], engine=query["engine"], roles=["internal"], analyzer=["Prompt Injection"]),
                 timeout=validator.timeout,
                 deserialize=True,
             )
