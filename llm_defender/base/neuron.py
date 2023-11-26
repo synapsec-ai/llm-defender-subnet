@@ -1,4 +1,4 @@
-"""Module for prompt-defender-subnet neurons.
+"""Module for llm-defender-subnet neurons.
 
 Neurons are the backbone of the subnet and are providing the subnet
 users tools to interact with the subnet and participate in the

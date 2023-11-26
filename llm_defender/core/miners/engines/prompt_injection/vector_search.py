@@ -1,6 +1,6 @@
 """
 This module implements the base-engine used by the prompt-injection
-feature of the prompt-defender-subnet.
+feature of the llm-defender-subnet.
 """
 import sys
 import uuid

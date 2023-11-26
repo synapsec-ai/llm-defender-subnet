@@ -1,5 +1,5 @@
-# Bittensor Prompt Defender Subnet
-This repository contains the source code for the Prompt Defender subnet running on top of [Bittensor network](https://github.com/opentensor/bittensor). The Prompt Defender subnet provides Large Language Model (LLM) developers a way to decentralize the computing required to detect and prevent various attacks and exploits against LLM applications. 
+# Bittensor LLM Defender Subnet
+This repository contains the source code for the LLM Defender subnet running on top of [Bittensor network](https://github.com/opentensor/bittensor). The LLM Defender subnet provides Large Language Model (LLM) developers a way to decentralize the computing required to detect and prevent various attacks and exploits against LLM applications. 
 
 ## Summary
 There are different and constantly evolving ways to attack LLMs, and to efficiently protect against such attacks, it is necessary to layer up several defensive methods to prevent the attacks from affecting the LLM or the application relying on the model.
@@ -18,8 +18,8 @@ This repository requires python3.10 or higher.
 
 Installation:
 ```
-$ git clone https://github.com/ceterum1/prompt-defender-subnet.git
-$ cd prompt-defender-subnet
+$ git clone https://github.com/ceterum1/llm-defender-subnet
+$ cd llm-defender-subnet
 $ python -m venv .venv
 $ source .venv/bin/activate
 $ sudo apt update && sudo apt install jq && sudo apt install npm && sudo npm install pm2 -g && pm2 update

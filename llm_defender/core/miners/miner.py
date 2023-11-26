@@ -1,5 +1,5 @@
 """Module for prompt-injection neurons for the
-prompt-defender-subnet.
+llm-defender-subnet.
 
 Long description
 
@@ -10,20 +10,15 @@ Typical example usage:
 """
 from argparse import ArgumentParser
 from typing import Tuple
-from secrets import choice
 import sys
-import torch
 import bittensor as bt
-from datasets import load_dataset
-from prompt_defender.base.neuron import BaseNeuron
-from prompt_defender.prompt_injection.protocol import PromptInjectionProtocol
-from prompt_defender.prompt_injection.miner.engines import (
-    HeuristicsEngine,
-    TextClassificationEngine,
-    VectorEngine
+from llm_defender.base.neuron import BaseNeuron
+from llm_defender.base.protocol import LLMDefenderProtocol
+from llm_defender.core.miners.engines.prompt_injection import (
+    heuristics,
+    text_classification,
+    vector_search
 )
-from prompt_defender.base.common import EnginePrompt
-
 
 class PromptInjectionMiner(BaseNeuron):
     """Summary of the class
@@ -99,7 +94,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         return wallet, subtensor, metagraph, miner_uid
 
-    def blacklist(self, synapse: PromptInjectionProtocol) -> Tuple[bool, str]:
+    def blacklist(self, synapse: LLMDefenderProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -134,7 +129,7 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.info(f"Accepted hotkey: {synapse.dendrite.hotkey}")
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
-    def priority(self, synapse: PromptInjectionProtocol) -> float:
+    def priority(self, synapse: LLMDefenderProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -152,7 +147,7 @@ class PromptInjectionMiner(BaseNeuron):
         return priority
 
 
-    def forward(self, synapse: PromptInjectionProtocol) -> PromptInjectionProtocol:
+    def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
         """The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
@@ -167,9 +162,9 @@ class PromptInjectionMiner(BaseNeuron):
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
         engines = [
-            HeuristicsEngine(prompt=synapse.prompt),
-            TextClassificationEngine(prompt=synapse.prompt),
-            VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/")
+            heuristics.HeuristicsEngine(prompt=synapse.prompt),
+            text_classification.TextClassificationEngine(prompt=synapse.prompt),
+            vector_search.VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/")
         ]
 
         engine_confidences = []

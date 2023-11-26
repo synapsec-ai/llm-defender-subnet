@@ -1,6 +1,6 @@
 """
 This module implements the base-engine used by the prompt-injection
-feature of the prompt-defender-subnet.
+feature of the llm-defender-subnet.
 """
 import sys
 import glob
@@ -89,7 +89,7 @@ class HeuristicsEngine(BaseEngine):
 
     class SqlSubEngine(HeuristicsSubEngine):
         """
-        This engine is used by the prompt-defender-subnet miners for
+        This engine is used by the llm-defender-subnet miners for
         analyzing prompt-injection strings that have been formatted as SQL
         queries.
 

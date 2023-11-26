@@ -1,5 +1,5 @@
 """Module for prompt-injection neurons for the
-prompt-defender-subnet.
+llm-defender-subnet.
 
 Long description
 

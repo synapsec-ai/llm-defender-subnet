@@ -43,7 +43,7 @@ pull_repo_and_checkout_branch() {
 
 install_packages() {
     local cfg_version=$(grep -oP 'version\s*=\s*\K[^ ]+' setup.cfg)
-    local installed_version=$(pip show prompt-defender | grep -oP 'Version:\s*\K[^ ]+')
+    local installed_version=$(pip show llm-defender | grep -oP 'Version:\s*\K[^ ]+')
 
     if [[ "$cfg_version" == "$installed_version" ]]; then
         echo "Subnet versions are matching: No installation is required."
@@ -53,7 +53,7 @@ install_packages() {
 
         # Uvloop re-implements asyncio module which breaks bittensor. It is
         # not needed by the default implementation of the
-        # prompt-defender-subnet, so we can uninstall it.
+        # llm-defender-subnet, so we can uninstall it.
         if pip show uvloop &>/dev/null; then
             echo "Uninstalling conflicting module uvloop"
             pip uninstall -y uvloop
