@@ -83,8 +83,7 @@ class PromptInjectionMiner(BaseNeuron):
         # Validate that our hotkey can be found from metagraph
         if wallet.hotkey.ss58_address not in metagraph.hotkeys:
             bt.logging.error(
-                f"Your miner: {wallet} is not registered to chain connection: \
-                {subtensor}. Run btcli register and try again"
+                f"Your miner: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
             )
             sys.exit()
 

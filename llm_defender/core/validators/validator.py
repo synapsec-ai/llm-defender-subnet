@@ -102,8 +102,7 @@ class PromptInjectionValidator(BaseNeuron):
         wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(self.neuron_config)
 
         bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {metagraph}\
-            \nSubtensor: {subtensor}\nWallet: {wallet}"
+            f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
         )
 
         # Validate that the validator has registered to the metagraph correctly

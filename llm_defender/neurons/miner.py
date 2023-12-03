@@ -32,8 +32,7 @@ def main(miner: PromptInjectionMiner):
     axon.serve(netuid=miner.neuron_config.netuid, subtensor=miner.subtensor)
 
     bt.logging.info(
-        f"Axon {miner.forward} served on network: \
-        {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
+        f"Axon {miner.forward} served on network: {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
     )
     # Activate the Miner on the network
     axon.start()
@@ -51,16 +50,16 @@ def main(miner: PromptInjectionMiner):
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
             if step % 5 == 0:
-                metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
+                miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
                     f"Step:{step} | "
-                    f"Block:{metagraph.block.item()} | "
-                    f"Stake:{metagraph.S[miner.miner_uid]} | "
-                    f"Rank:{metagraph.R[miner.miner_uid]} | "
-                    f"Trust:{metagraph.T[miner.miner_uid]} | "
-                    f"Consensus:{metagraph.C[miner.miner_uid] } | "
-                    f"Incentive:{metagraph.I[miner.miner_uid]} | "
-                    f"Emission:{metagraph.E[miner.miner_uid]}"
+                    f"Block:{miner.metagraph.block.item()} | "
+                    f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
+                    f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
+                    f"Trust:{miner.metagraph.T[miner.miner_uid]} | "
+                    f"Consensus:{miner.metagraph.C[miner.miner_uid] } | "
+                    f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
+                    f"Emission:{miner.metagraph.E[miner.miner_uid]}"
                 )
                 bt.logging.info(log)
             step += 1

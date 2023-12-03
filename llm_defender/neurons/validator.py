@@ -71,7 +71,7 @@ def main(validator: PromptInjectionValidator):
                 dtype=torch.bool,
             )
             bt.logging.trace(f"Invalid UIDs to filter: {invalid_uids}")
-
+            
             # Define which UIDs to filter out from the valid list of Axons
             uids_to_filter = torch.where(
                 validator_uids == False, validator_uids, invalid_uids
@@ -115,8 +115,7 @@ def main(validator: PromptInjectionValidator):
             # Process the responses
             validator.process_responses(query=query, responses=responses)
             # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 10 == 0:
-                # TODO(developer): Define how the validator normalizes scores before setting weights.
+            if (step + 1) % 110 == 0:
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
                 # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
@@ -187,3 +186,5 @@ if __name__ == "__main__":
         sys.exit()
 
     main(subnet_validator)
+
+
