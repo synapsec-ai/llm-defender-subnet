@@ -4,7 +4,7 @@ This repository contains the source code for the LLM Defender subnet running on 
 ## Summary
 There are different and constantly evolving ways to attack LLMs, and to efficiently protect against such attacks, it is necessary to layer up several defensive methods to prevent the attacks from affecting the LLM or the application relying on the model.
 
-The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **capabilities** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs. 
+The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **capabilities** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs. An engine can consist of a single analyzer or multiple subengines working towards a common goal.
 
 The ultimate goal is to enable LLM developers to harness the decentralized intelligence provided by the subnet and combine it with their local defensive capabilities to truly embrace the concept of defense-in-depth.
 
@@ -46,20 +46,46 @@ The current capabilities focus on analyzing the initial input prompt but the sho
 Further capabilities and engines will be added to the subnet in the future to expand the capabilities to cover functional use cases other than prompt injection. Our mission is to be the enabler for secure AI applications.
 
 ## FAQ
-```
-Q: Why are there multiple engines?
-A: A single engine can be prone for false-positives and in order to reach a definite conclusion about the legitimacy of an input we need to take into account input from multiple different engines. 
+This section will be updated regularly with commonly asked questions.
+- Why are there multiple engines?
+  - A single engine can be prone for false-positives and in order to reach a definite conclusion about the legitimacy of an input we need to take into account input from multiple different engines. 
 
-Q: I have already deployed <insert local solution here>, how do I benefit from this solution?
-A: As per the defense-in-depth concept, the fundamental idea is to layer up defenses for your LLM application. This solution is not meant to replace your local defenses but rather offload some of the computing-heavy analysis to be performed by the decentralized machine-learning network. 
+- I have already deployed \<insert local solution here>, how do I benefit from this solution?
+  - As per the defense-in-depth concept, the fundamental idea is to layer up defenses for your LLM application. This solution is not meant to replace your local defenses but rather offload some of the computing-heavy analysis to be performed by the decentralized machine-learning network.
 
 The incentive mechanism that is built-in to Bittensor will ensure the intelligence of the network will grow as time goes on and in the long-run the solution is expected to outperform any local defensive measures you have deployed.
-```
+
 
 ## Fine-tuning and Development
 Fine-tuning and development have been described in their respective guides:
 - [Developer Guide](./docs/developer-guide.md)
 - [Fine-tuning Guide](./docs/fine-tuning-guide.md)
+
+## Version 1.0 feature objectives
+The following is a list of high-level objectives for version 1.0 of the entire project (some of these are not directly related to the subnet code)
+- The following analyzers
+  - Prompt injection (already implemented)
+  - Prompt-response (fraud, jailbreaking, etc.)
+  - Content filtering (topic banning, prompt anonymization, secrets detection, etc.)
+  - Language/Code
+- 4+ engines per analyzer
+- Demo application
+- Prompt API (for synthetic prompts)
+- Subnet API (for third-party developers)
+- Async support for the subnet protocol
+- Miner profiles and the possibility to specialize in select analyzers
+- Wandb (or some other local database for analyzing the miner/validator performance)
+- Tests for fundamental validator/miner and engine features
+- Proper datasets for model creation
+- Full reference documentation for development/fine-tuning 
+- Sample implementation of a dedicated validator
+- Improved scoring and gating algorithms
+- Automated miner/validator updating in run.sh script
+- Out-of-the-box support in the miner script for customized engines
+- \+ possibly many other features depending on the needs of the community
+
+The current target is to release version 1.0 either in late Q1/2024 or early Q2/2024.
+
 
 ## How to integrate into the subnet?
 One of the long-term development targets we have is to provide a subnet that all Bittensor users can rely on when securing their subnets, applications and other solutions built on top of the Bittensor platform. 
