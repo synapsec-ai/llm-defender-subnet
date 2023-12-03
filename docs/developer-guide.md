@@ -2,7 +2,7 @@
 ## Fundamentals
 The the following diagram displays the high-level target architecture for version 1.0
 ```mermaid
-flowchart 
+graph TD 
     A(General-purpose \nvalidators) -- Synthetic Prompts --> B(Subnet miners)
     subgraph Maintained by the subnet owners 
     C(Prompt API)
