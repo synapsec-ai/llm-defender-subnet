@@ -2,6 +2,7 @@
 This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
+import torch
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -53,18 +54,21 @@ class TextClassificationEngine(BaseEngine):
             received from the classifier.
         """
 
-        tokenizer = AutoTokenizer.from_pretrained("deepset/deberta-v3-base-injection")
-        model = AutoModelForSequenceClassification.from_pretrained(
-            "deepset/deberta-v3-base-injection",
-            trust_remote_code=True,
-            torch_dtype="auto",
-        )
+        tokenizer = AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection")
+        model = AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection")
 
-        pipe = pipeline("text-classification", model=model, tokenizer=tokenizer)
+        pipe = pipeline(
+            "text-classification",
+            model=model,
+            tokenizer=tokenizer,
+            truncation=True,
+            max_length=512,
+            device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        )
         result = pipe(self.prompt)
 
         # Determine the confidence based on the score
-        if result[0]["label"] == "LEGIT":
+        if result[0]["label"] == "SAFE":
             self.confidence = 1.0 - result[0]["score"]
         else:
             self.confidence = result[0]["score"]

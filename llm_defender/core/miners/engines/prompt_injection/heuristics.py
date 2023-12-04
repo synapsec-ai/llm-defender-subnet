@@ -7,12 +7,11 @@ import glob
 import os
 from re import sub
 from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM
+    GPT2LMHeadModel,
+    GPT2Tokenizer
 )
 import bittensor as bt
 import yara
-from transformers import pipeline
 
 from llm_defender.base.engine import BaseEngine
 
@@ -111,10 +110,6 @@ class HeuristicsEngine(BaseEngine):
         The weights of the keywords are used to rank the SQL-formatted
         prompts either as malicious or non-malicious by modifying confidence
         score based on the keywords and weights.
-
-        The standard implementation uses the common reserved keywords as
-        defined in ISO/IEC 9075:2023. Depending on the situation, it may be
-        beneficial to utilize a different list of keywords.
         """
 
         def __init__(self, prompt: str, weight: float, name: str = "text-to-sql"):
@@ -140,23 +135,16 @@ class HeuristicsEngine(BaseEngine):
             return True
 
         def convert(self) -> str:
-            tokenizer = AutoTokenizer.from_pretrained("gpt2")
-            model = AutoModelForCausalLM.from_pretrained(
-                "gpt2", trust_remote_code=True, torch_dtype="auto"
-            )
+            model = GPT2LMHeadModel.from_pretrained("rakeshkiriyath/gpt2Medium_text_to_sql")
+            tokenizer = GPT2Tokenizer.from_pretrained("rakeshkiriyath/gpt2Medium_text_to_sql")
 
-            pipe = pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                pad_token_id=tokenizer.eos_token_id,
-            )
+            input_tensor = tokenizer.encode(self.prompt, return_tensors='pt')
 
-            res = pipe(
-                self.prompt, max_length=50, do_sample=False, no_repeat_ngram_size=2
-            )[0]
+            output = model.generate(input_tensor, max_length=256, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
 
-            return res["generated_text"].replace(self.prompt, "").strip()
+            decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
+
+            return decoded_output[len(self.prompt):].strip()
 
         def clean(self) -> list:
             """
