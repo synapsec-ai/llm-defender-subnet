@@ -4,12 +4,10 @@ The the following diagram displays the high-level target architecture for versio
 ```mermaid
 graph TD 
     A(General-purpose \nvalidators) -- Synthetic Prompts --> B(Subnet miners)
-    subgraph Maintained by the subnet owners 
     C(Prompt API)
     D(Subnet API)
     D1(Demo Application) -- Send prompt for analysis --> D
     E(Application \nvalidator)
-    end
     F(3rd party applications)
     E -- Real prompts --> B
     A -- Fetch synthetic prompts \n(once per hour) --> C
@@ -18,6 +16,10 @@ graph TD
 
     G(3rd party subnets) -- Send prompt for analysis--> H(Dedicated validator) -- Real prompts --> B
 ```
+
+
+    subgraph Maintained by the subnet owners 
+        end
 The synthetic prompts are used as a part of the scoring algorithm to determine which miners the application validator trusts the most when serving the real prompts received through the subnet API. The subnet API provides third party application developers a way to integrate their solutions in to the subnet. 
 
 Third party subnets (or applications) can also query the miners through a dedicated validator they are hosting themselves. Having a dedicated validator serves the same purpose as using the subnet API, but the subnet API is meant to be used by people not within the Bittensor ecosystem.
@@ -69,4 +71,3 @@ Contributions to the high-level architecture, protocol and neuron templates are 
 ### Scoring
 ### Gating
 ### Penalties 
-### 
