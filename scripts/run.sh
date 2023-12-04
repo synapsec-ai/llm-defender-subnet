@@ -71,6 +71,7 @@ run_neuron() {
     local wallet_hotkey="${args['wallet.hotkey']}"
     local logging_value="${args['logging']}"
     local subtensor_network="${args['subtensor.network']}"
+    local axon_port="${args['axon.port']}"
 
     if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
         echo "netuid, wallet.name, and wallet.hotkey are mandatory arguments."
@@ -95,6 +96,10 @@ run_neuron() {
 
     if [[ -n "$subtensor_network" ]]; then
         command+=" --subtensor.network $subtensor_network"
+    fi
+
+    if [[ -n "$axon_port" ]]; then
+        command+=" --axon.port $axon_port"
     fi
 
     if [[ -n "$logging_value" ]]; then

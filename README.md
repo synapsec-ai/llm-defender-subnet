@@ -27,12 +27,12 @@ $ sudo apt update && sudo apt install jq && sudo apt install npm && sudo npm ins
 
 Run miner:
 ```
-$ pm2 start scripts/run.sh --name miner -- --branch main --netuid X --profile miner --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
+$ pm2 start scripts/run.sh --name miner -- --branch main --netuid X --profile miner --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
 ```
 
 Run validator:
 ```
-$ pm2 start scripts/run.sh --name validator -- --branch main --netuid X --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
+$ pm2 start scripts/run.sh --name validator -- --branch main --netuid X --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
 ```
 ## Capabilities
 The subnet contains the following capabilities and engines

@@ -174,7 +174,7 @@ class PromptInjectionMiner(BaseNeuron):
         if all(0.0 <= val <= 1.0 for val in engine_confidences):
             output["confidence"] = sum(engine_confidences) / len(engine_confidences)
         else:
-            bt.logging.error(f'Confidence scores received from engines are out-of-bound: {engine_confidences}')
+            bt.logging.error(f'Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}')
             sys.exit()
         
         synapse.output = output
