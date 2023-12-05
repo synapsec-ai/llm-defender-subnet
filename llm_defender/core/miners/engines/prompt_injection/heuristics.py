@@ -54,7 +54,10 @@ class HeuristicsEngine(BaseEngine):
 
         for sub_engine in self.sub_engines:
             if sub_engine["sub_engine"].invoke():
-                self.engine_data.append(sub_engine["sub_engine"].get_results())
+                bt.logging.debug(f'Executing subengine: {sub_engine["sub_engine"]}')
+                subengine_result = sub_engine["sub_engine"].get_results()
+                self.engine_data.append(subengine_result)
+                bt.logging.debug(f'Appended subengine result: {subengine_result}')
 
         self.analyzed = True
 
