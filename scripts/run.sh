@@ -46,7 +46,7 @@ install_packages() {
     local installed_version=$(pip show llm-defender | grep -oP 'Version:\s*\K[^ ]+')
 
     if [[ "$cfg_version" == "$installed_version" ]]; then
-        echo "Subnet versions are matching: No installation is required."
+        echo "Subnet versions "$cfg_version" and "$installed_version" are matching: No installation is required."
     else
         echo "Installing package with pip"
         pip install -e .
