@@ -73,7 +73,7 @@ The following is a list of high-level objectives for version 1.0 of the entire p
 - Prompt API (for synthetic prompts)
 - Subnet API (for third-party developers)
 - Async support for the subnet protocol
-- Miner profiles and the possibility to specialize in select analyzers
+- Miner profiles and the possibility to specialize in select analyzers (if possible to implement)
 - Wandb (or some other local database for analyzing the miner/validator performance)
 - Tests for fundamental validator/miner and engine features
 - Proper datasets for model creation

@@ -16,6 +16,7 @@ import bittensor as bt
 from datasets import load_dataset
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt
+from llm_defender.base import mock_data
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -246,14 +247,12 @@ class PromptInjectionValidator(BaseNeuron):
             prompt: An instance of EnginePrompt
         """
 
-        dataset = load_dataset("deepset/prompt-injections", split="test")
-
-        entry = choice(dataset)
+        entry = mock_data.get_prompt()
 
         prompt = EnginePrompt(
             engine="Prompt Injection",
             prompt=entry["text"],
-            data={"isPromptInjection": entry["label"] == 1},
+            data={"isPromptInjection": entry["isPromptInjection"]},
         )
 
         return prompt

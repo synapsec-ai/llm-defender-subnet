@@ -52,7 +52,7 @@ def main(validator: PromptInjectionValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            # Filter out validators from the queryable Axons
+            # Filter out validators from the queryable Axons 
             validator_uids = validator.metagraph.total_stake == 0.0
             bt.logging.trace(f"Validators UIDs to filter: {validator_uids}")
 
@@ -186,5 +186,3 @@ if __name__ == "__main__":
         sys.exit()
 
     main(subnet_validator)
-
-
