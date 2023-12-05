@@ -146,6 +146,7 @@ class HeuristicsEngine(BaseEngine):
 
             decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
 
+            bt.logging.debug(f'text-to-sql prompt: {self.prompt}')
             bt.logging.debug(f'text-to-sql output: {decoded_output}')
 
             return decoded_output[len(self.prompt):].strip()
