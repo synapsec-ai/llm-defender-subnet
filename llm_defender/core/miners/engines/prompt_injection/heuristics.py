@@ -80,7 +80,6 @@ class HeuristicsEngine(BaseEngine):
 
         def get_results(self):
             return {
-                "prompt": self.prompt,
                 "name": self.name,
                 "confidence": self.confidence,
                 "output": self.output,
