@@ -53,7 +53,7 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
             # Filter out validators from the queryable Axons 
-            validator_uids = validator.metagraph.total_stake == 0.0
+            validator_uids = validator.metagraph.total_stake >= 0.0
             bt.logging.debug(f"Validators UIDs to filter: {validator_uids}")
 
             # Filter out axons with an IP address of 0.0.0.0
