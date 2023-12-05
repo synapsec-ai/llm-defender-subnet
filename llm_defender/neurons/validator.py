@@ -54,7 +54,7 @@ def main(validator: PromptInjectionValidator):
 
             # Filter out validators from the queryable Axons 
             validator_uids = validator.metagraph.total_stake == 0.0
-            bt.logging.trace(f"Validators UIDs to filter: {validator_uids}")
+            bt.logging.debug(f"Validators UIDs to filter: {validator_uids}")
 
             # Filter out axons with an IP address of 0.0.0.0
             invalid_uids = torch.tensor(
@@ -70,7 +70,7 @@ def main(validator: PromptInjectionValidator):
                 ],
                 dtype=torch.bool,
             )
-            bt.logging.trace(f"Invalid UIDs to filter: {invalid_uids}")
+            bt.logging.debug(f"Invalid UIDs to filter: {invalid_uids}")
             
             # Define which UIDs to filter out from the valid list of Axons
             uids_to_filter = torch.where(
