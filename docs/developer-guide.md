@@ -67,5 +67,16 @@ Contributions to the high-level architecture, protocol and neuron templates are 
 
 ## Bittensor 
 ### Scoring
+The scoring is done based on three criteria:
+1) Accuracy of the analysis
+2) Speed of the analysis
+3) The number of engines used
+
+Most weight is put on the accuracy of the analysis (70%), followed by the speed (20%) and the number of engines used (10%).
+
+
 ### Gating
+Gating is not currently applied and the exact model for gating has not been fully though out yet. The preliminary idea is to send the synthetic prompts to all miners and choose the best miners for the real prompts.
+
 ### Penalties 
+Penalties are not currently applied and the exact model for penalties have not been fully though out yet.

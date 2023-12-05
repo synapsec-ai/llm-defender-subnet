@@ -207,9 +207,9 @@ class PromptInjectionValidator(BaseNeuron):
             return 0.0
 
         # Determine final score
-        distance_weight = 0.6
+        distance_weight = 0.7
         speed_weight = 0.2
-        num_engines_weight = 0.2
+        num_engines_weight = 0.1
 
         bt.logging.debug(
             f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
