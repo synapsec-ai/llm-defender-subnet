@@ -30,12 +30,10 @@ class EngineResponse:
 
     def __init__(
         self,
-        prompt: str,
         confidence: float,
         engine_data: dict,
         name: str
     ):
-        self.prompt = prompt
         self.confidence = confidence
         self.engine_data = engine_data
         self.name = name

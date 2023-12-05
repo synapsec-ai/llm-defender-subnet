@@ -10,10 +10,8 @@ Typical example usage:
 """
 from argparse import ArgumentParser
 from typing import Tuple
-from secrets import choice
 import torch
 import bittensor as bt
-from datasets import load_dataset
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt
 from llm_defender.base import mock_data
@@ -63,7 +61,9 @@ class PromptInjectionValidator(BaseNeuron):
 
         return True
 
-    def setup_bittensor_objects(self, neuron_config) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
+    def setup_bittensor_objects(
+        self, neuron_config
+    ) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
         """Setups the bittensor objects"""
         try:
             wallet = bt.wallet(config=neuron_config)
@@ -73,7 +73,7 @@ class PromptInjectionValidator(BaseNeuron):
         except AttributeError as e:
             bt.logging.error(f"Unable to setup bittensor objects: {e}")
             raise AttributeError from e
-        
+
         return wallet, subtensor, dendrite, metagraph
 
     def initialize_neuron(self) -> bool:
@@ -100,7 +100,9 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         # Setup the bittensor objects
-        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(self.neuron_config)
+        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
+            self.neuron_config
+        )
 
         bt.logging.info(
             f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"

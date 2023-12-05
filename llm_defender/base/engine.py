@@ -33,7 +33,6 @@ class BaseEngine:
         self.confidence = self._trim_value(self.confidence)
 
         response = EngineResponse(
-            prompt=self.prompt,
             name=self.engine_name,
             confidence=self.confidence,
             engine_data=self.engine_data,
