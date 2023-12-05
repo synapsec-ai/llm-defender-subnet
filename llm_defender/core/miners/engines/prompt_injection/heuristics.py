@@ -54,7 +54,7 @@ class HeuristicsEngine(BaseEngine):
 
         for sub_engine in self.sub_engines:
             if sub_engine["sub_engine"].invoke():
-                bt.logging.debug(f'Executing subengine: {sub_engine["sub_engine"]}')
+                bt.logging.debug(f'Executing subengine: {sub_engine}')
                 subengine_result = sub_engine["sub_engine"].get_results()
                 self.engine_data.append(subengine_result)
                 bt.logging.debug(f'Appended subengine result: {subengine_result}')
@@ -145,6 +145,8 @@ class HeuristicsEngine(BaseEngine):
             output = model.generate(input_tensor, max_length=256, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
 
             decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
+
+            bt.logging.debug(f'text-to-sql output: {decoded_output}')
 
             return decoded_output[len(self.prompt):].strip()
 
