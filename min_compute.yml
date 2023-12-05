@@ -7,7 +7,12 @@
 
 # NOTE: Specification for miners may be different from validators
 
-version: '1.0' # update this version key as needed, ideally should match your release version
+# NOTE: The specifications for miners and validators are not yet finalized and it is likely
+# the miners and validators can run with considerably less resources than listed here. This 
+# fil will be updated once version 1.0.0 is reached.
+
+
+version: '0.1.0' # update this version key as needed, ideally should match your release version
 
 compute_spec:
 
@@ -27,7 +32,7 @@ compute_spec:
       cuda_cores: 1024                     # Minimum number of CUDA cores (if applicable)
       min_compute_capability: 6.0          # Minimum CUDA compute capability
       recommended_compute_capability: 7.0  # Recommended CUDA compute capability
-      recommended_gpu: "NVIDIA A100"       # provide a recommended GPU to purchase/rent
+      recommended_gpu: "NVIDIA RTX 3090"       # provide a recommended GPU to purchase/rent
 
     memory:
       min_ram: 16          # Minimum RAM (GB)
@@ -36,15 +41,15 @@ compute_spec:
       ram_type: "DDR4"     # RAM type (e.g., DDR4, DDR3, etc.)
 
     storage:
-      min_space: 10           # Minimum free storage space (GB)
+      min_space: 50           # Minimum free storage space (GB)
       recommended_space: 100  # Recommended free storage space (GB)
       type: "SSD"             # Preferred storage type (e.g., SSD, HDD)
       min_iops: 1000          # Minimum I/O operations per second (if applicable)
       recommended_iops: 5000  # Recommended I/O operations per second
 
     os:
-      name: "Ubuntu"  # Name of the preferred operating system(s)
-      version: 20.04  # Version of the preferred operating system(s)
+      name: "Debian"  # Name of the preferred operating system(s)
+      version: 12  # Version of the preferred operating system(s)
 
   validator:
 
@@ -56,13 +61,13 @@ compute_spec:
       architecture: "x86_64"  # Architecture type (e.g., x86_64, arm64)
 
     gpu:
-      required: True                       # Does the application require a GPU?
-      min_vram: 8                          # Minimum GPU VRAM (GB)
-      recommended_vram: 24                 # Recommended GPU VRAM (GB)
-      cuda_cores: 1024                     # Minimum number of CUDA cores (if applicable)
-      min_compute_capability: 6.0          # Minimum CUDA compute capability
-      recommended_compute_capability: 7.0  # Recommended CUDA compute capability
-      recommended_gpu: "NVIDIA A100"       # provide a recommended GPU to purchase/rent
+      required: False                      # Does the application require a GPU?
+      min_vram: 0                          # Minimum GPU VRAM (GB)
+      recommended_vram: 0                  # Recommended GPU VRAM (GB)
+      cuda_cores: 0                        # Minimum number of CUDA cores (if applicable)
+      min_compute_capability: 0            # Minimum CUDA compute capability
+      recommended_compute_capability: 0    # Recommended CUDA compute capability
+      recommended_gpu: null                # provide a recommended GPU to purchase/rent
 
     memory:
       min_ram: 16          # Minimum RAM (GB)
@@ -78,8 +83,8 @@ compute_spec:
       recommended_iops: 5000  # Recommended I/O operations per second
 
     os:
-      name: "Ubuntu"  # Name of the preferred operating system(s)
-      version: 20.04  # Version of the preferred operating system(s)
+      name: "Debian"  # Name of the preferred operating system(s)
+      version: 12  # Version of the preferred operating system(s)
 
 network_spec:
   bandwidth:
