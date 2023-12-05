@@ -50,17 +50,17 @@ install_packages() {
     else
         echo "Installing package with pip"
         pip install -e .
-
-        # Uvloop re-implements asyncio module which breaks bittensor. It is
-        # not needed by the default implementation of the
-        # llm-defender-subnet, so we can uninstall it.
-        if pip show uvloop &>/dev/null; then
-            echo "Uninstalling conflicting module uvloop"
-            pip uninstall -y uvloop
-        fi
-
-        echo "Packages installed successfully"
     fi
+
+    # Uvloop re-implements asyncio module which breaks bittensor. It is
+    # not needed by the default implementation of the
+    # llm-defender-subnet, so we can uninstall it.
+    if pip show uvloop &>/dev/null; then
+        echo "Uninstalling conflicting module uvloop"
+        pip uninstall -y uvloop
+    fi
+
+    echo "Packages installed successfully"
 }
 
 run_neuron() {
