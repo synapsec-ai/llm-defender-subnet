@@ -162,7 +162,7 @@ class PromptInjectionMiner(BaseNeuron):
         # detections. Initializing the engine also executes the engine.
         engines = [
             heuristics.HeuristicsEngine(prompt=synapse.prompt),
-            text_classification.TextClassificationEngine(prompt=synapse.prompt),
+            #text_classification.TextClassificationEngine(prompt=synapse.prompt),
             #vector_search.VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/"),
         ]
 
