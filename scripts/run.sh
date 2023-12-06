@@ -39,6 +39,8 @@ pull_repo_and_checkout_branch() {
         echo "Switching to branch: $branch"
         git checkout "$branch" || { echo "Branch '$branch' does not exist."; exit 1; }
     fi
+
+    git pull
 }
 
 install_packages() {
@@ -114,5 +116,10 @@ run_neuron() {
 parse_arguments "$@"
 
 pull_repo_and_checkout_branch
+echo "Repo pulled and branch checkout done. Sleeping 2 seconds."
+sleep 2
 install_packages
+echo "Installation done. Sleeping 2 seconds."
+sleep 2
+echo "Running neutron"
 run_neuron
