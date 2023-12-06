@@ -125,7 +125,7 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.info(f"Setting weights: {weights}")
 
                 bt.logging.debug(
-                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={validator.metagraph.weight}"
+                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={weights}"
                 )
                 # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
                 # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
