@@ -145,6 +145,16 @@ class HeuristicsEngine(BaseEngine):
 
             decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
 
+            model = None
+            tokenizer = None
+            input_tensor = None
+            output = None
+
+            del model
+            del tokenizer
+            del input_tensor
+            del output
+
             return decoded_output[len(self.prompt):].strip()
 
         def clean(self) -> list:
