@@ -116,6 +116,12 @@ def main(validator: PromptInjectionValidator):
             # Process the responses
             validator.process_responses(query=query, responses=responses)
 
+
+            # Print stats
+            bt.logging.debug(f'Scores: {validator.scores}')
+            bt.logging.debug(f'All UIDs: {validator.metagraph.uids}')
+            bt.logging.debug(f'Processed UIDs: kukkuu')
+            
             bt.logging.debug(f"Current step: {step}")
             # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
