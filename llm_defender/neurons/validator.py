@@ -114,10 +114,10 @@ def main(validator: PromptInjectionValidator):
 
             # Process the responses
             validator.process_responses(query=query, responses=responses)
-            
+
             bt.logging.debug(f'Current step: {step}')
             # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 110 == 0:
+            if (step + 1) % 10 == 0:
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
                 # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
