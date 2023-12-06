@@ -115,16 +115,20 @@ def main(validator: PromptInjectionValidator):
 
             # Process the responses
             processed_uids = torch.nonzero(uids_to_filter).squeeze()
-            validator.process_responses(query=query, processed_uids=processed_uids, responses=responses)
+            validator.process_responses(
+                query=query, processed_uids=processed_uids, responses=responses
+            )
 
             # Print stats
-            bt.logging.debug(f'Scores: {validator.scores}')
-            bt.logging.debug(f'All UIDs: {validator.metagraph.uids}')
-            bt.logging.debug(f'Processed UIDs: {processed_uids}')
-            
+            bt.logging.debug(f"Scores: {validator.scores}")
+            bt.logging.debug(f"All UIDs: {validator.metagraph.uids}")
+            bt.logging.debug(f"Processed UIDs: {processed_uids}")
+
             # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
-            bt.logging.debug(f"Current step: {step}. Current block: {current_block}. Last updated block: {last_updated_block}")
+            bt.logging.debug(
+                f"Current step: {step}. Current block: {current_block}. Last updated block: {last_updated_block}"
+            )
             if current_block - last_updated_block > 100:
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
@@ -145,7 +149,7 @@ def main(validator: PromptInjectionValidator):
                     bt.logging.success("Successfully set weights.")
                 else:
                     bt.logging.error("Failed to set weights.")
-                
+
                 last_updated_block = current_block
 
             # End the current step and prepare for the next iteration.

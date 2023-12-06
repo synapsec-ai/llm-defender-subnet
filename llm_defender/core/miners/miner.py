@@ -17,8 +17,9 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.engines.prompt_injection import (
     heuristics,
     text_classification,
-    vector_search
+    vector_search,
 )
+
 
 class PromptInjectionMiner(BaseNeuron):
     """Summary of the class
@@ -149,25 +150,20 @@ class PromptInjectionMiner(BaseNeuron):
 
         return priority
 
-
     def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
         """The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
         """
         # Responses are stored in a list
-        output = {
-            "confidence": 0.5,
-            "prompt": synapse.prompt,
-            "engines": []
-        }
+        output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
 
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
         engines = [
             heuristics.HeuristicsEngine(prompt=synapse.prompt),
             text_classification.TextClassificationEngine(prompt=synapse.prompt),
-            vector_search.VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/")
+            vector_search.VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/"),
         ]
 
         engine_confidences = []
@@ -178,10 +174,11 @@ class PromptInjectionMiner(BaseNeuron):
         if all(0.0 <= val <= 1.0 for val in engine_confidences):
             output["confidence"] = sum(engine_confidences) / len(engine_confidences)
         else:
-            bt.logging.error(f'Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}')
+            bt.logging.error(
+                f"Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}"
+            )
             sys.exit()
-        
+
         synapse.output = output
 
         return synapse
-
