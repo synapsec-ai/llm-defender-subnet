@@ -165,7 +165,7 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.info(f"Response score for the request: {response_score}")
 
             bt.logging.info(f"Score before adjustment for UID {processed_uids[i]}: {self.scores[processed_uids[i]]}")
-            self.scores[i] = (
+            self.scores[processed_uids[i]] = (
                 self.neuron_config.alpha * self.scores[processed_uids[i]]
                 + (1 - self.neuron_config.alpha) * response_score
             )
