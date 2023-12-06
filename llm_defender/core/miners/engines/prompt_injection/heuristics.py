@@ -31,8 +31,8 @@ class HeuristicsEngine(BaseEngine):
         self.confidence = 0.5
         self.engine_data = []
         self.sub_engines = [
-            {"sub_engine": self.SqlSubEngine(prompt=self.prompt, weight=0.3)},
-            {"sub_engine": self.YaraSubEngine(prompt=self.prompt, weight=0.7)}
+            #{"sub_engine": self.SqlSubEngine(prompt=self.prompt, weight=0.3)},
+            {"sub_engine": self.YaraSubEngine(prompt=self.prompt, weight=1.0)}
         ]
 
         if not self._validate_subengine_weights():

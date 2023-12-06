@@ -12,7 +12,7 @@
 # fil will be updated once version 1.0.0 is reached.
 
 
-version: '0.1.0' # update this version key as needed, ideally should match your release version
+version: '0.1.3' # update this version key as needed, ideally should match your release version
 
 compute_spec:
 
@@ -26,13 +26,13 @@ compute_spec:
       architecture: "x86_64"  # Architecture type (e.g., x86_64, arm64)
 
     gpu:
-      required: True                       # Does the application require a GPU?
-      min_vram: 8                          # Minimum GPU VRAM (GB)
-      recommended_vram: 24                 # Recommended GPU VRAM (GB)
-      cuda_cores: 1024                     # Minimum number of CUDA cores (if applicable)
-      min_compute_capability: 6.0          # Minimum CUDA compute capability
-      recommended_compute_capability: 7.0  # Recommended CUDA compute capability
-      recommended_gpu: "NVIDIA RTX 3090"       # provide a recommended GPU to purchase/rent
+      required: False                      # Does the application require a GPU?
+      min_vram: 0                          # Minimum GPU VRAM (GB)
+      recommended_vram: 0                  # Recommended GPU VRAM (GB)
+      cuda_cores: 0                        # Minimum number of CUDA cores (if applicable)
+      min_compute_capability: 0            # Minimum CUDA compute capability
+      recommended_compute_capability: 0    # Recommended CUDA compute capability
+      recommended_gpu: null                # provide a recommended GPU to purchase/rent
 
     memory:
       min_ram: 16          # Minimum RAM (GB)

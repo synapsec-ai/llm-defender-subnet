@@ -179,6 +179,10 @@ class PromptInjectionMiner(BaseNeuron):
             )
             sys.exit()
 
+        # Nullify engines after execution
+        engines = None
+        del engines
+
         synapse.output = output
 
         return synapse
