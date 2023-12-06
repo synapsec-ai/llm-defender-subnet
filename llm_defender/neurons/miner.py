@@ -50,6 +50,11 @@ def main(miner: PromptInjectionMiner):
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
             if step % 5 == 0:
+                bt.logging.debug(
+                    f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
+                )
+                
+                miner.metagraph.sync(subtensor=miner.subtensor)
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
                     f"Step:{step} | "
@@ -61,6 +66,7 @@ def main(miner: PromptInjectionMiner):
                     f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
                     f"Emission:{miner.metagraph.E[miner.miner_uid]}"
                 )
+
                 bt.logging.info(log)
             step += 1
             time.sleep(1)
