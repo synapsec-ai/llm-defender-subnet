@@ -20,6 +20,7 @@ def main(validator: PromptInjectionValidator):
     bt.logging.info("Starting validator loop")
 
     step = 0
+    last_updated_block = 0
     while True:
         try:
             # Periodically sync subtensor state
@@ -71,7 +72,7 @@ def main(validator: PromptInjectionValidator):
                 dtype=torch.bool,
             )
             bt.logging.debug(f"Invalid UIDs to filter: {invalid_uids}")
-            
+
             # Define which UIDs to filter out from the valid list of uids
             uids_to_filter = torch.where(
                 uids_with_stake == False, uids_with_stake, invalid_uids
@@ -113,11 +114,25 @@ def main(validator: PromptInjectionValidator):
             bt.logging.info(f"Received responses: {responses}")
 
             # Process the responses
-            validator.process_responses(query=query, responses=responses)
+            processed_uids = torch.nonzero(uids_to_filter).squeeze()
+            validator.process_responses(query=query, processed_uids=processed_uids, responses=responses)
+
+            # Print stats
+            bt.logging.debug(f'Scores: {validator.scores}')
+            bt.logging.debug(f'All UIDs: {validator.metagraph.uids}')
+            bt.logging.debug(f'Processed UIDs: {processed_uids}')
+            
+            bt.logging.debug(f"Current step: {step}")
             # Periodically update the weights on the Bittensor blockchain.
-            if (step + 1) % 110 == 0:
+            current_block = validator.subtensor.block
+            if current_block - last_updated_block > 100:
+                bt.logging.debug(f'We are currently in block {validator.subtensor.block} and last updated block was {last_updated_block}')
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
+
+                bt.logging.debug(
+                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={weights}"
+                )
                 # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
                 # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
                 result = validator.subtensor.set_weights(
@@ -131,6 +146,8 @@ def main(validator: PromptInjectionValidator):
                     bt.logging.success("Successfully set weights.")
                 else:
                     bt.logging.error("Failed to set weights.")
+                
+                last_updated_block = current_block
 
             # End the current step and prepare for the next iteration.
             step += 1

@@ -128,10 +128,14 @@ class PromptInjectionValidator(BaseNeuron):
 
         return True
 
-    def process_responses(self, query: dict, responses: list):
+    def process_responses(
+        self, processed_uids: torch.tensor, query: dict, responses: list
+    ):
         """
         This function processes the responses received from the miners.
         """
+
+        processed_uids = processed_uids.tolist()
 
         # Determine target value for scoring
         if query["data"]["isPromptInjection"] is True:
@@ -142,12 +146,16 @@ class PromptInjectionValidator(BaseNeuron):
         bt.logging.debug(f"Target set to: {target}")
 
         for i, response in enumerate(responses):
-            bt.logging.debug(f"Processing response {i} with content: {response}")
+            bt.logging.debug(
+                f"Processing response {i} from UID {processed_uids[i]} with content: {response}"
+            )
             # Set the score for empty responses to 0
             if not response.output:
-                bt.logging.debug(f"Received an empty response: {response}")
-                self.scores[i] = (
-                    self.neuron_config.alpha * self.scores[i]
+                bt.logging.debug(
+                    f"Received an empty response from UID {processed_uids[i]}: {response}"
+                )
+                self.scores[processed_uids[i]] = (
+                    self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
                 continue
@@ -162,12 +170,16 @@ class PromptInjectionValidator(BaseNeuron):
 
             bt.logging.info(f"Response score for the request: {response_score}")
 
-            bt.logging.info(f"Score before adjustment: {self.scores[i]}")
-            self.scores[i] = (
-                self.neuron_config.alpha * self.scores[i]
+            bt.logging.info(
+                f"Score before adjustment for UID {processed_uids[i]}: {self.scores[processed_uids[i]]}"
+            )
+            self.scores[processed_uids[i]] = (
+                self.neuron_config.alpha * self.scores[processed_uids[i]]
                 + (1 - self.neuron_config.alpha) * response_score
             )
-            bt.logging.info(f"Score after adjustment: {self.scores[i]}")
+            bt.logging.info(
+                f"Score after adjustment for UID {processed_uids[i]}: {self.scores[processed_uids[i]]}"
+            )
 
     def calculate_score(
         self, response, target: float, response_time: float, hotkey: str
@@ -189,6 +201,15 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         # Calculate score for the speed of the response
+        bt.logging.debug(
+            f"Calculating speed_score for {hotkey} with response_time: {response_time} and timeout {self.timeout}"
+        )
+        if response_time > self.timeout:
+            bt.logging.debug(
+                f"Received response time {response_time} larger than timeout {self.timeout}, setting response_time to timeout value"
+            )
+            response_time = self.timeout
+
         speed_score = 1.0 - (response_time / self.timeout)
 
         # Calculate score for the number of engines used
