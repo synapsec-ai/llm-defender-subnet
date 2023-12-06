@@ -130,6 +130,7 @@ def main(validator: PromptInjectionValidator):
                 f"Current step: {step}. Current block: {current_block}. Last updated block: {last_updated_block}"
             )
             if current_block - last_updated_block > 100:
+
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
 
@@ -149,6 +150,8 @@ def main(validator: PromptInjectionValidator):
                     bt.logging.success("Successfully set weights.")
                 else:
                     bt.logging.error("Failed to set weights.")
+                
+                last_updated_block = current_block
 
                 last_updated_block = current_block
 
