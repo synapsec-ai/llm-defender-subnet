@@ -144,10 +144,10 @@ class PromptInjectionValidator(BaseNeuron):
         bt.logging.debug(f"Target set to: {target}")
 
         for i, response in enumerate(responses):
-            bt.logging.debug(f"Processing response {i} with content: {response}")
+            bt.logging.debug(f"Processing response {i} from UID {processed_uids[i]} with content: {response}")
             # Set the score for empty responses to 0
             if not response.output:
-                bt.logging.debug(f"Received an empty response: {response}")
+                bt.logging.debug(f"Received an empty response from UID {processed_uids[i]}: {response}")
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
