@@ -114,12 +114,10 @@ def main(validator: PromptInjectionValidator):
             bt.logging.info(f"Received responses: {responses}")
 
             # Process the responses
-            validator.process_responses(query=query, responses=responses)
-
+            processed_uids = torch.nonzero(uids_to_filter).squeeze()
+            validator.process_responses(query=query, processed_uids=processed_uids, responses=responses)
 
             # Print stats
-
-            processed_uids = torch.nonzero(uids_to_filter).squeeze()
             bt.logging.debug(f'Scores: {validator.scores}')
             bt.logging.debug(f'All UIDs: {validator.metagraph.uids}')
             bt.logging.debug(f'Processed UIDs: {processed_uids}')
@@ -140,7 +138,7 @@ def main(validator: PromptInjectionValidator):
                 result = validator.subtensor.set_weights(
                     netuid=validator.neuron_config.netuid,  # Subnet to set weights on.
                     wallet=validator.wallet,  # Wallet to sign set weights using hotkey.
-                    uids=processed_uids,  # Uids of the miners to set weights for.
+                    uids=validator.metagraph.uids,  # Uids of the miners to set weights for.
                     weights=weights,  # Weights to set for the miners.
                     wait_for_inclusion=True,
                 )
