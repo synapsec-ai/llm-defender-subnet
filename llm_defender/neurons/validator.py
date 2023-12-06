@@ -118,9 +118,11 @@ def main(validator: PromptInjectionValidator):
 
 
             # Print stats
+
+            processed_uids = torch.nonzero(uids_to_filter).squeeze()
             bt.logging.debug(f'Scores: {validator.scores}')
             bt.logging.debug(f'All UIDs: {validator.metagraph.uids}')
-            bt.logging.debug(f'Processed UIDs: kukkuu')
+            bt.logging.debug(f'Processed UIDs: {processed_uids}')
             
             bt.logging.debug(f"Current step: {step}")
             # Periodically update the weights on the Bittensor blockchain.
@@ -138,7 +140,7 @@ def main(validator: PromptInjectionValidator):
                 result = validator.subtensor.set_weights(
                     netuid=validator.neuron_config.netuid,  # Subnet to set weights on.
                     wallet=validator.wallet,  # Wallet to sign set weights using hotkey.
-                    uids=validator.metagraph.uids,  # Uids of the miners to set weights for.
+                    uids=processed_uids,  # Uids of the miners to set weights for.
                     weights=weights,  # Weights to set for the miners.
                     wait_for_inclusion=True,
                 )
