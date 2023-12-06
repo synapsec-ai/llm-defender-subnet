@@ -31,7 +31,7 @@ class HeuristicsEngine(BaseEngine):
         self.confidence = 0.5
         self.engine_data = []
         self.sub_engines = [
-            {"sub_engine": self.SqlSubEngine(prompt=self.prompt, weight=0.3)},
+            #{"sub_engine": self.SqlSubEngine(prompt=self.prompt, weight=0.3)},
             {"sub_engine": self.YaraSubEngine(prompt=self.prompt, weight=0.7)}
         ]
 
@@ -144,16 +144,6 @@ class HeuristicsEngine(BaseEngine):
             output = model.generate(input_tensor, max_length=256, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
 
             decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
-
-            model = None
-            tokenizer = None
-            input_tensor = None
-            output = None
-
-            del model
-            del tokenizer
-            del input_tensor
-            del output
 
             return decoded_output[len(self.prompt):].strip()
 
