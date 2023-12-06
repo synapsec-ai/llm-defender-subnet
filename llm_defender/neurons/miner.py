@@ -80,7 +80,7 @@ def main(miner: PromptInjectionMiner):
 if __name__ == "__main__":
     # Parse command line arguments
     parser = ArgumentParser()
-    parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid")
+    parser.add_argument("--netuid", type=int, default=14, help="The chain subnet uid")
     parser.add_argument(
         "--logging.logging_dir",
         type=str,

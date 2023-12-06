@@ -189,6 +189,11 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         # Calculate score for the speed of the response
+        bt.logging.debug(f'Calculating speed_score for {hotkey} with response_time: {response_time} and timeout {self.timeout}')
+        if (response_time > self.timeout):
+            bt.logging.debug(f'Received response time {response_time} larger than timeout {self.timeout}, setting response_time to timeout value')
+            response_time = self.timeout
+    
         speed_score = 1.0 - (response_time / self.timeout)
 
         # Calculate score for the number of engines used
