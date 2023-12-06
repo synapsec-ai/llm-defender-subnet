@@ -35,6 +35,9 @@ class PromptInjectionMiner(BaseNeuron):
         self.neuron_config = self.config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet, bt.axon]
         )
+
+        self.set_miner_weights = parser.miner_set_weights
+
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:

@@ -5,6 +5,7 @@ import time
 from argparse import ArgumentParser
 import traceback
 import bittensor as bt
+import torch
 
 from llm_defender.core.miners.miner import PromptInjectionMiner
 
@@ -45,15 +46,44 @@ def main(miner: PromptInjectionMiner):
     )
 
     step = 0
+    last_updated_block = 0
     while True:
         try:
             # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
             if step % 5 == 0:
+                # Periodically update the weights on the Bittensor blockchain.
+                current_block = miner.subtensor.block
+                if (
+                    current_block - last_updated_block > 100
+                    and miner.set_miner_weights == True
+                ):
+                    weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
+                    weights[miner.miner_uid] = 1.0
+
+                    bt.logging.debug(
+                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}"
+                    )
+
+                    result = miner.subtensor.set_weights(
+                        netuid=miner.neuron_config.netuid,  # Subnet to set weights on.
+                        wallet=miner.wallet,  # Wallet to sign set weights using hotkey.
+                        uids=miner.metagraph.uids,  # Uids of the miners to set weights for.
+                        weights=weights,  # Weights to set for the miners.
+                        wait_for_inclusion=True,
+                    )
+
+                    if result:
+                        bt.logging.success("Successfully set weights.")
+                    else:
+                        bt.logging.error("Failed to set weights.")
+
+                    last_updated_block = miner.subtensor.block
+
                 bt.logging.debug(
                     f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
                 )
-                
+
                 miner.metagraph.sync(subtensor=miner.subtensor)
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
@@ -94,9 +124,14 @@ if __name__ == "__main__":
         help="Provide the log directory",
     )
 
-    # Create a miner based on the Class definitions
-    subnet_miner = PromptInjectionMiner(
-        parser=parser
+    parser.add_argument(
+        "--miner_set_weights",
+        type=bool,
+        default=True,
+        help="Determines if miner should set weights or not",
     )
+
+    # Create a miner based on the Class definitions
+    subnet_miner = PromptInjectionMiner(parser=parser)
 
     main(subnet_miner)
