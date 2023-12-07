@@ -154,7 +154,7 @@ run_neuron() {
 # Parse arguments and assign to associative array
 parse_arguments "$@"
 
-local profile="${args['profile']}"
+profile="${args['profile']}"
 
 check_python_and_venv
 echo "Python venv checks completed. Sleeping 2 seconds."
