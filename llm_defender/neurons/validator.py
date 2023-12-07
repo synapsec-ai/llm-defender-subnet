@@ -19,16 +19,16 @@ def main(validator: PromptInjectionValidator):
     # Step 7: The Main Validation Loop
     bt.logging.info("Starting validator loop")
 
-    step = 0
-    last_updated_block = 0
     while True:
         try:
-            # Periodically sync subtensor state
-            if step % 5 == 0:
+            # Periodically sync subtensor status and save the state file
+            if validator.step % 5 == 0:
                 bt.logging.debug(
                     f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
                 )
                 validator.metagraph.sync(subtensor=validator.subtensor)
+                # Save state
+                validator.save_state()
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -127,15 +127,14 @@ def main(validator: PromptInjectionValidator):
             # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
             bt.logging.debug(
-                f"Current step: {step}. Current block: {current_block}. Last updated block: {last_updated_block}"
+                f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
-            if current_block - last_updated_block > 100:
-
+            if current_block - validator.last_updated_block > 100:
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
 
                 bt.logging.debug(
-                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={weights}"
+                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={weights}, version_key={validator.subnet_version}"
                 )
                 # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
                 # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
@@ -144,19 +143,22 @@ def main(validator: PromptInjectionValidator):
                     wallet=validator.wallet,  # Wallet to sign set weights using hotkey.
                     uids=validator.metagraph.uids,  # Uids of the miners to set weights for.
                     weights=weights,  # Weights to set for the miners.
-                    wait_for_inclusion=True,
+                    wait_for_inclusion=False,
+                    version_key=validator.subnet_version
                 )
                 if result:
                     bt.logging.success("Successfully set weights.")
                 else:
                     bt.logging.error("Failed to set weights.")
-                
-                last_updated_block = current_block
 
-                last_updated_block = current_block
+                # Update validators knowledge of the last updated block
+                validator.last_updated_block = current_block
+
+                # We also want to save the state after we've updated the weights
+                validator.save_state()
 
             # End the current step and prepare for the next iteration.
-            step += 1
+            validator.step += 1
             # Resync our local state with the latest state from the blockchain.
             validator.metagraph = validator.subtensor.metagraph(
                 validator.neuron_config.netuid
@@ -190,11 +192,12 @@ if __name__ == "__main__":
         help="The weight moving average scoring.",
     )
     parser.add_argument("--netuid", type=int, default=14, help="The chain subnet uid.")
+
     parser.add_argument(
-        "--logging.logging_dir",
-        type=str,
-        default="/var/log/bittensor",
-        help="Provide the log directory",
+        "--load_state",
+        type=bool,
+        default=True,
+        help="WARNING: Setting this value to False clears the old state.",
     )
 
     # Create a validator based on the Class definitions and initialize it

@@ -45,24 +45,23 @@ def main(miner: PromptInjectionMiner):
         "Miner has been initialized and we are connected to the network. Start main loop."
     )
 
-    step = 0
-    last_updated_block = 0
+    # When we init, set last_updated_block to current_block
+    miner.last_updated_block = miner.subtensor.block
     while True:
         try:
-            # TODO(developer): Define any additional operations to be performed by the miner.
             # Below: Periodically update our knowledge of the network graph.
-            if step % 5 == 0:
+            if miner.step % 5 == 0:
                 # Periodically update the weights on the Bittensor blockchain.
                 current_block = miner.subtensor.block
                 if (
-                    current_block - last_updated_block > 100
+                    current_block - miner.last_updated_block > 100
                     and miner.set_miner_weights == True
                 ):
                     weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
                     weights[miner.miner_uid] = 1.0
 
                     bt.logging.debug(
-                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}"
+                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}, version_key={miner.subnet_version}"
                     )
 
                     result = miner.subtensor.set_weights(
@@ -70,7 +69,8 @@ def main(miner: PromptInjectionMiner):
                         wallet=miner.wallet,  # Wallet to sign set weights using hotkey.
                         uids=miner.metagraph.uids,  # Uids of the miners to set weights for.
                         weights=weights,  # Weights to set for the miners.
-                        wait_for_inclusion=True,
+                        wait_for_inclusion=False,
+                        version_key=miner.subnet_version
                     )
 
                     if result:
@@ -78,16 +78,18 @@ def main(miner: PromptInjectionMiner):
                     else:
                         bt.logging.error("Failed to set weights.")
 
-                    last_updated_block = miner.subtensor.block
+                    miner.last_updated_block = miner.subtensor.block
 
-                bt.logging.debug(
-                    f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
-                )
+                if miner.step % 100 == 0:
+                    bt.logging.debug(
+                        f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
+                    )
 
-                miner.metagraph.sync(subtensor=miner.subtensor)
+                    miner.metagraph.sync(subtensor=miner.subtensor)
+
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
-                    f"Step:{step} | "
+                    f"Step:{miner.step} | "
                     f"Block:{miner.metagraph.block.item()} | "
                     f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
                     f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
@@ -98,7 +100,7 @@ def main(miner: PromptInjectionMiner):
                 )
 
                 bt.logging.info(log)
-            step += 1
+            miner.step += 1
             time.sleep(1)
 
         # If someone intentionally stops the miner, it'll safely terminate operations.

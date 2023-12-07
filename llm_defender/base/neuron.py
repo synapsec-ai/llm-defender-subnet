@@ -9,11 +9,10 @@ Typical example usage:
     miner = MinerNeuron(profile="miner")
     miner.run()
 """
-import sys
 from argparse import ArgumentParser
 from os import path, makedirs
-from pathlib import PurePath
 import bittensor as bt
+from llm_defender import __spec_version__ as subnet_version
 
 
 class BaseNeuron:
@@ -22,16 +21,20 @@ class BaseNeuron:
     Class description
 
     Attributes:
-        parser: 
+        parser:
             Instance of ArgumentParser with the arguments given as
             command-line arguments in the execution script
-        profile: 
+        profile:
             Instance of str depicting the profile for the neuron
     """
 
     def __init__(self, parser: ArgumentParser, profile: str) -> None:
         self.parser = parser
         self.profile = profile
+        self.step = 0
+        self.last_updated_block = 0
+        self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
+        self.subnet_version = subnet_version
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -39,21 +42,21 @@ class BaseNeuron:
         This function attaches the configuration parameters to the
         necessary bittensor classes and initializes the logging for the
         neuron.
-        
+
         Args:
             bt_classes:
                 A list of Bittensor classes the apply the configuration
-                to 
+                to
 
         Returns:
-            config: 
+            config:
                 An instance of Bittensor config class containing the
                 neuron configuration
 
         Raises:
-            AttributeError: 
-                An error occurred during the configuration process 
-            OSError: 
+            AttributeError:
+                An error occurred during the configuration process
+            OSError:
                 Unable to create a log path.
 
         """
@@ -69,15 +72,7 @@ class BaseNeuron:
         config = bt.config(self.parser)
 
         # Construct log path
-        log_path = f"{config.logging.logging_dir}/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
-
-        # Ensure the log path is valid
-        if (
-            not path.abspath(log_path).startswith(config.logging.logging_dir)
-            or not PurePath(log_path).is_absolute()
-        ):
-            bt.logging.error(f"Provided an invalid log path: {log_path}")
-            raise AttributeError(f"Provided an invalid log path: {log_path}")
+        log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
 
         # Create the log path if it does not exists
         try:
