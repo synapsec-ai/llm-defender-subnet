@@ -163,7 +163,7 @@ class PromptInjectionMiner(BaseNeuron):
         engines = [
             heuristics.HeuristicsEngine(prompt=synapse.prompt),
             text_classification.TextClassificationEngine(prompt=synapse.prompt),
-            vector_search.VectorEngine(prompt=synapse.prompt, db_path="/tmp/chromadb/"),
+            vector_search.VectorEngine(prompt=synapse.prompt),
         ]
 
         engine_confidences = []

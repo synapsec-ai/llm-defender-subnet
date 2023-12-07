@@ -4,6 +4,7 @@ feature of the llm-defender-subnet.
 """
 import sys
 import uuid
+from os import path
 import chromadb
 import bittensor as bt
 from datasets import load_dataset
@@ -42,24 +43,75 @@ class VectorEngine(BaseEngine):
 
     def __init__(
         self,
-        db_path: str,
         prompt: str,
         result_count: int = 2,
         threshold: float = 1.0,
         engine_name="Vector Search",
+        prepare_only=False
     ):
         super().__init__(prompt, engine_name)
 
         self.result_count = result_count
         self.threshold = threshold
-        self.db_path = db_path
-        self.collection = self.get_collection()
-        self.engine_data = self.execute_query()
-        self.confidence = self.calculate_confidence()
+        self.db_path = f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"
+        
+        if not prepare_only:
+            self.collection = self.get_collection()
+            self.engine_data = self.execute_query()
+            self.confidence = self.calculate_confidence()
 
-        if 0.0 <= self.confidence >= 1.0:
-            bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
-            self.confidence = 0.0
+            if 0.0 <= self.confidence >= 1.0:
+                bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
+                self.confidence = 0.0
+
+    def prepare(self) -> bool:
+        """This function is used by prep.py
+        
+        The prep.py executes the prepare methods from all engines before
+        the miner is launched. If you change the models used by the
+        engines, you must also change this prepare function to match.
+
+        For the vector search engine, the accuracy is highly dependent
+        of the contents in the vector database. As a part of the
+        fine-tuning of the engines, it is recommended to adjust what
+        information is loaded into the chromadb as this code is
+        executed.
+        """
+        try:
+            client = chromadb.PersistentClient(path=self.db_path)
+            collection = client.get_or_create_collection(
+                name="prompt-injection-strings"
+            )
+        except Exception as e:
+            print(f"Unable to initialize chromadb: {e}")
+            return False
+
+        try:
+            # If we have already initialized the chromadb, we do not need to populate it
+            if collection.count() > 0:
+                return True
+
+            # Populate chromadb
+            dataset = load_dataset("deepset/prompt-injections", split="train", cache_dir=self.cache_dir)
+
+            collection.add(
+                documents=dataset["text"],
+                ids=[str(uuid.uuid4()) for _ in range(len(dataset["text"]))],
+            )
+
+            # Dummy query to trigger the download of the cached onnx model
+            collection.query(
+                query_texts="foo",
+                n_results=1,
+                include=["documents", "distances"],
+            )
+
+        except Exception as e:
+            print(f'Error: {e}')
+            return False
+        
+        return True
+
 
     def get_collection(self) -> chromadb.Collection:
         """Returns the chromadb collection.
@@ -71,25 +123,12 @@ class VectorEngine(BaseEngine):
         """
         try:
             client = chromadb.PersistentClient(path=self.db_path)
-            collection = client.get_or_create_collection(
+            collection = client.get_collection(
                 name="prompt-injection-strings"
             )
         except Exception as e:
-            bt.logging.error(f"Unable to initialize chromadb: {e}")
+            bt.logging.error(f"Unable to get collection from chromadb: {e}")
             sys.exit()
-
-        if collection.count() > 0:
-            bt.logging.debug(f"Using an existing chromadb in path: {self.db_path}")
-            return collection
-
-        bt.logging.info(f"Creating a new chromadb in path: {self.db_path}")
-
-        dataset = load_dataset("deepset/prompt-injections", split="train")
-
-        collection.add(
-            documents=dataset["text"],
-            ids=[str(uuid.uuid4()) for _ in range(len(dataset["text"]))],
-        )
 
         return collection
 
@@ -104,6 +143,7 @@ class VectorEngine(BaseEngine):
             displaying the query results.
         """
 
+        print("kukkuu")
         try:
             query_result = self.collection.query(
                 query_texts=self.prompt,
@@ -116,6 +156,8 @@ class VectorEngine(BaseEngine):
         bt.logging.debug(
             f"Query to chromadb collection executed, results: {query_result}"
         )
+
+        print("kakkuu")
         return query_result
 
     def calculate_confidence(self) -> float:

@@ -30,9 +30,12 @@ parse_arguments() {
 
 pull_repo_and_checkout_branch() {
     local branch="${args['branch']}"
+    local script_path="scripts/run.sh"
+
+    initial_hash=$(md5sum "$script_path" | awk '{ print $1 }')
 
     # Pull the latest repository
-    git pull
+    git pull --all
 
     # Change to the specified branch if provided
     if [[ -n "$branch" ]]; then
@@ -40,7 +43,17 @@ pull_repo_and_checkout_branch() {
         git checkout "$branch" || { echo "Branch '$branch' does not exist."; exit 1; }
     fi
 
-    git pull
+    local current_branch=$(git symbolic-ref --short HEAD)
+    git fetch &>/dev/null  # Silence output from fetch command
+    if ! git rev-parse --quiet --verify "origin/$current_branch" >/dev/null; then
+        echo "You are using a branch that does not exists in remote. Make sure your local branch is up-to-date with the latest version in the main branch."
+    fi
+
+    current_hash=$(md5sum "$script_path" | awk '{ print $1 }')
+
+    if [ "$initial_hash" != "$current_hash" ]; then
+        echo "The run.sh script has changed, exiting and letting pm2 to relaunch with the updated script"
+        exit 2
 }
 
 install_packages() {
@@ -63,6 +76,18 @@ install_packages() {
     fi
 
     echo "Packages installed successfully"
+}
+
+run_preparation() {
+    echo "Executing the preparation script"
+    python scripts/prep.py
+
+    if [ $? -eq 1]; then
+        echo "Preparation script did not execute correctly"
+        exit 1
+    fi
+    
+    echo "Preparation script executed correctly"
 }
 
 run_neuron() {
@@ -121,5 +146,7 @@ sleep 2
 install_packages
 echo "Installation done. Sleeping 2 seconds."
 sleep 2
+run_preparation
+echo "Preparation done. Sleeping 2 seconds."
 echo "Running neutron"
 run_neuron

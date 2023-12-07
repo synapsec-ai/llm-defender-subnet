@@ -194,10 +194,11 @@ class HeuristicsEngine(BaseEngine):
             prompt: str,
             weight: float,
             name: str = "yara",
-            rule_glob: str = f"{os.path.dirname(__file__)}/yara_rules/*.yar",
+            rule_glob: str = f"{os.path.dirname(__file__)}/yara_rules/*.yar"
         ):
             super().__init__(prompt=prompt, name=name, weight=weight)
-
+            
+            self.compiled_rules = f"{os.path.expanduser('~')}/.llm-defender-subnet/yara_compiled_rules"
             self.rule_glob = rule_glob
 
         def invoke(self) -> bool:
@@ -206,8 +207,13 @@ class HeuristicsEngine(BaseEngine):
 
             return True
 
-        def compile_and_match(self) -> list:
-            """Compiles and performs matching for YARA rules"""
+        def prepare(self) -> bool:
+            """This function is used by prep.py
+        
+            The prep.py executes the prepare methods from all engines before
+            the miner is launched. If you change the models used by the
+            engines, you must also change this prepare function to match.
+            """
 
             try:
                 rule_files = glob.glob(self.rule_glob)
@@ -215,10 +221,22 @@ class HeuristicsEngine(BaseEngine):
                     file: open(file, "r", encoding="utf-8").read()
                     for file in rule_files
                 }
-                bt.logging.debug(f'Loaded YARA rules: {rule_files}')
                 compiled_rules = yara.compile(sources=yara_rules)
+
+                compiled_rules.save(self.compiled_rules)
+
+                return True
             except Exception as e:
-                bt.logging.error(f"Unable to load and compile YARA rules: {e}")
+                print(f'Error: {e}')
+                return False
+
+
+        def compile_and_match(self) -> list:
+            """Compiles and performs matching for YARA rules"""
+
+            bt.logging.debug(f'Loading yara from rules file: {self.compiled_rules}')
+
+            compiled_rules = yara.load(self.compiled_rules)
             
             matches = compiled_rules.match(data=self.prompt)
 
