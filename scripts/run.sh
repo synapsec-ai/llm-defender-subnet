@@ -155,6 +155,8 @@ run_neuron() {
 parse_arguments "$@"
 
 check_python_and_venv
+echo "Python venv checks completed. Sleeping 2 seconds."
+sleep 2
 pull_repo_and_checkout_branch
 echo "Repo pulled and branch checkout done. Sleeping 2 seconds."
 sleep 2
