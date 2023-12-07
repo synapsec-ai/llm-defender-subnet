@@ -45,6 +45,8 @@ def main(miner: PromptInjectionMiner):
         "Miner has been initialized and we are connected to the network. Start main loop."
     )
 
+    # When we init, set last_updated_block to current_block
+    miner.last_updated_block = miner.subtensor.block
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
@@ -53,7 +55,7 @@ def main(miner: PromptInjectionMiner):
                 current_block = miner.subtensor.block
                 if (
                     current_block - miner.last_updated_block > 100
-                    and miner.set_miner_weights == True and miner.step > 1200
+                    and miner.set_miner_weights == True
                 ):
                     weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
                     weights[miner.miner_uid] = 1.0
