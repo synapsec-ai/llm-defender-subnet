@@ -70,6 +70,7 @@ def main(miner: PromptInjectionMiner):
                         uids=miner.metagraph.uids,  # Uids of the miners to set weights for.
                         weights=weights,  # Weights to set for the miners.
                         wait_for_inclusion=False,
+                        version_key=miner.subnet_version
                     )
 
                     if result:

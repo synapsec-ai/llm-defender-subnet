@@ -11,8 +11,8 @@ Typical example usage:
 """
 from argparse import ArgumentParser
 from os import path, makedirs
-from pathlib import PurePath
 import bittensor as bt
+from llm_defender import __spec_version__ as subnet_version
 
 
 class BaseNeuron:
@@ -21,10 +21,10 @@ class BaseNeuron:
     Class description
 
     Attributes:
-        parser: 
+        parser:
             Instance of ArgumentParser with the arguments given as
             command-line arguments in the execution script
-        profile: 
+        profile:
             Instance of str depicting the profile for the neuron
     """
 
@@ -34,6 +34,7 @@ class BaseNeuron:
         self.step = 0
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
+        self.subnet_version = subnet_version
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -41,21 +42,21 @@ class BaseNeuron:
         This function attaches the configuration parameters to the
         necessary bittensor classes and initializes the logging for the
         neuron.
-        
+
         Args:
             bt_classes:
                 A list of Bittensor classes the apply the configuration
-                to 
+                to
 
         Returns:
-            config: 
+            config:
                 An instance of Bittensor config class containing the
                 neuron configuration
 
         Raises:
-            AttributeError: 
-                An error occurred during the configuration process 
-            OSError: 
+            AttributeError:
+                An error occurred during the configuration process
+            OSError:
                 Unable to create a log path.
 
         """
@@ -72,7 +73,7 @@ class BaseNeuron:
 
         # Construct log path
         log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
-        
+
         # Create the log path if it does not exists
         try:
             config.full_path = path.expanduser(log_path)
