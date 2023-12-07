@@ -1,6 +1,19 @@
 #!/bin/bash
 declare -A args
 
+check_python_and_venv() {
+    if [ -n "$VIRTUAL_ENV" ]; then
+        echo "Virtual environment is activated: $VIRTUAL_ENV"
+    else
+        echo "WARNING: Virtual environment is not activated. It is recommended to run this script in a python venv."
+    fi
+
+    if ! python --version "$1" &>/dev/null; then
+        echo "Python is not available. Make sure Python is installed and venv has been activated."
+        exit 1
+    fi
+}
+
 parse_arguments() {
 
     while [[ $# -gt 0 ]]; do
@@ -141,6 +154,7 @@ run_neuron() {
 # Parse arguments and assign to associative array
 parse_arguments "$@"
 
+check_python_and_venv
 pull_repo_and_checkout_branch
 echo "Repo pulled and branch checkout done. Sleeping 2 seconds."
 sleep 2
