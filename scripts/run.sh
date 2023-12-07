@@ -83,7 +83,7 @@ run_preparation() {
     echo "Executing the preparation script"
     python scripts/prep.py
 
-    if [ $? -eq 1]; then
+    if [ $? -eq 1 ]; then
         echo "Preparation script did not execute correctly"
         exit 1
     fi
