@@ -9,7 +9,7 @@ check_python_and_venv() {
     fi
 
     if ! python --version "$1" &>/dev/null; then
-        echo "Python is not available. Make sure Python is installed and venv has been activated."
+        echo "ERROR: Python is not available. Make sure Python is installed and venv has been activated."
         exit 1
     fi
 }
