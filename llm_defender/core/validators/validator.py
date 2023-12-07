@@ -8,6 +8,7 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+import copy
 from argparse import ArgumentParser
 from typing import Tuple
 import torch
@@ -37,6 +38,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.dendrite = None
         self.metagraph = None
         self.scores = None
+        self.hotkeys = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -73,6 +75,8 @@ class PromptInjectionValidator(BaseNeuron):
         except AttributeError as e:
             bt.logging.error(f"Unable to setup bittensor objects: {e}")
             raise AttributeError from e
+
+        self.hotkeys = copy.deepcopy(metagraph.hotkeys)
 
         return wallet, subtensor, dendrite, metagraph
 
@@ -125,6 +129,12 @@ class PromptInjectionValidator(BaseNeuron):
         self.dendrite = dendrite
         self.metagraph = metagraph
         self.scores = scores
+
+        # Read command line arguments and perform actions based on them
+        args = self.parser.parse_args()
+
+        if args.load_state:
+            self.load_state()
 
         return True
 
@@ -279,3 +289,29 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         return prompt
+
+    def save_state(self):
+        """Saves the state of the validator to a file."""
+        bt.logging.info("Saving validator state.")
+
+        # Save the state of the validator to file.
+        torch.save(
+            {
+                "step": self.step,
+                "scores": self.scores,
+                "hotkeys": self.hotkeys,
+                "last_updated_block": self.last_updated_block
+            },
+            self.neuron_config.full_path + "/state.pt",
+        )
+
+    def load_state(self):
+        """Loads the state of the validator from a file."""
+        bt.logging.info("Loading validator state.")
+
+        # Load the state of the validator from file.
+        state = torch.load(self.neuron_config.full_path + "/state.pt")
+        self.step = state["step"]
+        self.scores = state["scores"]
+        self.hotkeys = state["hotkeys"]
+        self.last_updated_block = state["last_updated_block"]

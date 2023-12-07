@@ -19,12 +19,10 @@ def main(validator: PromptInjectionValidator):
     # Step 7: The Main Validation Loop
     bt.logging.info("Starting validator loop")
 
-    step = 0
-    last_updated_block = 0
     while True:
         try:
             # Periodically sync subtensor state
-            if step % 5 == 0:
+            if validator.step % 5 == 0:
                 bt.logging.debug(
                     f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
                 )
@@ -127,10 +125,9 @@ def main(validator: PromptInjectionValidator):
             # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
             bt.logging.debug(
-                f"Current step: {step}. Current block: {current_block}. Last updated block: {last_updated_block}"
+                f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
-            if current_block - last_updated_block > 100:
-
+            if current_block - validator.last_updated_block > 100:
                 weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
                 bt.logging.info(f"Setting weights: {weights}")
 
@@ -150,13 +147,15 @@ def main(validator: PromptInjectionValidator):
                     bt.logging.success("Successfully set weights.")
                 else:
                     bt.logging.error("Failed to set weights.")
-                
-                last_updated_block = current_block
 
-                last_updated_block = current_block
+                # Update validators knowledge of the last updated block
+                validator.last_updated_block = current_block
+
+                # Save state
+                validator.save_state()
 
             # End the current step and prepare for the next iteration.
-            step += 1
+            validator.step += 1
             # Resync our local state with the latest state from the blockchain.
             validator.metagraph = validator.subtensor.metagraph(
                 validator.neuron_config.netuid
@@ -195,6 +194,13 @@ if __name__ == "__main__":
         type=str,
         default="/var/log/bittensor",
         help="Provide the log directory",
+    )
+
+    parser.add_argument(
+        "--load_state",
+        type=bool,
+        default=True,
+        help="WARNING: Setting this value to False clears the old state.",
     )
 
     # Create a validator based on the Class definitions and initialize it

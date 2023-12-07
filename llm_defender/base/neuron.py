@@ -32,6 +32,8 @@ class BaseNeuron:
     def __init__(self, parser: ArgumentParser, profile: str) -> None:
         self.parser = parser
         self.profile = profile
+        self.step = 0
+        self.last_updated_block = 0
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
