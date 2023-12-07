@@ -54,6 +54,7 @@ pull_repo_and_checkout_branch() {
     if [ "$initial_hash" != "$current_hash" ]; then
         echo "The run.sh script has changed, exiting and letting pm2 to relaunch with the updated script"
         exit 2
+    fi
 }
 
 install_packages() {
