@@ -33,7 +33,7 @@ class BaseNeuron:
         self.profile = profile
         self.step = 0
         self.last_updated_block = 0
-        self.base_path = f"{path.expanduser}/.llm-defender-subnet"
+        self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
