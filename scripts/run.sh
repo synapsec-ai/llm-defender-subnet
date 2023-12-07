@@ -116,7 +116,7 @@ run_neuron() {
     profile="$PROFILE"
     netuid="$NETUID"
 
-    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
+    if [[ -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
         echo "netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
