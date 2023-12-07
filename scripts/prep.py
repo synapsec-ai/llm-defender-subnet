@@ -2,6 +2,7 @@
 This script prepares the engines before miner is executed.
 """
 import sys
+import os
 from llm_defender.core.miners.engines.prompt_injection import (
     text_classification,
     vector_search,
@@ -12,6 +13,11 @@ from llm_defender.core.miners.engines.prompt_injection import (
 def prepare_engines():
     """Prepare the engines"""
     # Prepare text classification engine
+
+    # Make directories
+    if not os.path.exists(f"{os.path.expanduser('~')}/.llm-defender-subnet"):
+        os.makedirs(f"{os.path.expanduser('~')}/.llm-defender-subnet")
+    
     text_classification_engine = text_classification.TextClassificationEngine(
         prompt=None, prepare_only=True
     )

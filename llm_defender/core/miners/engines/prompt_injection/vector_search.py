@@ -56,6 +56,7 @@ class VectorEngine(BaseEngine):
         self.db_path = f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"
         
         if not prepare_only:
+            self.prepare()
             self.collection = self.get_collection()
             self.engine_data = self.execute_query()
             self.confidence = self.calculate_confidence()

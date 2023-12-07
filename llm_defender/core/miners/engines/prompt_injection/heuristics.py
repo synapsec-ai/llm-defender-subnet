@@ -201,6 +201,8 @@ class HeuristicsEngine(BaseEngine):
             self.compiled_rules = f"{os.path.expanduser('~')}/.llm-defender-subnet/yara_compiled_rules"
             self.rule_glob = rule_glob
 
+            self.prepare()
+
         def invoke(self) -> bool:
             self.output = self.compile_and_match()
             self.confidence = self.calculate_confidence()
