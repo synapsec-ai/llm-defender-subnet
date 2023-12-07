@@ -42,8 +42,9 @@ parse_arguments() {
 }
 
 pull_repo_and_checkout_branch() {
-    local branch="${args['branch']}"
     local script_path="scripts/run.sh"
+
+    branch="$BRANCH"
 
     initial_hash=$(md5sum "$script_path" | awk '{ print $1 }')
 
@@ -51,7 +52,7 @@ pull_repo_and_checkout_branch() {
     git pull --all
 
     # Change to the specified branch if provided
-    if [[ -n "$branch" ]]; then
+    if [[ -n "$branch" ]]; thenlocal
         echo "Switching to branch: $branch"
         git checkout "$branch" || { echo "Branch '$branch' does not exist."; exit 1; }
     fi
@@ -105,14 +106,15 @@ run_preparation() {
 }
 
 run_neuron() {
-    local profile="${args['profile']}"
-    local netuid="${args['netuid']}"
     local subtensor_chain_endpoint="${args['subtensor.chain_endpoint']}"
     local wallet_name="${args['wallet.name']}"
     local wallet_hotkey="${args['wallet.hotkey']}"
     local logging_value="${args['logging']}"
     local subtensor_network="${args['subtensor.network']}"
     local axon_port="${args['axon.port']}"
+
+    profile="$PROFILE"
+    netuid="$NETUID"
 
     if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
         echo "netuid, wallet.name, and wallet.hotkey are mandatory arguments."
