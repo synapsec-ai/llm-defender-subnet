@@ -8,9 +8,11 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+import copy
 from argparse import ArgumentParser
 from typing import Tuple
 import torch
+from os import path
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt
@@ -37,6 +39,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.dendrite = None
         self.metagraph = None
         self.scores = None
+        self.hotkeys = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -73,6 +76,8 @@ class PromptInjectionValidator(BaseNeuron):
         except AttributeError as e:
             bt.logging.error(f"Unable to setup bittensor objects: {e}")
             raise AttributeError from e
+
+        self.hotkeys = copy.deepcopy(metagraph.hotkeys)
 
         return wallet, subtensor, dendrite, metagraph
 
@@ -125,6 +130,12 @@ class PromptInjectionValidator(BaseNeuron):
         self.dendrite = dendrite
         self.metagraph = metagraph
         self.scores = scores
+
+        # Read command line arguments and perform actions based on them
+        args = self.parser.parse_args()
+
+        if args.load_state:
+            self.load_state()
 
         return True
 
@@ -279,3 +290,36 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         return prompt
+
+    def save_state(self):
+        """Saves the state of the validator to a file."""
+        bt.logging.info("Saving validator state.")
+
+        # Save the state of the validator to file.
+        torch.save(
+            {
+                "step": self.step,
+                "scores": self.scores,
+                "hotkeys": self.hotkeys,
+                "last_updated_block": self.last_updated_block
+            },
+            self.base_path + "/state.pt",
+        )
+
+        bt.logging.debug(f'Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}')
+
+    def load_state(self):
+        """Loads the state of the validator from a file."""
+
+        # Load the state of the validator from file.
+        state_path = self.base_path + "/state.pt"
+        if path.exists(state_path):
+            bt.logging.info("Loading validator state.")
+            state = torch.load(state_path)
+            bt.logging.debug(f'Loaded the following state from file: {state}')
+            self.step = state["step"]
+            self.scores = state["scores"]
+            self.hotkeys = state["hotkeys"]
+            self.last_updated_block = state["last_updated_block"]
+        else:
+            bt.logging.info("Validator state not found. Starting with default values.")
