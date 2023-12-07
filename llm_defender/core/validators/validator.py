@@ -306,6 +306,8 @@ class PromptInjectionValidator(BaseNeuron):
             self.base_path + "/state.pt",
         )
 
+        bt.logging.debug(f'Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}')
+
     def load_state(self):
         """Loads the state of the validator from a file."""
 
@@ -314,6 +316,7 @@ class PromptInjectionValidator(BaseNeuron):
         if path.exists(state_path):
             bt.logging.info("Loading validator state.")
             state = torch.load(state_path)
+            bt.logging.debug(f'Loaded the following state from file: {state}')
             self.step = state["step"]
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
