@@ -52,7 +52,7 @@ pull_repo_and_checkout_branch() {
     git pull --all
 
     # Change to the specified branch if provided
-    if [[ -n "$branch" ]]; thenlocal
+    if [[ -n "$branch" ]]; then
         echo "Switching to branch: $branch"
         git checkout "$branch" || { echo "Branch '$branch' does not exist."; exit 1; }
     fi

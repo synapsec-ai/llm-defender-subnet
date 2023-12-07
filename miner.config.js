@@ -6,7 +6,7 @@ module.exports = {
             script: "./scripts/run.sh",
             watch: ["./llm_defender", "./scripts/run.sh", "./scripts/prep.py", "setup.cfg"],
             env: {
-                "branch": "main",
+                "branch": "dev/auto_update_and_prepare_script",
                 "netuid": "14",
                 "profile": "miner"
             },
