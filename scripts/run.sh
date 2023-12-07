@@ -154,6 +154,8 @@ run_neuron() {
 # Parse arguments and assign to associative array
 parse_arguments "$@"
 
+local profile="${args['profile']}"
+
 check_python_and_venv
 echo "Python venv checks completed. Sleeping 2 seconds."
 sleep 2
@@ -163,7 +165,11 @@ sleep 2
 install_packages
 echo "Installation done. Sleeping 2 seconds."
 sleep 2
-run_preparation
-echo "Preparation done. Sleeping 2 seconds."
+
+if [[ "$profile" == "miner" ]]; then
+    run_preparation
+    echo "Preparation done. Sleeping 2 seconds."
+fi
+
 echo "Running neutron"
 run_neuron

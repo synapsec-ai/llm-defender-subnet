@@ -32,7 +32,7 @@ $ pm2 start scripts/run.sh --name miner -- --branch main --netuid 14 --profile m
 
 Run validator:
 ```
-$ pm2 start scripts/run.sh --name validator -- --branch main --netuid 14 --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
+$ pm2 start scripts/run.sh --name validator -- --branch main --netuid 14 --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
 ```
 
 > [!WARNING]  
