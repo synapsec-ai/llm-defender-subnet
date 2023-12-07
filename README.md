@@ -27,13 +27,23 @@ $ sudo apt update && sudo apt install jq && sudo apt install npm && sudo npm ins
 
 Run miner:
 ```
-$ pm2 start scripts/run.sh --name miner -- --branch main --netuid 14 --profile miner --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
+$ pm2 start scripts/run.sh --name llm-defender-subnet-miner0 --watch ./llm-defender,./scripts -- --branch main --netuid 14 --profile miner --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
 ```
 
 Run validator:
 ```
-$ pm2 start scripts/run.sh --name validator -- --branch main --netuid 14 --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
+$ pm2 start scripts/run.sh --name llm-defender-subnet-validator0 --watch ./llm-defender,./scripts -- --branch main --netuid 14 --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
 ```
+
+Run auto-updater (only one instance needs to be running if multiple miners and/or validators are running):
+```
+$ pm2 start updater.config.js
+```
+
+> [!WARNING]  
+> The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
+
+
 ## Capabilities
 The subnet contains the following capabilities and engines
 - [Prompt Injection](https://llmtop10.com/llm01/)

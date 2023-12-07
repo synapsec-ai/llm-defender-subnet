@@ -3,6 +3,7 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 import torch
+from os import path
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -33,10 +34,12 @@ class TextClassificationEngine(BaseEngine):
         self,
         prompt: str,
         engine_name: str = "Text Classification",
+        prepare_only=False
     ):
         super().__init__(prompt, engine_name)
 
-        self.engine_data = self.classification()
+        if not prepare_only:
+            self.engine_data = self.classification()
 
     def classification(self) -> list:
         """Perform text-classification for the prompt.
@@ -54,8 +57,8 @@ class TextClassificationEngine(BaseEngine):
             received from the classifier.
         """
 
-        tokenizer = AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection")
-        model = AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection")
+        tokenizer = AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
+        model = AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
 
         pipe = pipeline(
             "text-classification",
@@ -76,3 +79,22 @@ class TextClassificationEngine(BaseEngine):
         self.analyzed = True
 
         return [result[0]]
+
+    def prepare(self) -> bool:
+        """This function is used by prep.py
+        
+        The prep.py executes the prepare methods from all engines before
+        the miner is launched. If you change the models used by the
+        engines, you must also change this prepare function to match.
+        """
+
+        try:
+            
+            AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
+            AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
+            
+            return True
+        except Exception as e:
+            print(f'Error: {e}')
+            return False
+

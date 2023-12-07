@@ -3,6 +3,7 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 from llm_defender.base.utils import EngineResponse
+from os import path
 
 
 class BaseEngine:
@@ -21,6 +22,7 @@ class BaseEngine:
         self.analyzed = False
         self.engine_data = []
         self.engine_name = engine_name
+        self.cache_dir = f"{path.expanduser('~')}/.llm-defender-subnet/cache"
 
     def get_response(self) -> EngineResponse:
         """
