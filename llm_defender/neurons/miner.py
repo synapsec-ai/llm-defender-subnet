@@ -61,7 +61,7 @@ def main(miner: PromptInjectionMiner):
                     weights[miner.miner_uid] = 1.0
 
                     bt.logging.debug(
-                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}"
+                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}, version_key={miner.subnet_version}"
                     )
 
                     result = miner.subtensor.set_weights(
