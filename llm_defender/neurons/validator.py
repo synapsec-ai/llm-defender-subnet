@@ -143,7 +143,7 @@ def main(validator: PromptInjectionValidator):
                     wallet=validator.wallet,  # Wallet to sign set weights using hotkey.
                     uids=validator.metagraph.uids,  # Uids of the miners to set weights for.
                     weights=weights,  # Weights to set for the miners.
-                    wait_for_inclusion=True,
+                    wait_for_inclusion=False,
                 )
                 if result:
                     bt.logging.success("Successfully set weights.")
