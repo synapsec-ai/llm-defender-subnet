@@ -42,9 +42,8 @@ parse_arguments() {
 }
 
 pull_repo_and_checkout_branch() {
+    local branch="${args['branch']}"
     local script_path="scripts/run.sh"
-
-    branch="$BRANCH"
 
     initial_hash=$(md5sum "$script_path" | awk '{ print $1 }')
 
@@ -106,6 +105,8 @@ run_preparation() {
 }
 
 run_neuron() {
+    local profile="${args['profile']}"
+    local netuid="${args['netuid']}"
     local subtensor_chain_endpoint="${args['subtensor.chain_endpoint']}"
     local wallet_name="${args['wallet.name']}"
     local wallet_hotkey="${args['wallet.hotkey']}"
@@ -113,10 +114,7 @@ run_neuron() {
     local subtensor_network="${args['subtensor.network']}"
     local axon_port="${args['axon.port']}"
 
-    profile="$PROFILE"
-    netuid="$NETUID"
-
-    if [[ -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
+    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
         echo "netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
