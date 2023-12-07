@@ -143,7 +143,6 @@ class VectorEngine(BaseEngine):
             displaying the query results.
         """
 
-        print("kukkuu")
         try:
             query_result = self.collection.query(
                 query_texts=self.prompt,
@@ -157,7 +156,6 @@ class VectorEngine(BaseEngine):
             f"Query to chromadb collection executed, results: {query_result}"
         )
 
-        print("kakkuu")
         return query_result
 
     def calculate_confidence(self) -> float:
