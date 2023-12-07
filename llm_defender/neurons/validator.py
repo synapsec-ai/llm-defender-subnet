@@ -21,12 +21,14 @@ def main(validator: PromptInjectionValidator):
 
     while True:
         try:
-            # Periodically sync subtensor state
+            # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
                 bt.logging.debug(
                     f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
                 )
                 validator.metagraph.sync(subtensor=validator.subtensor)
+                # Save state
+                validator.save_state()
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -151,7 +153,7 @@ def main(validator: PromptInjectionValidator):
                 # Update validators knowledge of the last updated block
                 validator.last_updated_block = current_block
 
-                # Save state
+                # We also want to save the state after we've updated the weights
                 validator.save_state()
 
             # End the current step and prepare for the next iteration.
