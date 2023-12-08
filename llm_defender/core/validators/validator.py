@@ -32,7 +32,7 @@ class PromptInjectionValidator(BaseNeuron):
         super().__init__(parser=parser, profile="validator")
 
         self.max_engines = 3
-        self.timeout = 30
+        self.timeout = 12
         self.neuron_config = None
         self.wallet = None
         self.subtensor = None
