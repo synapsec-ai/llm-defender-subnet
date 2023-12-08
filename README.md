@@ -14,7 +14,7 @@ Due to the nature of the Bittensor network, the confidence score is a result of 
 
 ## Quickstart
 
-This repository requires python3.10 or higher.
+This repository requires python3.10 or higher and Ubuntu 22.04/Debian 12. It is highly recommended to spin up a fresh Ubuntu 22.04 or Debian 12 machine for running the subnet neurons. Upgrading from python3.8 to python3.10 on Ubuntu 20.04 is known to cause issues with the installation of the python modules required by the miners.
 
 > [!WARNING]  
 > We are recommending to use python virtual environment (venv) when running either the validator or miner. Make sure the virtual environment is active prior to launching the pm2 instance.
