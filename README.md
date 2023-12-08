@@ -29,6 +29,12 @@ $ sudo apt update && sudo apt install jq && sudo apt install npm \
 && sudo npm install pm2 -g && pm2 update
 ```
 
+If you are not familiar with Bittensor, you should first perform the following activities:
+- [Generate a new coldkey](https://docs.bittensor.com/getting-started/wallets#step-1-generate-a-coldkey)
+- [Generate a new hotkey under your new coldkey](https://docs.bittensor.com/getting-started/wallets#step-2-generate-a-hotkey)
+- [Register your new hotkey on our subnet 14](https://docs.bittensor.com/subnets/register-and-participate)
+
+
 Run miner:
 ```
 $ cd llm-defender-subnet
@@ -39,8 +45,8 @@ $ pm2 start scripts/run.sh \
 --branch main \
 --netuid 14 \
 --profile miner \
---wallet.name wallet_name \
---wallet.hotkey wallet_hotkey \
+--wallet.name YourColdkeyGoesHere \
+--wallet.hotkey YourHotkeyGoesHere \
 --axon.port 15000
 ```
 You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
@@ -55,8 +61,8 @@ $ pm2 start scripts/run.sh \
 --branch main \
 --netuid 14 \
 --profile validator \
---wallet.name wallet_name \
---wallet.hotkey wallet_hotkey
+--wallet.name YourColdkeyGoesHere \
+--wallet.hotkey YourHotkeyGoesHere
 ```
 You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
