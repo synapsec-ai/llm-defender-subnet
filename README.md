@@ -16,24 +16,45 @@ Due to the nature of the Bittensor network, the confidence score is a result of 
 
 This repository requires python3.10 or higher.
 
+> [!WARNING]  
+> We are recommending to use python virtual environment (venv) when running either the validator or miner. Make sure the virtual environment is active prior to launching the pm2 instance.
+
 Installation:
 ```
 $ git clone https://github.com/ceterum1/llm-defender-subnet
 $ cd llm-defender-subnet
 $ python -m venv .venv
 $ source .venv/bin/activate
-$ sudo apt update && sudo apt install jq && sudo apt install npm && sudo npm install pm2 -g && pm2 update
+$ sudo apt update && sudo apt install jq && sudo apt install npm \
+&& sudo npm install pm2 -g && pm2 update
 ```
 
 Run miner:
 ```
-$ pm2 start scripts/run.sh --name llm-defender-subnet-miner0 --watch ./llm-defender,./scripts -- --branch main --netuid 14 --profile miner --wallet.name <your miner wallet> --wallet.hotkey <your miner hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946 --axon.port 15000] --logging.<log-level>
+$ pm2 start scripts/run.sh \
+--name llm-defender-subnet-miner0 \
+--watch ./llm-defender,./scripts -- \
+--branch main \
+--netuid 14 \
+--profile miner \
+--wallet.name wallet_name \
+--wallet.hotkey wallet_hotkey \
+--axon.port 15000
 ```
+You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run validator:
 ```
-$ pm2 start scripts/run.sh --name llm-defender-subnet-validator0 --watch ./llm-defender,./scripts -- --branch main --netuid 14 --profile validator --wallet.name <your validator wallet> --wallet.hotkey <your validator hotkey> [--subtensor.network test --subtensor.chain_endpoint ws://127.0.0.1:9946] --logging.<log-level>
+$ pm2 start scripts/run.sh \
+--name llm-defender-subnet-validator0 \
+--watch ./llm-defender,./scripts -- \
+--branch main \
+--netuid 14 \
+--profile validator \
+--wallet.name wallet_name \
+--wallet.hotkey wallet_hotkey
 ```
+You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run auto-updater (only one instance needs to be running if multiple miners and/or validators are running):
 ```
@@ -90,7 +111,7 @@ The following is a list of high-level objectives for version 1.0 of the entire p
 - Full reference documentation for development/fine-tuning 
 - Sample implementation of a dedicated validator
 - Improved scoring and gating algorithms
-- Automated miner/validator updating in run.sh script
+- ~~Automated miner/validator updating in run.sh script (done)~~
 - Out-of-the-box support in the miner script for customized engines
 - \+ possibly many other features depending on the needs of the community
 
