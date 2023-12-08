@@ -128,15 +128,22 @@ class PromptInjectionMiner(BaseNeuron):
         if not self.metagraph.validator_permit[uid]:
             bt.logging.info(f"Blacklisted non-validator: {synapse.dendrite.hotkey}")
             return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
-        
+
         # Blacklist entities that have insufficient stake
         stake = float(self.metagraph.S[uid])
         if stake <= 0.0:
-            bt.logging.info(f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}")
-            return (True, f"Hotkey {synapse.dendrite.hotkey} has insufficient stake: {stake}")
+            bt.logging.info(
+                f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
+            )
+            return (
+                True,
+                f"Hotkey {synapse.dendrite.hotkey} has insufficient stake: {stake}",
+            )
 
         # Allow all other entities
-        bt.logging.info(f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})")
+        bt.logging.info(
+            f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
+        )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
     def priority(self, synapse: LLMDefenderProtocol) -> float:
@@ -161,6 +168,15 @@ class PromptInjectionMiner(BaseNeuron):
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
         """
+
+        # bt.logging.debug(
+        #     f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
+        # )
+        # if synapse.subnet_version > self.subnet_version:
+        #     bt.logging.warning(
+        #         f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version})."
+        #     )
+
         # Responses are stored in a list
         output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
 

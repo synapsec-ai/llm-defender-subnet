@@ -100,6 +100,7 @@ def main(validator: PromptInjectionValidator):
                     engine=query["engine"],
                     roles=["internal"],
                     analyzer=["Prompt Injection"],
+                    # subnet_version=validator.subnet_version
                 ),
                 timeout=validator.timeout,
                 deserialize=True,

@@ -18,6 +18,12 @@ class LLMDefenderProtocol(bt.Synapse):
     engine: typing.Optional[str] = None
     output: typing.Optional[dict] = None
 
+    # subnet_version: int = pydantic.Field(
+    #     ...,
+    #     description="Current subnet version",
+    #     allow_mutation=False,
+    # )
+
     roles: typing.List[str] = pydantic.Field(
         ...,
         title="Roles",
