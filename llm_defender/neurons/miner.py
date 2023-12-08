@@ -50,7 +50,7 @@ def main(miner: PromptInjectionMiner):
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
-            if miner.step % 5 == 0:
+            if miner.step % 10 == 0:
                 # Periodically update the weights on the Bittensor blockchain.
                 current_block = miner.subtensor.block
                 if (

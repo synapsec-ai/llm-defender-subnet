@@ -124,13 +124,26 @@ class PromptInjectionMiner(BaseNeuron):
             )
 
         # Blacklist entities that are not validators
-        # uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
-        # if not self.metagraph.validator_permit[uid]:
-        #     bt.logging.info(f"Blacklisted unknown hotkey: {synapse.dendrite.hotkey}")
-        #     return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+        uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
+        if not self.metagraph.validator_permit[uid]:
+            bt.logging.info(f"Blacklisted non-validator: {synapse.dendrite.hotkey}")
+            return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+
+        # Blacklist entities that have insufficient stake
+        stake = float(self.metagraph.S[uid])
+        if stake <= 0.0:
+            bt.logging.info(
+                f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
+            )
+            return (
+                True,
+                f"Hotkey {synapse.dendrite.hotkey} has insufficient stake: {stake}",
+            )
 
         # Allow all other entities
-        bt.logging.info(f"Accepted hotkey: {synapse.dendrite.hotkey}")
+        bt.logging.info(
+            f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
+        )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
     def priority(self, synapse: LLMDefenderProtocol) -> float:
@@ -142,19 +155,28 @@ class PromptInjectionMiner(BaseNeuron):
 
         # Otherwise prioritize validators based on their stake
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
-        priority = float(self.metagraph.S[uid])
+        stake = float(self.metagraph.S[uid])
 
-        bt.logging.info(
-            f"Prioritized: {synapse.dendrite.hotkey} with value: {priority}"
+        bt.logging.debug(
+            f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
         )
 
-        return priority
+        return stake
 
     def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
         """The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
         """
+
+        # bt.logging.debug(
+        #     f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
+        # )
+        # if synapse.subnet_version > self.subnet_version:
+        #     bt.logging.warning(
+        #         f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version})."
+        #     )
+
         # Responses are stored in a list
         output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
 
@@ -177,12 +199,16 @@ class PromptInjectionMiner(BaseNeuron):
             bt.logging.error(
                 f"Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}"
             )
-            sys.exit()
+            return synapse
 
         # Nullify engines after execution
         engines = None
         del engines
 
         synapse.output = output
+
+        bt.logging.debug(f'Processed prompt: {output["prompt"]}')
+        bt.logging.debug(f'Engine data: {output["engines"]}')
+        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
 
         return synapse

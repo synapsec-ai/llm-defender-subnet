@@ -201,7 +201,9 @@ class HeuristicsEngine(BaseEngine):
             self.compiled_rules = f"{os.path.expanduser('~')}/.llm-defender-subnet/yara_compiled_rules"
             self.rule_glob = rule_glob
 
-            self.prepare()
+            if not os.path.isfile(self.compiled_rules):
+                bt.logging.warning('Running yara preparation mid-flight. Something may have not been initialized properly. Considering restarting the miner.')
+                self.prepare()
 
         def invoke(self) -> bool:
             self.output = self.compile_and_match()

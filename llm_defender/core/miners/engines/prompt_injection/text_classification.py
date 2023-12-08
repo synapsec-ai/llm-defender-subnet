@@ -39,7 +39,6 @@ class TextClassificationEngine(BaseEngine):
         super().__init__(prompt, engine_name)
 
         if not prepare_only:
-            self.prepare()
             self.engine_data = self.classification()
 
     def classification(self) -> list:

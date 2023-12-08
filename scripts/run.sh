@@ -1,16 +1,52 @@
 #!/bin/bash
 declare -A args
 
-check_python_and_venv() {
+check_runtime_environment() {
+    if ! python --version "$1" &>/dev/null; then
+        echo "ERROR: Python is not available. Make sure Python is installed and venv has been activated."
+        exit 1
+    fi
+
+    # Get Python version
+    python_version=$(python -c 'import sys; print(sys.version_info[:])')
+    IFS=', ' read -r -a values <<< "$(sed 's/[()]//g; s/,//g' <<< "$python_version")"
+
+    # Validate that we are on a version greater than 3
+    if ! [[ ${values[0]} -ge 3 ]]; then
+        echo "ERROR: The current major version of python "${values[0]}" is less than required: 3"
+        exit 1
+    fi
+
+    # Validate that the minor version is at least 10
+    if ! [[ ${values[1]} -ge 10 ]]; then
+        echo "ERROR: The current minor version of python "${values[1]}" is less than required: 10"
+        exit 1
+    fi
+
+    echo "The installed python version "${values[0]}"."${values[1]}" meets the minimum requirement (3.10)."
+
+    # Check that the required packages are installed. These should be bundled with the OS and/or Python version. 
+    # If they do not exists, they should be installed manually. We do not want to install these in the run script,
+    # as it could mess up the local system
+
+    package_list=("libssl-dev" "python"${values[0]}"."${values[1]}"-dev")
+
+    error=0
+    for package_name in "${package_list[@]}"; do
+        if ! dpkg -l | grep -q -w "^ii  $package_name"; then
+            echo "ERROR: $package_name is not installed. Please install it manually."
+            error=1
+        fi
+    done
+
+    if [[ $error -eq 1 ]]; then
+        exit 1
+    fi
+
     if [ -n "$VIRTUAL_ENV" ]; then
         echo "Virtual environment is activated: $VIRTUAL_ENV"
     else
         echo "WARNING: Virtual environment is not activated. It is recommended to run this script in a python venv."
-    fi
-
-    if ! python --version "$1" &>/dev/null; then
-        echo "ERROR: Python is not available. Make sure Python is installed and venv has been activated."
-        exit 1
     fi
 }
 
@@ -89,7 +125,7 @@ install_packages() {
         pip uninstall -y uvloop
     fi
 
-    echo "Packages installed successfully"
+    echo "All python packages are installed"
 }
 
 run_preparation() {
@@ -151,12 +187,13 @@ run_neuron() {
     eval "$command"
 }
 
+echo "### START OF EXECUTION ###"
 # Parse arguments and assign to associative array
 parse_arguments "$@"
 
 profile="${args['profile']}"
 
-check_python_and_venv
+check_runtime_environment
 echo "Python venv checks completed. Sleeping 2 seconds."
 sleep 2
 pull_repo_and_checkout_branch
