@@ -177,7 +177,6 @@ class PromptInjectionMiner(BaseNeuron):
             bt.logging.error(
                 f"Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}"
             )
-            sys.exit()
 
         # Nullify engines after execution
         engines = None

@@ -6,7 +6,7 @@ module.exports = {
             script: "./scripts/updater.sh",
             env: {
                 "UPDATE_INTERVAL": 1800,
-                "BRANCH": "main"
+                "BRANCH": "development"
             },
             max_restarts: 5
         }

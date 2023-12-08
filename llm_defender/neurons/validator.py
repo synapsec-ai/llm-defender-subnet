@@ -86,7 +86,8 @@ def main(validator: PromptInjectionValidator):
                 for axon, keep_flag in zip(all_axons, uids_to_filter)
                 if keep_flag.item()
             ]
-            bt.logging.info(f"UIDs to query: {uids_to_query}")
+            
+            bt.logging.info(f"Sending query to the following UIDs: {uids_to_query}")
 
             # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()

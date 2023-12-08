@@ -151,6 +151,7 @@ run_neuron() {
     eval "$command"
 }
 
+echo "### START OF EXECUTION ###"
 # Parse arguments and assign to associative array
 parse_arguments "$@"
 
