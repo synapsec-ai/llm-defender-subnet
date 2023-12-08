@@ -31,6 +31,8 @@ $ sudo apt update && sudo apt install jq && sudo apt install npm \
 
 Run miner:
 ```
+$ cd llm-defender-subnet
+$ source .venv/bin/activate
 $ pm2 start scripts/run.sh \
 --name llm-defender-subnet-miner0 \
 --watch ./llm-defender,./scripts -- \
@@ -45,6 +47,8 @@ You can optionally provide --subtensor.network, --subtensor.chain_endpoint and -
 
 Run validator:
 ```
+$ cd llm-defender-subnet
+$ source .venv/bin/activate
 $ pm2 start scripts/run.sh \
 --name llm-defender-subnet-validator0 \
 --watch ./llm-defender,./scripts -- \
