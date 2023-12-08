@@ -86,8 +86,12 @@ def main(validator: PromptInjectionValidator):
                 for axon, keep_flag in zip(all_axons, uids_to_filter)
                 if keep_flag.item()
             ]
-            
-            bt.logging.info(f"Sending query to the following UIDs: {uids_to_query}")
+
+            list_of_uids = [validator.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query]
+            list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
+
+            bt.logging.info(f"Sending query to the following UIDs: {list_of_uids}")
+            bt.logging.debug(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
             # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()
@@ -113,7 +117,7 @@ def main(validator: PromptInjectionValidator):
                 # If we receive empty responses from all axons we do not need to proceed further, as there is nothing to do
                 continue
 
-            bt.logging.info(f"Received responses: {responses}")
+            bt.logging.debug(f"Received responses: {responses}")
 
             # Process the responses
             processed_uids = torch.nonzero(uids_to_filter).squeeze()
@@ -155,9 +159,6 @@ def main(validator: PromptInjectionValidator):
 
                 # Update validators knowledge of the last updated block
                 validator.last_updated_block = current_block
-
-                # We also want to save the state after we've updated the weights
-                validator.save_state()
 
             # End the current step and prepare for the next iteration.
             validator.step += 1

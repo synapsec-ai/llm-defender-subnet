@@ -125,7 +125,7 @@ install_packages() {
         pip uninstall -y uvloop
     fi
 
-    echo "Packages installed successfully"
+    echo "All python packages are installed"
 }
 
 run_preparation() {

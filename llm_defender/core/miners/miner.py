@@ -157,7 +157,7 @@ class PromptInjectionMiner(BaseNeuron):
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         stake = float(self.metagraph.S[uid])
 
-        bt.logging.info(
+        bt.logging.debug(
             f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
         )
 
@@ -199,11 +199,16 @@ class PromptInjectionMiner(BaseNeuron):
             bt.logging.error(
                 f"Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}"
             )
+            return synapse
 
         # Nullify engines after execution
         engines = None
         del engines
 
         synapse.output = output
+
+        bt.logging.debug(f'Processed prompt: {output["prompt"]}')
+        bt.logging.debug(f'Engine data: {output["engines"]}')
+        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
 
         return synapse

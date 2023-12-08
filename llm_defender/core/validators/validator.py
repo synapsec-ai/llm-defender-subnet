@@ -121,21 +121,20 @@ class PromptInjectionValidator(BaseNeuron):
         validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
         bt.logging.info(f"Validator is running with UID: {validator_uid}")
 
-        # Setup initial scoring weights
-        scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
-        bt.logging.info(f"Validation weights have been initialized: {scores}")
-
         self.wallet = wallet
         self.subtensor = subtensor
         self.dendrite = dendrite
         self.metagraph = metagraph
-        self.scores = scores
 
         # Read command line arguments and perform actions based on them
         args = self.parser.parse_args()
 
         if args.load_state:
             self.load_state()
+        else:
+            # Setup initial scoring weights
+            self.scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
+            bt.logging.debug(f"Validation weights have been initialized: {self.scores}")
 
         return True
 
@@ -165,10 +164,13 @@ class PromptInjectionValidator(BaseNeuron):
                 bt.logging.debug(
                     f"Received an empty response from UID {processed_uids[i]}: {response}"
                 )
+                old_score = copy.deepcopy(self.scores[processed_uids[i]])
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
+                new_score = self.scores[processed_uids[i]]
+                bt.logging.info(f'No valid response from UID {processed_uids[i]}. Overall score for the UID {processed_uids[i]}: {new_score} (Change: {new_score - old_score})')
                 continue
 
             response_time = response.dendrite.process_time
@@ -179,18 +181,14 @@ class PromptInjectionValidator(BaseNeuron):
                 hotkey=response.dendrite.hotkey,
             )
 
-            bt.logging.info(f"Response score for the request: {response_score}")
-
-            bt.logging.info(
-                f"Score before adjustment for UID {processed_uids[i]}: {self.scores[processed_uids[i]]}"
-            )
+            old_score = copy.deepcopy(self.scores[processed_uids[i]])
             self.scores[processed_uids[i]] = (
                 self.neuron_config.alpha * self.scores[processed_uids[i]]
                 + (1 - self.neuron_config.alpha) * response_score
             )
-            bt.logging.info(
-                f"Score after adjustment for UID {processed_uids[i]}: {self.scores[processed_uids[i]]}"
-            )
+            new_score = self.scores[processed_uids[i]]
+
+            bt.logging.info(f'Scored the response from UID {processed_uids[i]}: {response_score}. Overall score for the UID {processed_uids[i]}: {new_score} (Change: {new_score - old_score})')
 
     def calculate_score(
         self, response, target: float, response_time: float, hotkey: str
@@ -321,5 +319,12 @@ class PromptInjectionValidator(BaseNeuron):
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
             self.last_updated_block = state["last_updated_block"]
+
+            bt.logging.info(f'Scores loaded from saved file: {self.scores}')
         else:
             bt.logging.info("Validator state not found. Starting with default values.")
+            # Setup initial scoring weights
+            self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+            bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+
+            
