@@ -124,13 +124,19 @@ class PromptInjectionMiner(BaseNeuron):
             )
 
         # Blacklist entities that are not validators
-        # uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
-        # if not self.metagraph.validator_permit[uid]:
-        #     bt.logging.info(f"Blacklisted unknown hotkey: {synapse.dendrite.hotkey}")
-        #     return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+        uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
+        if not self.metagraph.validator_permit[uid]:
+            bt.logging.info(f"Blacklisted non-validator: {synapse.dendrite.hotkey}")
+            return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+        
+        # Blacklist entities that have insufficient stake
+        stake = float(self.metagraph.S[uid])
+        if stake <= 0.0:
+            bt.logging.info(f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}")
+            return (True, f"Hotkey {synapse.dendrite.hotkey} has insufficient stake: {stake}")
 
         # Allow all other entities
-        bt.logging.info(f"Accepted hotkey: {synapse.dendrite.hotkey}")
+        bt.logging.info(f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})")
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
     def priority(self, synapse: LLMDefenderProtocol) -> float:
@@ -142,13 +148,13 @@ class PromptInjectionMiner(BaseNeuron):
 
         # Otherwise prioritize validators based on their stake
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
-        priority = float(self.metagraph.S[uid])
+        stake = float(self.metagraph.S[uid])
 
         bt.logging.info(
-            f"Prioritized: {synapse.dendrite.hotkey} with value: {priority}"
+            f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
         )
 
-        return priority
+        return stake
 
     def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
         """The function is executed once the data from the
