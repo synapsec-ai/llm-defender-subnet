@@ -2,7 +2,7 @@
 This module implements common classes that are used by one or more core
 features and their engines.
 """
-
+import gc
 
 class EnginePrompt:
     """
@@ -61,3 +61,13 @@ def normalize_list(input_list: list) -> list:
         normalized_list = [1.0]
 
     return normalized_list
+
+def cleanup(variables: list=None):
+    """This is a generic cleanup function"""
+    if variables:
+        for variable in variables:
+            variable = None
+            del variable
+    
+    gc.collect()
+ 
