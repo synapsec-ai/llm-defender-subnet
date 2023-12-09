@@ -19,6 +19,10 @@ from llm_defender.core.miners.engines.prompt_injection import (
     text_classification,
     vector_search,
 )
+from chromadb import PersistentClient
+from os import path
+
+from llm_defender.base import utils
 
 
 class PromptInjectionMiner(BaseNeuron):
@@ -39,6 +43,11 @@ class PromptInjectionMiner(BaseNeuron):
 
         args = parser.parse_args()
         self.set_miner_weights = args.miner_set_weights
+
+        self.chromadb_client = PersistentClient(path=f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/")
+
+        self.text_classification_model = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_model()
+        self.text_classification_tokenizer = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_tokenizer()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
@@ -184,8 +193,8 @@ class PromptInjectionMiner(BaseNeuron):
         # detections. Initializing the engine also executes the engine.
         engines = [
             heuristics.HeuristicsEngine(prompt=synapse.prompt),
-            text_classification.TextClassificationEngine(prompt=synapse.prompt),
-            vector_search.VectorEngine(prompt=synapse.prompt),
+            text_classification.TextClassificationEngine(prompt=synapse.prompt, model=self.text_classification_model, tokenizer=self.text_classification_tokenizer),
+            vector_search.VectorEngine(prompt=synapse.prompt,client=self.chromadb_client),
         ]
 
         engine_confidences = []
@@ -201,14 +210,11 @@ class PromptInjectionMiner(BaseNeuron):
             )
             return synapse
 
-        # Nullify engines after execution
-        engines = None
-        del engines
-
         synapse.output = output
 
         bt.logging.debug(f'Processed prompt: {output["prompt"]}')
         bt.logging.debug(f'Engine data: {output["engines"]}')
-        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
 
+        # Nullify engines after execution
+        utils.cleanup(variables=[engines,engine_confidences,output])
         return synapse

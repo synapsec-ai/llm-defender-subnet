@@ -8,7 +8,8 @@ from llm_defender.core.miners.engines.prompt_injection import (
     vector_search,
     heuristics,
 )
-
+from chromadb import PersistentClient
+from os import path
 
 def prepare_engines():
     """Prepare the engines"""
@@ -17,9 +18,11 @@ def prepare_engines():
     # Make directories
     if not os.path.exists(f"{os.path.expanduser('~')}/.llm-defender-subnet"):
         os.makedirs(f"{os.path.expanduser('~')}/.llm-defender-subnet")
-    
+    text_classification_model = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_model()
+    text_classification_tokenizer = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_tokenizer()
+
     text_classification_engine = text_classification.TextClassificationEngine(
-        prompt=None, prepare_only=True
+        prompt=None, prepare_only=True, tokenizer=text_classification_tokenizer, model=text_classification_model
     )
     if not text_classification_engine.prepare():
         print("Unable to prepare text classification engine")
@@ -28,7 +31,7 @@ def prepare_engines():
     print("Successfully downloaded the files for the text classification engine")
 
     # Prepare vector search engine
-    vector_search_engine = vector_search.VectorEngine(prompt=None, prepare_only=True)
+    vector_search_engine = vector_search.VectorEngine(client=PersistentClient(path=f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"), prompt=None, prepare_only=True)
     if not vector_search_engine.prepare():
         print("Unable to prepare vector search engine")
         sys.exit(1)

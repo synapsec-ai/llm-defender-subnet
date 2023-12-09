@@ -2,7 +2,6 @@
 This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
-import sys
 import uuid
 from os import path
 import chromadb
@@ -44,25 +43,34 @@ class VectorEngine(BaseEngine):
     def __init__(
         self,
         prompt: str,
+        client: chromadb.ClientAPI,
         result_count: int = 2,
         threshold: float = 1.0,
         engine_name="Vector Search",
-        prepare_only=False
+        prepare_only=False,
     ):
         super().__init__(prompt, engine_name)
 
         self.result_count = result_count
         self.threshold = threshold
         self.db_path = f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"
+        self.client = client
         
         if not prepare_only:
             self.collection = self.get_collection()
-            self.engine_data = self.execute_query()
-            self.confidence = self.calculate_confidence()
+            if self.collection:
+                self.engine_data = self.execute_query()
+                if self.engine_data:
+                    self.confidence = self.calculate_confidence()
 
-            if 0.0 <= self.confidence >= 1.0:
-                bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
-                self.confidence = 0.0
+                    if 0.0 <= self.confidence >= 1.0:
+                        bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
+                        self.confidence = 0.5
+                else:
+                    self.confidence = 0.5
+            else:
+                self.confidence = 0.5
+                self.engine_data = None
 
     def prepare(self) -> bool:
         """This function is used by prep.py
@@ -78,8 +86,7 @@ class VectorEngine(BaseEngine):
         executed.
         """
         try:
-            client = chromadb.PersistentClient(path=self.db_path)
-            collection = client.get_or_create_collection(
+            collection = self.client.get_or_create_collection(
                 name="prompt-injection-strings"
             )
         except Exception as e:
@@ -122,26 +129,21 @@ class VectorEngine(BaseEngine):
                 collection used to store the prompt injection records
         """
         try:
-
             if not path.exists(self.db_path):
                 bt.logging.warning('Running preparation mid-flight for chromadb. The miner may not have been initialized properly, consider restarting the miner.')
                 self.prepare()
-            client = chromadb.PersistentClient(path=self.db_path)
-            collection = client.get_collection(
+            collection = self.client.get_collection(
                 name="prompt-injection-strings"
             )
         except ValueError as e:
             bt.logging.warning(f'Running preparation mid-flight for chromadb. The miner may not have been initialized properly, consider restarting the miner. Error received: {e}')
             self.prepare()
-            client = chromadb.PersistentClient(path=self.db_path)
-            collection = client.get_collection(
+            collection = self.client.get_collection(
                 name="prompt-injection-strings"
             )
         except Exception as e:
             bt.logging.error(f"Unable to get collection from chromadb: {e}")
-            return False
-        
-        client.clear_system_cache()
+            return None
 
         return collection
 
@@ -164,6 +166,8 @@ class VectorEngine(BaseEngine):
             )
         except Exception as e:
             bt.logging.error(f"Exception occurred while querying chromadb: {e}")
+
+            return None
 
         bt.logging.debug(
             f"Query to chromadb collection executed, results: {query_result}"

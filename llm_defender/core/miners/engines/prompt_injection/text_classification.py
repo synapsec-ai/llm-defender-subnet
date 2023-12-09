@@ -3,7 +3,6 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 import torch
-from os import path
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -11,6 +10,7 @@ from transformers import (
 from transformers import pipeline
 from llm_defender.base.engine import BaseEngine
 
+from llm_defender.base import utils
 
 
 class TextClassificationEngine(BaseEngine):
@@ -31,15 +31,37 @@ class TextClassificationEngine(BaseEngine):
     """
 
     def __init__(
-        self,
-        prompt: str,
-        engine_name: str = "Text Classification",
-        prepare_only=False
+        self, prompt: str, engine_name: str = "Text Classification", prepare_only=False, model=None, tokenizer=None
     ):
         super().__init__(prompt, engine_name)
+        
+        if not model:
+            self.model = self.get_model()
+        else:
+            self.model = model
+        
+        if not tokenizer:
+            self.tokenizer = self.get_tokenizer()
+        else:
+            self.tokenizer = tokenizer
 
         if not prepare_only:
             self.engine_data = self.classification()
+        
+
+    def get_model(self):
+        model = AutoModelForSequenceClassification.from_pretrained(
+            "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+        )
+
+        return model
+    
+    def get_tokenizer(self):
+        tokenizer = AutoTokenizer.from_pretrained(
+            "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+        )
+
+        return tokenizer
 
     def classification(self) -> list:
         """Perform text-classification for the prompt.
@@ -57,13 +79,10 @@ class TextClassificationEngine(BaseEngine):
             received from the classifier.
         """
 
-        tokenizer = AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
-        model = AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
-
         pipe = pipeline(
             "text-classification",
-            model=model,
-            tokenizer=tokenizer,
+            model=self.model,
+            tokenizer=self.tokenizer,
             truncation=True,
             max_length=512,
             device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
@@ -78,23 +97,27 @@ class TextClassificationEngine(BaseEngine):
 
         self.analyzed = True
 
+        utils.cleanup()
+
         return [result[0]]
 
     def prepare(self) -> bool:
         """This function is used by prep.py
-        
+
         The prep.py executes the prepare methods from all engines before
         the miner is launched. If you change the models used by the
         engines, you must also change this prepare function to match.
         """
 
         try:
-            
-            AutoTokenizer.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
-            AutoModelForSequenceClassification.from_pretrained("laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir)
-            
+            AutoTokenizer.from_pretrained(
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            )
+            AutoModelForSequenceClassification.from_pretrained(
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            )
+
             return True
         except Exception as e:
-            print(f'Error: {e}')
+            print(f"Error: {e}")
             return False
-
