@@ -14,7 +14,7 @@ Due to the nature of the Bittensor network, the confidence score is a result of 
 
 ## Quickstart
 
-This repository requires python3.10 or higher.
+This repository requires python3.10 or higher and Ubuntu 22.04/Debian 12. It is highly recommended to spin up a fresh Ubuntu 22.04 or Debian 12 machine for running the subnet neurons. Upgrading from python3.8 to python3.10 on Ubuntu 20.04 is known to cause issues with the installation of the python modules required by the miners.
 
 > [!WARNING]  
 > We are recommending to use python virtual environment (venv) when running either the validator or miner. Make sure the virtual environment is active prior to launching the pm2 instance.
@@ -29,30 +29,40 @@ $ sudo apt update && sudo apt install jq && sudo apt install npm \
 && sudo npm install pm2 -g && pm2 update
 ```
 
+If you are not familiar with Bittensor, you should first perform the following activities:
+- [Generate a new coldkey](https://docs.bittensor.com/getting-started/wallets#step-1-generate-a-coldkey)
+- [Generate a new hotkey under your new coldkey](https://docs.bittensor.com/getting-started/wallets#step-2-generate-a-hotkey)
+- [Register your new hotkey on our subnet 14](https://docs.bittensor.com/subnets/register-and-participate)
+
+
 Run miner:
 ```
+$ cd llm-defender-subnet
+$ source .venv/bin/activate
 $ pm2 start scripts/run.sh \
 --name llm-defender-subnet-miner0 \
 --watch ./llm-defender,./scripts -- \
 --branch main \
 --netuid 14 \
 --profile miner \
---wallet.name wallet_name \
---wallet.hotkey wallet_hotkey \
+--wallet.name YourColdkeyGoesHere \
+--wallet.hotkey YourHotkeyGoesHere \
 --axon.port 15000
 ```
 You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run validator:
 ```
+$ cd llm-defender-subnet
+$ source .venv/bin/activate
 $ pm2 start scripts/run.sh \
 --name llm-defender-subnet-validator0 \
 --watch ./llm-defender,./scripts -- \
 --branch main \
 --netuid 14 \
 --profile validator \
---wallet.name wallet_name \
---wallet.hotkey wallet_hotkey
+--wallet.name YourColdkeyGoesHere \
+--wallet.hotkey YourHotkeyGoesHere
 ```
 You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
