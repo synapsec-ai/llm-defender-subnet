@@ -214,6 +214,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         bt.logging.debug(f'Processed prompt: {output["prompt"]}')
         bt.logging.debug(f'Engine data: {output["engines"]}')
+        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
 
         # Nullify engines after execution
         utils.cleanup(variables=[engines,engine_confidences,output])
