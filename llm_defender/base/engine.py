@@ -55,7 +55,7 @@ class BaseEngine:
         self.output = {}
         self.name = name
         self.cache_dir = (
-            f"{path.expanduser('~')}/.llm-defender-subnet/{self.name}/cache"
+            f"{path.expanduser('~')}/.llm-defender-subnet/cache"
         )
 
     @staticmethod

@@ -2,50 +2,33 @@
 This script prepares the engines before miner is executed.
 """
 import sys
-import os
-from llm_defender.core.miners.engines.prompt_injection import (
-    text_classification,
-    vector_search,
-    heuristics,
-)
-from chromadb import PersistentClient
-from os import path
+from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
+from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
+from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
 
 def prepare_engines():
     """Prepare the engines"""
     # Prepare text classification engine
 
-    # Make directories
-    if not os.path.exists(f"{os.path.expanduser('~')}/.llm-defender-subnet"):
-        os.makedirs(f"{os.path.expanduser('~')}/.llm-defender-subnet")
-    text_classification_model = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_model()
-    text_classification_tokenizer = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_tokenizer()
-
-    text_classification_engine = text_classification.TextClassificationEngine(
-        prompt=None, prepare_only=True, tokenizer=text_classification_tokenizer, model=text_classification_model
-    )
-    if not text_classification_engine.prepare():
+    if not TextClassificationEngine().prepare():
         print("Unable to prepare text classification engine")
         sys.exit(1)
 
-    print("Successfully downloaded the files for the text classification engine")
+    print("Prepared Text Classification engine")
 
     # Prepare vector search engine
-    vector_search_engine = vector_search.VectorEngine(client=PersistentClient(path=f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"), prompt=None, prepare_only=True)
-    if not vector_search_engine.prepare():
+    if not VectorEngine(reset_on_init=True).prepare():
         print("Unable to prepare vector search engine")
         sys.exit(1)
 
-    print("Successfully downloaded the files for the vector search engine")
+    print("Prepared Vector Search engine")
 
-    # Prepare heuristic sub-engines
-    yara_engine = heuristics.HeuristicsEngine.YaraSubEngine(prompt=None, weight=1.0)
-    if not yara_engine.prepare():
-        print("Unable to prepare heuristics:yara engine")
+    # Prepare YARA engine
+    if not YaraEngine().prepare():
+        print("Unable to prepare vector search engine")
         sys.exit(1)
 
-    print("Successfully downloaded the files for the heuristics engine")
-
+    print("Prepared YARA engine")
 
 if __name__ == "__main__":
     prepare_engines()

@@ -3,6 +3,7 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 import torch
+from os import path, makedirs
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -48,8 +49,17 @@ class TextClassificationEngine(BaseEngine):
             return {"outcome": results[0]["label"], "score": results[0]["score"]}
         return {"outcome": "UNKNOWN"}
 
-    def prepare(self):
+    def prepare(self) -> bool:
+        # Check cache directory
+        if not path.exists(self.cache_dir):
+            try:
+                makedirs(self.cache_dir)
+            except OSError as e:
+                raise OSError(f"Unable to create cache directory: {e}") from e
+            
         _, _ = self.initialize()
+
+        return True
 
     def initialize(self):
         try:

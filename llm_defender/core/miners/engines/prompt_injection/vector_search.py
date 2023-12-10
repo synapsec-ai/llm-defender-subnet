@@ -3,8 +3,9 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 import uuid
-from os import path
+from os import path, makedirs
 import chromadb
+from chromadb.config import Settings
 import bittensor as bt
 from datasets import load_dataset
 from llm_defender.base.engine import BaseEngine
@@ -44,31 +45,36 @@ class VectorEngine(BaseEngine):
         self,
         prompt: str = None,
         name="engine:vector_search",
+        reset_on_init=False
     ):
         super().__init__(name=name)
         self.prompt = prompt
         self.collection_name = "prompt-injection-strings"
+        self.reset_on_init = reset_on_init
 
     def _calculate_confidence(self):
         if self.output["outcome"] != "ResultsNotFound":
-            # Some distances are above 2.0 -> unlikely to be malicious
-            if any(distance >= 2.0 for distance in self.output["distances"]):
+            # Some distances are above 1.6 -> unlikely to be malicious
+            distances = self.output["distances"]
+            if any(distance >= 1.6 for distance in distances):
                 return 0.0
-
-            # Some distances are below 1.0 -> likely to be malicious
-            if any(distance <= 1.0 for distance in self.output["distances"]):
+            if any(distance <= 1.0 for distance in distances):
                 return 1.0
+            
+            # Calculate the value between 0.0 and 1.0 based on the distance from 1.0 to 1.6
+            min_distance = 1.0
+            max_distance = 1.6
 
-            mean = sum(distance for distance in self.output["distances"]) / len(
-                self.output["distances"]
-            )
+            # Normalize the distances between 1.0 and 1.6 to a range between 0 and 1
+            normalized_distances = [(distance - min_distance) / (max_distance - min_distance) for distance in distances]
 
-            score = 1 - (mean - 1)
-            if score < 0.0:
-                return 0.0
-            if score > 1.0:
-                return 1.0
-            return score
+            # Calculate the mean of normalized distances
+            normalized_mean = sum(normalized_distances) / len(normalized_distances)
+
+            # Interpolate the value between 0.0 and 1.0 based on the normalized_mean
+            interpolated_value = 1.0 - normalized_mean
+
+            return interpolated_value
 
         return 0.5
 
@@ -81,7 +87,7 @@ class VectorEngine(BaseEngine):
             }
         return {"outcome": "ResultsNotFound"}
 
-    def prepare(self):
+    def prepare(self) -> bool:
         """This function is used by prep.py
 
         The prep.py executes the prepare methods from all engines before
@@ -94,6 +100,13 @@ class VectorEngine(BaseEngine):
         information is loaded into the chromadb as this code is
         executed.
         """
+        # Check cache directory
+        if not path.exists(self.cache_dir):
+            try:
+                makedirs(self.cache_dir)
+            except OSError as e:
+                raise OSError(f"Unable to create cache directory: {e}") from e
+            
         # Client is needed to prepare the engine
         client = self.initialize()
 
@@ -105,7 +118,7 @@ class VectorEngine(BaseEngine):
 
         # Populate chromadb
         try:
-            # If there already are items in the collection, we do not need to populate it
+            # If there already are items in the collection, reset them
             if collection.count() > 0:
                 return True
 
@@ -140,7 +153,10 @@ class VectorEngine(BaseEngine):
             raise Exception(f"Unable to populate chromadb collection: {e}") from e
 
     def initialize(self) -> chromadb.PersistentClient:
-        client = chromadb.PersistentClient(path=f"{self.cache_dir}")
+        client = chromadb.PersistentClient(path=f"{self.cache_dir}", settings=Settings(allow_reset=True))
+        if self.reset_on_init:
+            client.reset()
+
         return client
 
     def execute(self, client: chromadb.PersistentClient):
