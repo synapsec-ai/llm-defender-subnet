@@ -21,19 +21,25 @@ This repository requires python3.10 or higher and Ubuntu 22.04/Debian 12. It is 
 
 Installation:
 ```
+$ sudo apt update && sudo apt install jq && sudo apt install npm \
+&& sudo npm install pm2 -g && pm2 update && sudo apt install git
 $ git clone https://github.com/ceterum1/llm-defender-subnet
 $ cd llm-defender-subnet
 $ python -m venv .venv
 $ source .venv/bin/activate
-$ sudo apt update && sudo apt install jq && sudo apt install npm \
-&& sudo npm install pm2 -g && pm2 update
+$ pip install bittensor
 ```
+
+> [!NOTE]  
+> During installation you might get an error "The virtual environment was not created successfully because ensurepip is not available". In this case, install the python3.11-venv (or python3.10-venv) package following the instructions on screen. After this, re-execute the `python3 -m venv .venv` command.
 
 If you are not familiar with Bittensor, you should first perform the following activities:
 - [Generate a new coldkey](https://docs.bittensor.com/getting-started/wallets#step-1-generate-a-coldkey)
 - [Generate a new hotkey under your new coldkey](https://docs.bittensor.com/getting-started/wallets#step-2-generate-a-hotkey)
 - [Register your new hotkey on our subnet 14](https://docs.bittensor.com/subnets/register-and-participate)
 
+> [!NOTE]  
+> Validators need to establish an internet connection with the miner. This requires ensuring that the port specified in --axon.port is reachable on the virtual machine via the internet. This involves either opening the port on the firewall or configuring port forwarding.
 
 Run miner:
 ```
@@ -121,7 +127,7 @@ The following is a list of high-level objectives for version 1.0 of the entire p
 - Full reference documentation for development/fine-tuning 
 - Sample implementation of a dedicated validator
 - Improved scoring and gating algorithms
-- ~~Automated miner/validator updating in run.sh script (done)~~
+- ~~Automated miner/validator updating in run.sh script~~ (done)
 - Out-of-the-box support in the miner script for customized engines
 - \+ possibly many other features depending on the needs of the community
 
