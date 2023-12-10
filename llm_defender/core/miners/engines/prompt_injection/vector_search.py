@@ -153,7 +153,7 @@ class VectorEngine(BaseEngine):
             raise Exception(f"Unable to populate chromadb collection: {e}") from e
 
     def initialize(self) -> chromadb.PersistentClient:
-        client = chromadb.PersistentClient(path=f"{self.cache_dir}", settings=Settings(allow_reset=True))
+        client = chromadb.PersistentClient(path=f"{self.cache_dir}/chromadb2", settings=Settings(allow_reset=True))
         if self.reset_on_init:
             client.reset()
 

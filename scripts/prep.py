@@ -17,7 +17,7 @@ def prepare_engines():
     print("Prepared Text Classification engine")
 
     # Prepare vector search engine
-    if not VectorEngine(reset_on_init=True).prepare():
+    if not VectorEngine().prepare():
         print("Unable to prepare vector search engine")
         sys.exit(1)
 
