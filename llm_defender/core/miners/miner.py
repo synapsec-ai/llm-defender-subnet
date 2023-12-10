@@ -18,6 +18,7 @@ from llm_defender.core.miners.engines.prompt_injection import (
     heuristics,
     text_classification,
     vector_search,
+    yara
 )
 from chromadb import PersistentClient
 from os import path
@@ -48,6 +49,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         self.text_classification_model = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_model()
         self.text_classification_tokenizer = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_tokenizer()
+        self.yara_rules = yara.YaraEngine().initialize()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
@@ -191,17 +193,25 @@ class PromptInjectionMiner(BaseNeuron):
 
         # Initialize the engines and their weights to be used for the
         # detections. Initializing the engine also executes the engine.
-        engines = [
-            heuristics.HeuristicsEngine(prompt=synapse.prompt),
-            text_classification.TextClassificationEngine(prompt=synapse.prompt, model=self.text_classification_model, tokenizer=self.text_classification_tokenizer),
-            vector_search.VectorEngine(prompt=synapse.prompt,client=self.chromadb_client),
-        ]
+        # engines = [
+        #     heuristics.HeuristicsEngine(prompt=synapse.prompt),
+        #     text_classification.TextClassificationEngine(prompt=synapse.prompt, model=self.text_classification_model, tokenizer=self.text_classification_tokenizer),
+        #     vector_search.VectorEngine(prompt=synapse.prompt,client=self.chromadb_client),
+        #     yara.YaraEngine(input=synapse.prompt)
+        # ]
 
         engine_confidences = []
-        for engine in engines:
-            output["engines"].append(engine.get_response())
-            engine_confidences.append(engine.confidence)
 
+        # Execute YARA engine
+        yara_engine = yara.YaraEngine(input=synapse.prompt)
+        yara_engine.execute(rules=self.yara_rules)
+        yara_response = yara_engine.get_response().get_dict()
+        output["engines"].append(yara_response)
+        engine_confidences.append(yara_response["confidence"])
+        utils.cleanup(yara_engine)
+
+
+        # Validate confidence scores
         if all(0.0 <= val <= 1.0 for val in engine_confidences):
             output["confidence"] = sum(engine_confidences) / len(engine_confidences)
         else:
