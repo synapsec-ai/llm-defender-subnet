@@ -8,9 +8,8 @@ from transformers import (
     AutoModelForSequenceClassification,
 )
 from transformers import pipeline
+import bittensor as bt
 from llm_defender.base.engine import BaseEngine
-
-from llm_defender.base import utils
 
 
 class TextClassificationEngine(BaseEngine):
@@ -30,40 +29,48 @@ class TextClassificationEngine(BaseEngine):
 
     """
 
-    def __init__(
-        self, prompt: str, engine_name: str = "Text Classification", prepare_only=False, model=None, tokenizer=None
-    ):
-        super().__init__(prompt, engine_name)
-        
-        if not model:
-            self.model = self.get_model()
+    def __init__(self, prompt: str = None, name: str = "engine:text_classification"):
+        super().__init__(name=name)
+        self.prompt = prompt
+
+    def _calculate_confidence(self):
+        # Determine the confidence based on the score
+        if self.output["outcome"] != "UNKNOWN":
+            if self.output["outcome"] == "SAFE":
+                return 0.0
+            else:
+                return 1.0
         else:
-            self.model = model
-        
-        if not tokenizer:
-            self.tokenizer = self.get_tokenizer()
-        else:
-            self.tokenizer = tokenizer
+            return 0.5
 
-        if not prepare_only:
-            self.engine_data = self.classification()
-        
+    def _populate_data(self, results):
+        if results:
+            return {"outcome": results[0]["label"], "score": results[0]["score"]}
+        return {"outcome": "UNKNOWN"}
 
-    def get_model(self):
-        model = AutoModelForSequenceClassification.from_pretrained(
-            "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
-        )
+    def prepare(self):
+        _, _ = self.initialize()
 
-        return model
-    
-    def get_tokenizer(self):
-        tokenizer = AutoTokenizer.from_pretrained(
-            "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
-        )
+    def initialize(self):
+        try:
+            model = AutoModelForSequenceClassification.from_pretrained(
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            )
 
-        return tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            )
+        except Exception as e:
+            raise Exception(
+                f"Error occurred when initializing model or tokenizer: {e}"
+            ) from e
 
-    def classification(self) -> list:
+        if not model or not tokenizer:
+            raise ValueError("Model or tokenizer is empty")
+
+        return model, tokenizer
+
+    def execute(self, model, tokenizer):
         """Perform text-classification for the prompt.
 
         This function performs classification of the given prompt to
@@ -72,52 +79,33 @@ class TextClassificationEngine(BaseEngine):
         attributes based on the outcome of the classifier.
 
         Arguments:
-            None
-
-        Returns:
-            data: An instance of dict containing the label and score
-            received from the classifier.
+            Model:
+                The model used by the pipeline
+            Tokenizer:
+                The tokenizer used by the pipeline
         """
 
-        pipe = pipeline(
-            "text-classification",
-            model=self.model,
-            tokenizer=self.tokenizer,
-            truncation=True,
-            max_length=512,
-            device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-        )
-        result = pipe(self.prompt)
-
-        # Determine the confidence based on the score
-        if result[0]["label"] == "SAFE":
-            self.confidence = 1.0 - result[0]["score"]
-        else:
-            self.confidence = result[0]["score"]
-
-        self.analyzed = True
-
-        utils.cleanup()
-
-        return [result[0]]
-
-    def prepare(self) -> bool:
-        """This function is used by prep.py
-
-        The prep.py executes the prepare methods from all engines before
-        the miner is launched. If you change the models used by the
-        engines, you must also change this prepare function to match.
-        """
-
+        if not model or not tokenizer:
+            raise ValueError("Model or tokenizer is empty")
         try:
-            AutoTokenizer.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            pipe = pipeline(
+                "text-classification",
+                model=model,
+                tokenizer=tokenizer,
+                truncation=True,
+                max_length=512,
+                device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            AutoModelForSequenceClassification.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
-            )
-
-            return True
+            results = pipe(self.prompt)
         except Exception as e:
-            print(f"Error: {e}")
-            return False
+            raise Exception(
+                f"Error occurred during text classification pipeline execution: {e}"
+            ) from e
+
+        self.output = self._populate_data(results)
+        self.confidence = self._calculate_confidence()
+
+        bt.logging.debug(
+            f"Text Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
+        )
+        return True

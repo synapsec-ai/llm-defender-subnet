@@ -50,7 +50,7 @@ class BaseEngine:
     """
 
     def __init__(self, name: str = "BaseEngine"):
-        self.input = None
+        self.prompt = None
         self.confidence = None
         self.output = {}
         self.name = name
@@ -143,7 +143,7 @@ class BaseEngine:
 
     @abstractmethod
     @confidence_validation
-    def _populate_data(self) -> dict:
+    def _populate_data(self, results) -> dict:
         """Populates the data object of the analysis.
 
         This method should populate the data object. The data can be
@@ -175,7 +175,7 @@ class BaseEngine:
         calculate_confidence() and populate_data() methods.
         """
 
-        if not self.name or not self.confidence or not self.output:
+        if not self.name or self.confidence is None or not self.output:
             raise ValueError(
                 f"Instance attributes [self.name, self.confidence, self.data] cannot be empty. Values are: {[self.name, self.confidence, self.output]}"
             )

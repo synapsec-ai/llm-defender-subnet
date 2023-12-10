@@ -21,32 +21,31 @@ class YaraEngine(BaseEngine):
     yara_rules directory.
     
     """
-    def __init__(self, input: str=None, name: str = "engine:yara"):
+    def __init__(self, prompt: str=None, name: str = "engine:yara"):
         super().__init__(name=name)
 
-        self.input = input
+        self.prompt = prompt
         self.compiled = f"{self.cache_dir}/compiled_rules"
         self.rules = f"{path.dirname(__file__)}/yara_rules/*.yar"
 
     def _calculate_confidence(self):
-        if self.output:
+        if self.output["outcome"] != "NoRuleMatch":
             match_accuracies = []
             for match in self.output["meta"]:
                 if float(match["accuracy"]) < 0.0 or float(match["accuracy"]) > 1.0:
                     raise ValueError(f'YARA rule accuracy is out-of-bounds: {match}')
                 match_accuracies.append(float(match["accuracy"]))
 
-            self.confidence = 1.0 * max(match_accuracies)
-        else:
-            self.output = {"outcome": "No YARA matches found"}
-            self.confidence = 0.5
+            return 1.0 * max(match_accuracies)
+        return 0.5
 
     def _populate_data(self, results):
         if results:
-            self.output = {
-                "outcome": "YARA matches found",
+            return {
+                "outcome": "RuleMatch",
                 "meta": [result.meta for result in results],
             }
+        return {"outcome": "NoRuleMatch"}
 
     def prepare(self) -> bool:
         # Check cache directory
@@ -91,21 +90,21 @@ class YaraEngine(BaseEngine):
     
     def execute(self, rules: yara.Rules) -> bool:
 
-        if not self.input:
+        if not self.prompt:
             raise ValueError('Cannot execute engine with empty input')
 
-        if not isinstance(self.input, str):
-            raise ValueError(f'Input must be a string. The type for the input {self.input} is: {type(self.input)}')
+        if not isinstance(self.prompt, str):
+            raise ValueError(f'Input must be a string. The type for the input {self.prompt} is: {type(self.prompt)}')
         
         try:
-            results = rules.match(data=self.input)
+            results = rules.match(data=self.prompt)
         except yara.TimeoutError as e:
             raise yara.TimeoutError(f'YARA matching timed out: {e}') from e
         except yara.Error as e:
             raise yara.TimeoutError(f'YARA matching returned an error: {e}') from e
 
-        self._populate_data(results)
-        self._calculate_confidence()
+        self.output = self._populate_data(results)
+        self.confidence = self._calculate_confidence()
 
         bt.logging.debug(f"YARA engine executed (Confidence: {self.confidence} - Output: {self.output})")
         return True
