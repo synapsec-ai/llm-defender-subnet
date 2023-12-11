@@ -4,14 +4,12 @@ The fine-tuning in this subnet is a little bit different from other subnets. Sin
 
 For example, in the **Prompt Injection Analyzer**, there are currently following engines:
 - Text Classification
-- Heuristics
+- YARA
 - Vector Search
 
 The **Text Classification** engine by default uses [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) to classify the given prompt either as malicious (injection) or non-malicious (non-injection). The engine can be fine-tuned either by changing the parameters in the engine code, tuning the existing model or creating entirely a new model that implements the same functionality.
 
-The **Heuristics** engine consists (or, to be exact, will consists) of multiple **sub-engines** executing a very specific task. Currently the only supported sub-engine is YARA (https://virustotal.github.io/yara/), which is typically used for identifying malware. This is where the first non-traditional approach for fine-tuning comes. The engine is fine-tuned by creating new YARA rules to detect prompt injection attacks.
-
-YARA is fundamentally a pattern matching tool based on set of strings and boolean expression, which makes it extremely effective on detecting prompt injections that follow a pre-determined syntax.
+The **YARA** engine analyzes the prompts based on specific patterns. It is based on a tool called YARA (https://virustotal.github.io/yara/) that is typically used for identifying malware. This is where the first non-traditional approach for fine-tuning comes. The engine is fine-tuned by creating new YARA rules to detect prompt injection attacks. YARA is fundamentally a pattern matching tool based on set of strings and boolean expression, which makes it extremely effective on detecting prompt injections that follow a pre-determined syntax.
 
 The **Vector Search** engine uses vector embeddings and calculates the distance of the given prompt against the vector embeddings stored in a local ChromaDB instance. This engine is fine-tuned by improving the vector embeddings stored inside ChromaDB, essentially by using more diverse dataset during the initialization of the engine. The engine can also be fine-tuned by adjusting the logic on how the data is queried and compared against the given prompt. 
 
@@ -21,6 +19,30 @@ Our objective is to provide engines that are more or less "static" once they rea
 We are highly recommending to not changing anything but the engines to keep rest of the codebase up-to-date. You'll need to merge the changes from the main branch to your local branch whenever there are changes, but as the objective is to keep the changes to the engine code to the minimum, this merging can for the most parts be done automatically. In a long run, any changes to the engines considered to be stable are considered as breaking changes and they will be announced in advance.
 
 You can obviously also do the fine-tuning with some other way, but this way you can quite easily keep rest of the code up-to-date with the main branch but still be able to fine-tune the miner code. This is also the way to do it if you want to get support from the subnet developers to help you get started with the fine-tuning process.
+
+One important fine-tuning method is to also tune the engine weights in the `PromptInjectionMiner` class. Please note that this is the only fine-tuning you need to make outside of the engines. 
+
+So in a nutshell, in order to fine-tune the **text classification** engine, you need to modify the following file:
+- llm_defender/core/miners/engines/prompt_injection/text_classification.py
+
+And within the file, you need to modify the `prepare()`, `initialize()`, `execute()`, `_calculate_confidence()` and `_populate_data()` functions. If you for example want to take another model into you but keep rest of the functionality as is, you would need to replace the model names within the `initialize()` and change the logic within the `_calculate_confidence()` and `_populate_data()` functions so that the output stays the same.
+
+The engines have been designed so that they can be loaded outside of the miner. This way you can easily test the updated engine logic. 
+
+Sample script for running text classification engine outside of the miner:
+
+```
+from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
+
+engine = TextClassificationEngine()
+engine.prepare()
+model, tokenizer = engine.initialize()
+
+for i in ["foo", "bar"]:
+    engine = TextClassificationEngine(prompt=i)
+    engine.execute(model=model, tokenizer=tokenizer)
+    print(engine.get_response().get_dict())
+```
 
 ## Technical requirements
 As our objective is to enable miner fine-tuners to potentially even completely rewrite the engines as they best see fit, we have implemented some technical requirements the engines must conform to. 
