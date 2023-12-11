@@ -31,12 +31,18 @@ class EngineResponse:
     def __init__(
         self,
         confidence: float,
-        engine_data: dict,
+        data: dict,
         name: str
     ):
         self.confidence = confidence
-        self.engine_data = engine_data
+        self.data = data
         self.name = name
+    
+    def get_dict(self) -> dict:
+        """
+        This function returns dict representation of the class
+        """
+        return {"name": self.name, "confidence": self.confidence, "data": self.data}
 
 
 def normalize_list(input_list: list) -> list:

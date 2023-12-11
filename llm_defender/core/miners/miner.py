@@ -14,15 +14,9 @@ import sys
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.miners.engines.prompt_injection import (
-    heuristics,
-    text_classification,
-    vector_search,
-)
-from chromadb import PersistentClient
-from os import path
-
-from llm_defender.base import utils
+from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
+from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
+from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
 
 
 class PromptInjectionMiner(BaseNeuron):
@@ -44,10 +38,10 @@ class PromptInjectionMiner(BaseNeuron):
         args = parser.parse_args()
         self.set_miner_weights = args.miner_set_weights
 
-        self.chromadb_client = PersistentClient(path=f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/")
+        self.chromadb_client = VectorEngine().initialize()
 
-        self.text_classification_model = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_model()
-        self.text_classification_tokenizer = text_classification.TextClassificationEngine(prompt=None, prepare_only=True).get_tokenizer()
+        self.model, self.tokenizer = TextClassificationEngine().initialize()
+        self.yara_rules = YaraEngine().initialize()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
@@ -189,26 +183,37 @@ class PromptInjectionMiner(BaseNeuron):
         # Responses are stored in a list
         output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
 
-        # Initialize the engines and their weights to be used for the
-        # detections. Initializing the engine also executes the engine.
-        engines = [
-            heuristics.HeuristicsEngine(prompt=synapse.prompt),
-            text_classification.TextClassificationEngine(prompt=synapse.prompt, model=self.text_classification_model, tokenizer=self.text_classification_tokenizer),
-            vector_search.VectorEngine(prompt=synapse.prompt,client=self.chromadb_client),
-        ]
-
         engine_confidences = []
-        for engine in engines:
-            output["engines"].append(engine.get_response())
-            engine_confidences.append(engine.confidence)
 
-        if all(0.0 <= val <= 1.0 for val in engine_confidences):
-            output["confidence"] = sum(engine_confidences) / len(engine_confidences)
-        else:
-            bt.logging.error(
-                f"Confidence scores received from engines are out-of-bound: {engine_confidences}, output: {output}"
-            )
-            return synapse
+        # Execute YARA engine
+        yara_engine = YaraEngine(prompt=synapse.prompt)
+        yara_engine.execute(rules=self.yara_rules)
+        yara_response = yara_engine.get_response().get_dict()
+        output["engines"].append(yara_response)
+        engine_confidences.append(yara_response["confidence"])
+
+        # Execute Text Classification engine
+        text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
+        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        text_classification_response = text_classification_engine.get_response().get_dict()
+        output["engines"].append(text_classification_response)
+        engine_confidences.append(text_classification_response["confidence"])
+
+        # Execute Vector Search engine
+        vector_engine = VectorEngine(prompt=synapse.prompt)
+        vector_engine.execute(client=self.chromadb_client)
+        vector_response = vector_engine.get_response().get_dict()
+        output["engines"].append(vector_response)
+        engine_confidences.append(vector_response["confidence"])
+
+
+        # Determine engine weights. These should corresponding to the
+        # order of execution. You should modify these values as a part
+        # of the fine-tuning process. Defaults to equal weight to all engines.
+        engine_weights = [1/len(engine_confidences) for _ in engine_confidences]
+
+        # Calculate confidence score
+        output["confidence"] = self.calculate_overall_confidence(engine_confidences, engine_weights)
 
         synapse.output = output
 
@@ -216,6 +221,24 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.debug(f'Engine data: {output["engines"]}')
         bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
 
-        # Nullify engines after execution
-        utils.cleanup(variables=[engines,engine_confidences,output])
         return synapse
+    
+    def calculate_overall_confidence(self, confidences, weights):
+        """Function to calculate the overall confidence"""
+        if len(confidences) != len(weights):
+            raise ValueError("Number of confidences and weights should match")
+        
+        if any(confidence < 0.0 or confidence > 1.0 for confidence in confidences):
+            raise ValueError("Confidences should be between 0.0 and 1.0")
+        
+        if not (0.99 <= sum(weights) <= 1.01):
+            raise ValueError("Sum of weights should be approximately 1.0")
+
+        # Calculate the weighted average of confidences
+        weighted_sum = sum(confidence * weight for confidence, weight in zip(confidences, weights))
+        
+        # Calculate the overall confidence
+        overall_score = min(1.0, max(0.0, weighted_sum))
+        bt.logging.debug(f'Calculated weighted confidence: {weighted_sum}. Original confidence: {sum(confidences)/len(confidences)}')
+        
+        return overall_score

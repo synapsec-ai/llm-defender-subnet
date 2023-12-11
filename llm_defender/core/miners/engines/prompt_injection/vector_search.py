@@ -3,8 +3,9 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 import uuid
-from os import path
+from os import path, makedirs
 import chromadb
+from chromadb.config import Settings
 import bittensor as bt
 from datasets import load_dataset
 from llm_defender.base.engine import BaseEngine
@@ -42,39 +43,53 @@ class VectorEngine(BaseEngine):
 
     def __init__(
         self,
-        prompt: str,
-        client: chromadb.ClientAPI,
-        result_count: int = 2,
-        threshold: float = 1.0,
-        engine_name="Vector Search",
-        prepare_only=False,
+        prompt: str = None,
+        name="engine:vector_search",
+        reset_on_init=False
     ):
-        super().__init__(prompt, engine_name)
+        super().__init__(name=name)
+        self.prompt = prompt
+        self.collection_name = "prompt-injection-strings"
+        self.reset_on_init = reset_on_init
 
-        self.result_count = result_count
-        self.threshold = threshold
-        self.db_path = f"{path.expanduser('~')}/.llm-defender-subnet/chromadb/"
-        self.client = client
-        
-        if not prepare_only:
-            self.collection = self.get_collection()
-            if self.collection:
-                self.engine_data = self.execute_query()
-                if self.engine_data:
-                    self.confidence = self.calculate_confidence()
+    def _calculate_confidence(self):
+        if self.output["outcome"] != "ResultsNotFound":
+            # Some distances are above 1.6 -> unlikely to be malicious
+            distances = self.output["distances"]
+            if any(distance >= 1.6 for distance in distances):
+                return 0.0
+            if any(distance <= 1.0 for distance in distances):
+                return 1.0
+            
+            # Calculate the value between 0.0 and 1.0 based on the distance from 1.0 to 1.6
+            min_distance = 1.0
+            max_distance = 1.6
 
-                    if 0.0 <= self.confidence >= 1.0:
-                        bt.logging.error(f"Confidence out-of-bounds: {self.confidence}")
-                        self.confidence = 0.5
-                else:
-                    self.confidence = 0.5
-            else:
-                self.confidence = 0.5
-                self.engine_data = None
+            # Normalize the distances between 1.0 and 1.6 to a range between 0 and 1
+            normalized_distances = [(distance - min_distance) / (max_distance - min_distance) for distance in distances]
+
+            # Calculate the mean of normalized distances
+            normalized_mean = sum(normalized_distances) / len(normalized_distances)
+
+            # Interpolate the value between 0.0 and 1.0 based on the normalized_mean
+            interpolated_value = 1.0 - normalized_mean
+
+            return interpolated_value
+
+        return 0.5
+
+    def _populate_data(self, results):
+        if results:
+            return {
+                "outcome": "ResultsFound",
+                "distances": results["distances"][0],
+                "documents": results["documents"][0],
+            }
+        return {"outcome": "ResultsNotFound"}
 
     def prepare(self) -> bool:
         """This function is used by prep.py
-        
+
         The prep.py executes the prepare methods from all engines before
         the miner is launched. If you change the models used by the
         engines, you must also change this prepare function to match.
@@ -85,127 +100,95 @@ class VectorEngine(BaseEngine):
         information is loaded into the chromadb as this code is
         executed.
         """
-        try:
-            collection = self.client.get_or_create_collection(
-                name="prompt-injection-strings"
-            )
-        except Exception as e:
-            print(f"Unable to get or create chromadb collection: {e}")
-            return False
+        # Check cache directory
+        if not path.exists(self.cache_dir):
+            try:
+                makedirs(self.cache_dir)
+            except OSError as e:
+                raise OSError(f"Unable to create cache directory: {e}") from e
+            
+        # Client is needed to prepare the engine
+        client = self.initialize()
 
+        # Initialize collection
         try:
-            # If we have already initialized the chromadb, we do not need to populate it
+            collection = client.get_or_create_collection(name=self.collection_name)
+        except Exception as e:
+            raise Exception(f"Unable to get or create chromadb collection: {e}") from e
+
+        # Populate chromadb
+        try:
+            # If there already are items in the collection, reset them
             if collection.count() > 0:
                 return True
 
-            # Populate chromadb
-            dataset = load_dataset("deepset/prompt-injections", split="train", cache_dir=self.cache_dir)
+            dataset = load_dataset(
+                "deepset/prompt-injections", cache_dir=self.cache_dir
+            )
+            filtered_dataset = dataset.filter(lambda x: x["label"] == 1)
 
+            # Add training data
             collection.add(
-                documents=dataset["text"],
-                ids=[str(uuid.uuid4()) for _ in range(len(dataset["text"]))],
+                documents=filtered_dataset["train"]["text"],
+                ids=[
+                    str(uuid.uuid4())
+                    for _ in range(len(filtered_dataset["train"]["text"]))
+                ],
             )
 
-            # Dummy query to trigger the download of the cached onnx model
-            collection.query(
-                query_texts="foo",
-                n_results=1,
-                include=["documents", "distances"],
+            # Add testing data
+            collection.add(
+                documents=filtered_dataset["test"]["text"],
+                ids=[
+                    str(uuid.uuid4())
+                    for _ in range(len(filtered_dataset["test"]["text"]))
+                ],
             )
 
+            # Trigger the download of onnx model
+            collection.query(query_texts="foo")
+
+            return True
         except Exception as e:
-            print(f'Error: {e}')
-            return False
-        
-        return True
+            raise Exception(f"Unable to populate chromadb collection: {e}") from e
 
+    def initialize(self) -> chromadb.PersistentClient:
+        client = chromadb.PersistentClient(path=f"{self.cache_dir}/chromadb2", settings=Settings(allow_reset=True))
+        if self.reset_on_init:
+            client.reset()
 
-    def get_collection(self) -> chromadb.Collection:
-        """Returns the chromadb collection.
+        return client
 
-        Returns:
-            collection:
-                An instance of chromadb.collection consisting of the
-                collection used to store the prompt injection records
-        """
+    def execute(self, client: chromadb.PersistentClient):
+        # Get collection
         try:
-            if not path.exists(self.db_path):
-                bt.logging.warning('Running preparation mid-flight for chromadb. The miner may not have been initialized properly, consider restarting the miner.')
-                self.prepare()
-            collection = self.client.get_collection(
-                name="prompt-injection-strings"
-            )
+            collection = client.get_collection(name=self.collection_name)
         except ValueError as e:
-            bt.logging.warning(f'Running preparation mid-flight for chromadb. The miner may not have been initialized properly, consider restarting the miner. Error received: {e}')
-            self.prepare()
-            collection = self.client.get_collection(
-                name="prompt-injection-strings"
+            bt.logging.warning(
+                f"Running preparation mid-flight for chromadb. The miner may not have been initialized properly, consider restarting the miner. Error received: {e}"
             )
+            self.prepare()
+            collection = client.get_collection(name="prompt-injection-strings")
         except Exception as e:
-            bt.logging.error(f"Unable to get collection from chromadb: {e}")
-            return None
+            raise Exception(f"Unable to get collection from chromadb: {e}") from e
 
-        return collection
+        if not collection:
+            raise ValueError("ChromaDB collection not found")
 
-    def execute_query(self) -> chromadb.QueryResult:
-        """This method executes query against the collection.
-
-        The collection is queried based on the parameters defined in the
-        init function.
-
-        Returns:
-            query_results: An instance of chromadb.QueryResult
-            displaying the query results.
-        """
-
+        # Execute query
         try:
-            query_result = self.collection.query(
+            results = collection.query(
                 query_texts=self.prompt,
-                n_results=self.result_count,
+                n_results=2,
                 include=["documents", "distances"],
             )
         except Exception as e:
-            bt.logging.error(f"Exception occurred while querying chromadb: {e}")
+            raise Exception(f"Unable to query documents from collection: {e}") from e
 
-            return None
+        self.output = self._populate_data(results)
+        self.confidence = self._calculate_confidence()
 
         bt.logging.debug(
-            f"Query to chromadb collection executed, results: {query_result}"
+            f"Vector Search engine executed (Confidence: {self.confidence} - Output: {self.output})"
         )
-
-        return query_result
-
-    def calculate_confidence(self) -> float:
-        """This method calculates the confidence score for the engine.
-
-        The default algorithm uses the threshold as a cut-off point to
-        consider a prompt may be a prompt injection.
-
-        Returns:
-            confidence: A float depicting the confidence score.
-        """
-        self.analyzed = True
-        confidence = 0.5
-        mean_distance = sum(
-            sum(sublist) for sublist in self.engine_data["distances"]
-        ) / sum(len(sublist) for sublist in self.engine_data["distances"])
-        if not any(
-            value < self.threshold
-            for results in self.engine_data["distances"]
-            for value in results
-        ):
-            bt.logging.debug(
-                f'None of the results {self.engine_data["distances"]} were belong the threshold: {self.threshold}'
-            )
-            
-            mean_distance = 1 - mean_distance + self.threshold
-            confidence = min(0.5, max(0.0, mean_distance))
-            return confidence
-
-        confidence = max(0.5, 1 - mean_distance)
-        bt.logging.debug(
-            f"Confidence score set to {confidence} for prompt {self.prompt}"
-        )
-
-        return confidence
-
+        return True
