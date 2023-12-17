@@ -69,12 +69,14 @@ class VectorEngine(BaseEngine):
             normalized_distances = [(distance - min_distance) / (max_distance - min_distance) for distance in distances]
 
             # Calculate the mean of normalized distances
-            normalized_mean = sum(normalized_distances) / len(normalized_distances)
+            if normalized_distances:
+                normalized_mean = sum(normalized_distances) / len(normalized_distances)
 
-            # Interpolate the value between 0.0 and 1.0 based on the normalized_mean
-            interpolated_value = 1.0 - normalized_mean
+                # Interpolate the value between 0.0 and 1.0 based on the normalized_mean
+                interpolated_value = 1.0 - normalized_mean
 
-            return interpolated_value
+                return interpolated_value
+            return 0.5
 
         return 0.5
 

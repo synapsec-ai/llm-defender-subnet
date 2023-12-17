@@ -50,7 +50,7 @@ def main(miner: PromptInjectionMiner):
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
-            if miner.step % 10 == 0:
+            if miner.step % 20 == 0:
                 # Periodically update the weights on the Bittensor blockchain.
                 current_block = miner.subtensor.block
                 if (
@@ -80,7 +80,7 @@ def main(miner: PromptInjectionMiner):
 
                     miner.last_updated_block = miner.subtensor.block
 
-                if miner.step % 100 == 0:
+                if miner.step % 600 == 0:
                     bt.logging.debug(
                         f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
                     )

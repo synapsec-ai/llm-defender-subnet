@@ -12,11 +12,13 @@ import copy
 from argparse import ArgumentParser
 from typing import Tuple
 import torch
+import pickle
 from os import path
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt
 from llm_defender.base import mock_data
+from llm_defender.core.validators import penalty
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -40,6 +42,9 @@ class PromptInjectionValidator(BaseNeuron):
         self.metagraph = None
         self.scores = None
         self.hotkeys = None
+        self.miner_responses = None
+        self.max_targets = None
+        self.target_group = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -131,21 +136,29 @@ class PromptInjectionValidator(BaseNeuron):
 
         if args.load_state:
             self.load_state()
+            self.load_miner_state()
         else:
             # Setup initial scoring weights
             self.scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
             bt.logging.debug(f"Validation weights have been initialized: {self.scores}")
 
+        if args.max_targets:
+            self.max_targets = args.max_targets
+        else:
+            self.max_targets = 256
+        
+        self.target_group = 0
+
         return True
 
     def process_responses(
         self, processed_uids: torch.tensor, query: dict, responses: list
-    ):
+    ) -> list:
         """
         This function processes the responses received from the miners.
         """
 
-        processed_uids = processed_uids.tolist()
+        # processed_uids = processed_uids.tolist()
 
         # Determine target value for scoring
         if query["data"]["isPromptInjection"] is True:
@@ -153,45 +166,108 @@ class PromptInjectionValidator(BaseNeuron):
         else:
             target = 0.0
 
-        bt.logging.debug(f"Target set to: {target}")
+        bt.logging.debug(f"Confidence target set to: {target}")
 
+        response_data = []
+
+        responses_invalid_uids = []
+        responses_valid_uids = []
         for i, response in enumerate(responses):
-            bt.logging.debug(
-                f"Processing response {i} from UID {processed_uids[i]} with content: {response}"
-            )
+            hotkey = self.metagraph.hotkeys[processed_uids[i]]
             # Set the score for empty responses to 0
             if not response.output:
-                bt.logging.debug(
-                    f"Received an empty response from UID {processed_uids[i]}: {response}"
-                )
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
                 new_score = self.scores[processed_uids[i]]
-                bt.logging.info(f'No valid response from UID {processed_uids[i]}. Overall score for the UID {processed_uids[i]}: {new_score} (Change: {new_score - old_score})')
-                continue
+                response_score = (
+                    distance_score
+                ) = speed_score = engine_score = penalty_multiplier = 0.0
+                engine_response = {}
+                engine_data = {}
+                responses_invalid_uids.append(processed_uids[i])
+            else:
+                response_time = response.dendrite.process_time
+                (
+                    response_score,
+                    distance_score,
+                    speed_score,
+                    engine_score,
+                    penalty_multiplier,
+                ) = self.calculate_score(
+                    response=response.output,
+                    target=target,
+                    prompt=query["prompt"],
+                    response_time=response_time,
+                    hotkey=hotkey,
+                )
 
-            response_time = response.dendrite.process_time
-            response_score = self.calculate_score(
-                response=response.output,
-                target=target,
-                response_time=response_time,
-                hotkey=response.dendrite.hotkey,
-            )
+                old_score = copy.deepcopy(self.scores[processed_uids[i]])
+                self.scores[processed_uids[i]] = (
+                    self.neuron_config.alpha * self.scores[processed_uids[i]]
+                    + (1 - self.neuron_config.alpha) * response_score
+                )
+                new_score = self.scores[processed_uids[i]]
 
-            old_score = copy.deepcopy(self.scores[processed_uids[i]])
-            self.scores[processed_uids[i]] = (
-                self.neuron_config.alpha * self.scores[processed_uids[i]]
-                + (1 - self.neuron_config.alpha) * response_score
-            )
-            new_score = self.scores[processed_uids[i]]
+                engine_response = {
+                    "prompt": response.output["prompt"],
+                    "confidence": response.output["confidence"],
+                }
+                engine_data = [
+                    [
+                        data
+                        for data in response.output["engines"]
+                        if data["name"] == "engine:text_classification"
+                    ][0],
+                    [
+                        data
+                        for data in response.output["engines"]
+                        if data["name"] == "engine:vector_search"
+                    ][0],
+                    [
+                        data
+                        for data in response.output["engines"]
+                        if data["name"] == "engine:yara"
+                    ][0],
+                ]
+                responses_valid_uids.append(processed_uids[i])
 
-            bt.logging.info(f'Scored the response from UID {processed_uids[i]}: {response_score}. Overall score for the UID {processed_uids[i]}: {new_score} (Change: {new_score - old_score})')
+            # Create response data object
+            data = {
+                "UID": processed_uids[i],
+                "hotkey": hotkey,
+                "target": target,
+                "original_prompt": query["prompt"],
+                "response": engine_response,
+                "engine_scores": {
+                    "distance_score": float(distance_score),
+                    "speed_score": float(speed_score),
+                    "engine_score": float(engine_score),
+                    "penalty_multiplier": float(penalty_multiplier),
+                },
+                "weight_scores": {
+                    "new": float(new_score),
+                    "old": float(old_score),
+                    "change": float(new_score) - float(old_score),
+                },
+                "engine_data": engine_data,
+            }
+
+            bt.logging.debug(f"Processed response: {data}")
+
+            response_data.append(data)
+
+        bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
+        bt.logging.info(
+            f"Received invalid responses from UIDs: {responses_invalid_uids}"
+        )
+
+        return response_data
 
     def calculate_score(
-        self, response, target: float, response_time: float, hotkey: str
+        self, response, target: float, prompt: str, response_time: float, hotkey: str
     ) -> float:
         """This function sets the score based on the response.
 
@@ -245,10 +321,17 @@ class PromptInjectionValidator(BaseNeuron):
             f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
         )
 
+        penalty_score = self.apply_penalty(response, hotkey, prompt)
+        if penalty_score >= 20:
+            penalty_multiplier = 0.0
+        elif penalty_score > 0.0:
+            penalty_multiplier = 1 - ((penalty_score / 2.0) / 10)
+        else:
+            penalty_multiplier = 1.0
         score = (
             distance_weight * distance_score
             + speed_weight * speed_score
-            + num_engines_weight * engine_score
+            + num_engines_weight * engine_score * penalty_multiplier
         )
 
         if score > 1.0 or score < 0.0:
@@ -258,13 +341,39 @@ class PromptInjectionValidator(BaseNeuron):
 
             return 0.0
 
-        return score
+        return score, distance_score, speed_score, engine_score, penalty_multiplier
 
-    def penalty(self) -> bool:
+    def apply_penalty(self, response, hotkey, prompt) -> float:
         """
-        Penalty function.
+        Applies a penalty score based on the response and previous
+        responses received from the miner.
         """
-        return False
+
+        # If hotkey is not found from list of responses, penalties
+        # cannot be calculated
+        if not self.miner_responses:
+            return 1.0
+        if not hotkey in self.miner_responses.keys():
+            return 1.0
+        
+        # Get UID
+        uid = self.metagraph.hotkeys.index(hotkey)
+
+        penalty_score = 1.0
+        # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
+        # penalty_score -= similarity.check_penalty(self.miner_responses["hotkey"], response)
+        penalty_score += penalty.duplicate.check_penalty(
+            uid, self.miner_responses[hotkey], response
+        )
+        penalty_score += penalty.base.check_penalty(
+            uid, self.miner_responses[hotkey], response, prompt
+        )
+
+        bt.logging.debug(
+            f"Penalty score '{penalty_score}' for response '{response}' from UID '{uid}'"
+        )
+        return penalty_score
+
 
     def serve_prompt(self) -> EnginePrompt:
         """Generates a prompt to serve to a miner
@@ -289,6 +398,43 @@ class PromptInjectionValidator(BaseNeuron):
 
         return prompt
 
+    def check_hotkeys(self):
+        """Checks if some hotkeys have been replaced in the metagraph"""
+        current_hotkeys = self.metagraph.hotkeys
+        for i, hotkey in enumerate(current_hotkeys):
+            if self.hotkeys[i] != hotkey:
+                bt.logging.debug(f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0")
+                bt.logging.debug(f"Scores before reset: {self.scores}")
+                self.scores[i] = 0.0
+                bt.logging.debug(f"Scores after reset: {self.scores}")
+        
+        self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+
+    def save_miner_state(self):
+        """Saves the miner state to a file."""
+        with open(f"{self.base_path}/miners.pickle", "wb") as pickle_file:
+            pickle.dump(self.miner_responses, pickle_file)
+
+        bt.logging.debug("Saves miner states to a file")
+
+    def load_miner_state(self):
+        """Loads the miner state from a file"""
+        state_path = f"{self.base_path}/miners.pickle"
+        if path.exists(state_path):
+            with open(state_path, "rb") as pickle_file:
+                self.miner_responses = pickle.load(pickle_file)
+
+            bt.logging.debug("Saves miner states loaded from a file")
+
+    def truncate_miner_state(self):
+        """Truncates the local miner state"""
+
+        if self.miner_responses:
+            for hotkey in self.miner_responses:
+                self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
+
+            bt.logging.debug("Truncated miner response list")
+
     def save_state(self):
         """Saves the state of the validator to a file."""
         bt.logging.info("Saving validator state.")
@@ -299,12 +445,14 @@ class PromptInjectionValidator(BaseNeuron):
                 "step": self.step,
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
-                "last_updated_block": self.last_updated_block
+                "last_updated_block": self.last_updated_block,
             },
             self.base_path + "/state.pt",
         )
 
-        bt.logging.debug(f'Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}')
+        bt.logging.debug(
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+        )
 
     def load_state(self):
         """Loads the state of the validator from a file."""
@@ -314,17 +462,15 @@ class PromptInjectionValidator(BaseNeuron):
         if path.exists(state_path):
             bt.logging.info("Loading validator state.")
             state = torch.load(state_path)
-            bt.logging.debug(f'Loaded the following state from file: {state}')
+            bt.logging.debug(f"Loaded the following state from file: {state}")
             self.step = state["step"]
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
             self.last_updated_block = state["last_updated_block"]
 
-            bt.logging.info(f'Scores loaded from saved file: {self.scores}')
+            bt.logging.info(f"Scores loaded from saved file: {self.scores}")
         else:
             bt.logging.info("Validator state not found. Starting with default values.")
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
-
-            
