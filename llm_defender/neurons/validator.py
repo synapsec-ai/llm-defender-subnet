@@ -65,7 +65,7 @@ def main(validator: PromptInjectionValidator):
 
             # Filter uids to send the request to
             uids_with_stake = validator.metagraph.total_stake >= 0.0
-            bt.logging.debug(f"UIDs to filter: {uids_with_stake}")
+            bt.logging.trace(f"UIDs to filter: {uids_with_stake}")
 
             # Filter out uids with an IP address of 0.0.0.0
             invalid_uids = torch.tensor(
