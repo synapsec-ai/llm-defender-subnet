@@ -177,7 +177,7 @@ class PromptInjectionMiner(BaseNeuron):
         # )
         # if synapse.subnet_version > self.subnet_version:
         #     bt.logging.warning(
-        #         f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version})."
+        #         f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version}). Please update the miner."
         #     )
 
         # Responses are stored in a list
@@ -215,11 +215,18 @@ class PromptInjectionMiner(BaseNeuron):
         # Calculate confidence score
         output["confidence"] = self.calculate_overall_confidence(engine_confidences, engine_weights)
 
+        # Add subnet version to the output
+        # output["subnet_version"] = self.subnet_version
+
+        # Add synapse UUID to the output
+        # output["synapse_uuid"] = synapse.synapse_uuid
+        output["synapse_uuid"] = None
+
         synapse.output = output
 
         bt.logging.debug(f'Processed prompt: {output["prompt"]}')
         bt.logging.debug(f'Engine data: {output["engines"]}')
-        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]}')
+        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}')
 
         return synapse
     

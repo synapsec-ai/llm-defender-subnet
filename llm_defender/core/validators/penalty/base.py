@@ -35,9 +35,9 @@ def _check_confidence_history(uid, miner_responses, penalty_name="Suspicious con
     if average_confidence >= 0.45 and average_confidence <= 0.55:
         penalty += 5
     elif average_confidence < 0.45 and average_confidence >= 0.35:
-        penalty += 3
+        penalty += 2
     elif average_confidence < 0.35:
-        penalty += 4
+        penalty += 3
 
     bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'")
 

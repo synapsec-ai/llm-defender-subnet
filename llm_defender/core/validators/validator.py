@@ -16,7 +16,7 @@ import pickle
 from os import path
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.utils import EnginePrompt
+from llm_defender.base.utils import EnginePrompt, timeout_decorator
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 
@@ -146,20 +146,23 @@ class PromptInjectionValidator(BaseNeuron):
             self.max_targets = args.max_targets
         else:
             self.max_targets = 256
-        
+
         self.target_group = 0
 
         return True
 
     def process_responses(
-        self, processed_uids: torch.tensor, query: dict, responses: list
+        self,
+        processed_uids: torch.tensor,
+        query: dict,
+        responses: list,
+        # synapse_uuid: str,
     ) -> list:
         """
         This function processes the responses received from the miners.
         """
 
         # processed_uids = processed_uids.tolist()
-
         # Determine target value for scoring
         if query["data"]["isPromptInjection"] is True:
             target = 1.0
@@ -185,7 +188,7 @@ class PromptInjectionValidator(BaseNeuron):
                 response_score = (
                     distance_score
                 ) = speed_score = engine_score = penalty_multiplier = 0.0
-                engine_response = {}
+                miner_response = {}
                 engine_data = {}
                 responses_invalid_uids.append(processed_uids[i])
             else:
@@ -211,9 +214,10 @@ class PromptInjectionValidator(BaseNeuron):
                 )
                 new_score = self.scores[processed_uids[i]]
 
-                engine_response = {
+                miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
+                    # "synapse_uuid": response.output["synapse_uuid"],
                 }
                 engine_data = [
                     [
@@ -234,13 +238,19 @@ class PromptInjectionValidator(BaseNeuron):
                 ]
                 responses_valid_uids.append(processed_uids[i])
 
+                # if response.output["subnet_version"] > self.subnet_version:
+                #     bt.logging.warning(
+                #         f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than ours ({self.subnet_version}). Please update the validator.'
+                #     )
+
             # Create response data object
             data = {
                 "UID": processed_uids[i],
                 "hotkey": hotkey,
                 "target": target,
                 "original_prompt": query["prompt"],
-                "response": engine_response,
+                # "synapse_uuid": synapse_uuid,
+                "response": miner_response,
                 "engine_scores": {
                     "distance_score": float(distance_score),
                     "speed_score": float(speed_score),
@@ -298,7 +308,7 @@ class PromptInjectionValidator(BaseNeuron):
         speed_score = 1.0 - (response_time / self.timeout)
 
         # Calculate score for the number of engines used
-        engine_score = len(response) / self.max_engines
+        engine_score = len(response["engines"]) / self.max_engines
 
         # Validate individual scores
         if (
@@ -310,7 +320,7 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds individual scores:\nDistance: {distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Determine final score
         distance_weight = 0.7
@@ -339,7 +349,7 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds score: {score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0
 
         return score, distance_score, speed_score, engine_score, penalty_multiplier
 
@@ -355,13 +365,15 @@ class PromptInjectionValidator(BaseNeuron):
             return 1.0
         if not hotkey in self.miner_responses.keys():
             return 1.0
-        
+
         # Get UID
         uid = self.metagraph.hotkeys.index(hotkey)
 
         penalty_score = 1.0
         # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
-        # penalty_score -= similarity.check_penalty(self.miner_responses["hotkey"], response)
+        penalty_score += penalty.similarity.check_penalty(
+            uid, self.miner_responses[hotkey], response
+        )
         penalty_score += penalty.duplicate.check_penalty(
             uid, self.miner_responses[hotkey], response
         )
@@ -373,7 +385,6 @@ class PromptInjectionValidator(BaseNeuron):
             f"Penalty score '{penalty_score}' for response '{response}' from UID '{uid}'"
         )
         return penalty_score
-
 
     def serve_prompt(self) -> EnginePrompt:
         """Generates a prompt to serve to a miner
@@ -403,11 +414,13 @@ class PromptInjectionValidator(BaseNeuron):
         current_hotkeys = self.metagraph.hotkeys
         for i, hotkey in enumerate(current_hotkeys):
             if self.hotkeys[i] != hotkey:
-                bt.logging.debug(f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0")
+                bt.logging.debug(
+                    f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
+                )
                 bt.logging.debug(f"Scores before reset: {self.scores}")
                 self.scores[i] = 0.0
                 bt.logging.debug(f"Scores after reset: {self.scores}")
-        
+
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
 
     def save_miner_state(self):
@@ -474,3 +487,32 @@ class PromptInjectionValidator(BaseNeuron):
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+    
+    @timeout_decorator(timeout=10)
+    def set_weights(self):
+        """Sets the weights for the subnet"""
+
+        weights = torch.nn.functional.normalize(self.scores, p=1.0, dim=0)
+        bt.logging.info(f"Setting weights: {weights}")
+
+        bt.logging.debug(
+            f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+        )
+        # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+        result = self.subtensor.set_weights(
+            netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+            wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+            uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+            weights=weights,  # Weights to set for the miners.
+            wait_for_inclusion=False,
+            version_key=self.subnet_version,
+        )
+        if result:
+            bt.logging.success("Successfully set weights.")
+            bt.logging.info(f"Weights: {weights}")
+
+            # Update validators knowledge of the last updated block
+            self.last_updated_block = self.subtensor.block
+        else:
+            bt.logging.error("Failed to set weights.")

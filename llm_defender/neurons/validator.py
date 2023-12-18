@@ -9,6 +9,7 @@ import torch
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
+from uuid import uuid4
 
 
 def main(validator: PromptInjectionValidator):
@@ -37,7 +38,7 @@ def main(validator: PromptInjectionValidator):
                 # Save miners state
                 validator.save_miner_state()
 
-            if validator.step % 2 == 0:
+            if validator.step % 20 == 0:
                 validator.truncate_miner_state()
 
             # Get all axons
@@ -127,6 +128,7 @@ def main(validator: PromptInjectionValidator):
             query = validator.serve_prompt().get_dict()
 
             # Broadcast query to valid Axons
+            # synapse_uuid = str(uuid4())
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
@@ -134,7 +136,8 @@ def main(validator: PromptInjectionValidator):
                     engine=query["engine"],
                     roles=["internal"],
                     analyzer=["Prompt Injection"],
-                    # subnet_version=validator.subnet_version
+                    subnet_version=validator.subnet_version,
+                    # synapse_uuid=synapse_uuid
                 ),
                 timeout=validator.timeout,
                 deserialize=True,
@@ -152,7 +155,8 @@ def main(validator: PromptInjectionValidator):
             # Process the responses
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
-                query=query, processed_uids=list_of_uids, responses=responses
+                query=query, processed_uids=list_of_uids, responses=responses, 
+                # synapse_uuid=synapse_uuid
             )
 
             for res in response_data:
@@ -175,29 +179,12 @@ def main(validator: PromptInjectionValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
             if current_block - validator.last_updated_block > 100:
-                weights = torch.nn.functional.normalize(validator.scores, p=1.0, dim=0)
-                bt.logging.info(f"Setting weights: {weights}")
-
-                bt.logging.debug(
-                    f"Setting weights with the following parameters: netuid={validator.neuron_config.netuid}, wallet={validator.wallet}, uids={validator.metagraph.uids}, weights={weights}, version_key={validator.subnet_version}"
-                )
-                # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-                # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-                result = validator.subtensor.set_weights(
-                    netuid=validator.neuron_config.netuid,  # Subnet to set weights on.
-                    wallet=validator.wallet,  # Wallet to sign set weights using hotkey.
-                    uids=validator.metagraph.uids,  # Uids of the miners to set weights for.
-                    weights=weights,  # Weights to set for the miners.
-                    wait_for_inclusion=False,
-                    version_key=validator.subnet_version,
-                )
-                if result:
-                    bt.logging.success("Successfully set weights.")
-                else:
-                    bt.logging.error("Failed to set weights.")
-
-                # Update validators knowledge of the last updated block
-                validator.last_updated_block = current_block
+                
+                # Set weights for the miners
+                try:
+                    validator.set_weights()
+                except TimeoutError as e:
+                    bt.logging.error(f'Setting weights timed out: {e}')
 
             # End the current step and prepare for the next iteration.
             validator.step += 1

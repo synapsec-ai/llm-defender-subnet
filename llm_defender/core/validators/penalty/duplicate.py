@@ -22,7 +22,7 @@ def _calculate_duplicate_percentage(uid, miner_responses, engine, penalty_name="
     elif engine == "engine:text_classification":
         if duplicate_percentage > 0.5:
             if duplicate_percentage > 0.95:
-                penalty += 4
+                penalty += 3
             elif duplicate_percentage > 0.9:
                 penalty += 2
             elif duplicate_percentage > 0.8:
