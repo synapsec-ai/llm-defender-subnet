@@ -5,7 +5,7 @@ def _check_prompt_response_mismatch(uid, response, prompt, penalty_name="Prompt/
     penalty = 0.0
     if response["prompt"] != prompt:
         penalty = 20.0
-    bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
+    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
     return penalty
 
 
@@ -13,7 +13,7 @@ def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bo
     penalty = 0.0
     if response["confidence"] > 1.0 or response["confidence"] < 0.0:
         penalty = 20.0
-    bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
+    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
     return penalty
 
 
@@ -39,7 +39,7 @@ def _check_confidence_history(uid, miner_responses, penalty_name="Suspicious con
     elif average_confidence < 0.35:
         penalty += 3
 
-    bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'")
+    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'")
 
     return penalty
 

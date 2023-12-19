@@ -59,7 +59,7 @@ def _check_response_history(uid, miner_responses, engine, penalty_name="High-sim
     elif average_similarity > 0.6:
         penalty += 0.5
 
-    bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average confidence: '{average_similarity}'")
+    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average confidence: '{average_similarity}'")
     return penalty
 
 def check_penalty(uid, miner_responses, response):

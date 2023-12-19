@@ -83,7 +83,6 @@ class PromptInjectionValidator(BaseNeuron):
             raise AttributeError from e
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
-        bt.logging.info(f"Self.hotkeys at init: {len(self.hotkeys)}")
 
         return wallet, subtensor, dendrite, metagraph
 
@@ -396,7 +395,7 @@ class PromptInjectionValidator(BaseNeuron):
             uid, self.miner_responses[hotkey], response, prompt
         )
 
-        bt.logging.debug(
+        bt.logging.trace(
             f"Penalty score '{penalty_score}' for response '{response}' from UID '{uid}'"
         )
         return penalty_score
@@ -429,7 +428,6 @@ class PromptInjectionValidator(BaseNeuron):
         if self.hotkeys:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
-                bt.logging.info(f"During checking: {len(self.hotkeys)}")
                 current_hotkeys = self.metagraph.hotkeys
                 for i, hotkey in enumerate(current_hotkeys):
                     if self.hotkeys[i] != hotkey:
@@ -517,8 +515,6 @@ class PromptInjectionValidator(BaseNeuron):
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
-
-        bt.logging.info(f"After loading state: {len(self.hotkeys)}")
 
     @timeout_decorator(timeout=30)
     def set_weights(self):
