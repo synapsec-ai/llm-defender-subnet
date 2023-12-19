@@ -83,7 +83,7 @@ class PromptInjectionValidator(BaseNeuron):
             raise AttributeError from e
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
-        bt.logging.info(f'Self.hotkeys at init: {len(self.hotkeys)}')
+        bt.logging.info(f"Self.hotkeys at init: {len(self.hotkeys)}")
 
         return wallet, subtensor, dendrite, metagraph
 
@@ -220,23 +220,34 @@ class PromptInjectionValidator(BaseNeuron):
                     "confidence": response.output["confidence"],
                     # "synapse_uuid": response.output["synapse_uuid"],
                 }
-                engine_data = [
-                    [
-                        data
-                        for data in response.output["engines"]
-                        if data["name"] == "engine:text_classification"
-                    ][0],
-                    [
-                        data
-                        for data in response.output["engines"]
-                        if data["name"] == "engine:vector_search"
-                    ][0],
-                    [
-                        data
-                        for data in response.output["engines"]
-                        if data["name"] == "engine:yara"
-                    ][0],
+                text_class = [
+                    data
+                    for data in response.output["engines"]
+                    if data["name"] == "engine:text_classification"
                 ]
+
+                vector_search = [
+                    data
+                    for data in response.output["engines"]
+                    if data["name"] == "engine:vector_search"
+                ]
+
+                yara = [
+                    data
+                    for data in response.output["engines"]
+                    if data["name"] == "engine:yara"
+                ]
+                if len(text_class == 0):
+                    bt.logging.info(text_class)
+                    bt.logging.info(response.output)
+                if len(vector_search == 0):
+                    bt.logging.info(text_class)
+                    bt.logging.info(response.output)
+                if len(yara == 0):
+                    bt.logging.info(text_class)
+                    bt.logging.info(response.output)
+                    
+                engine_data = [text_class[0], vector_search[0], yara[0]]
                 responses_valid_uids.append(processed_uids[i])
 
                 # if response.output["subnet_version"] > self.subnet_version:
@@ -415,7 +426,7 @@ class PromptInjectionValidator(BaseNeuron):
         if self.hotkeys:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
-                bt.logging.info(f'During checking: {len(self.hotkeys)}')
+                bt.logging.info(f"During checking: {len(self.hotkeys)}")
                 current_hotkeys = self.metagraph.hotkeys
                 for i, hotkey in enumerate(current_hotkeys):
                     if self.hotkeys[i] != hotkey:
@@ -427,9 +438,13 @@ class PromptInjectionValidator(BaseNeuron):
                         bt.logging.debug(f"Scores after reset: {self.scores}")
             else:
                 # Init default scores
-                bt.logging.info(f'Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}')
+                bt.logging.info(
+                    f"Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}"
+                )
                 self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-                bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+                bt.logging.info(
+                    f"Validation weights have been initialized: {self.scores}"
+                )
 
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
@@ -499,9 +514,9 @@ class PromptInjectionValidator(BaseNeuron):
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
-        
-        bt.logging.info(f'After loading state: {len(self.hotkeys)}')
-    
+
+        bt.logging.info(f"After loading state: {len(self.hotkeys)}")
+
     @timeout_decorator(timeout=30)
     def set_weights(self):
         """Sets the weights for the subnet"""
@@ -524,7 +539,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         if result:
             bt.logging.success("Successfully set weights.")
-            
+
             # Update validators knowledge of the last updated block
             self.last_updated_block = self.subtensor.block
         else:
