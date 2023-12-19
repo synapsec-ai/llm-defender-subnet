@@ -412,6 +412,7 @@ class PromptInjectionValidator(BaseNeuron):
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:
+            bt.logging.debug(len(self.hotkeys))
             current_hotkeys = self.metagraph.hotkeys
             for i, hotkey in enumerate(current_hotkeys):
                 if self.hotkeys[i] != hotkey:
