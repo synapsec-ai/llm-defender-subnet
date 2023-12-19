@@ -431,7 +431,7 @@ class PromptInjectionValidator(BaseNeuron):
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
                 current_hotkeys = self.metagraph.hotkeys
                 for i, hotkey in enumerate(current_hotkeys):
-                    if self.hotkeys[i] != hotkey:
+                    if self.hotkeys[i] == hotkey:
                         bt.logging.debug(
                             f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                         )
