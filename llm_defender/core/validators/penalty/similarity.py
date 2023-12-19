@@ -44,7 +44,7 @@ def _check_response_history(uid, miner_responses, engine, penalty_name="High-sim
     mask = np.triu(np.ones(cosine_sim_matrix.shape), k=1).astype(bool)
     similarities = cosine_sim_matrix[mask]
 
-    if not similarities:
+    if len(similarities) == 0:
         return penalty
     
     average_similarity = similarities.mean()

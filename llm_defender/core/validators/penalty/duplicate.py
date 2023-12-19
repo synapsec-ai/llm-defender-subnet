@@ -36,11 +36,14 @@ def _calculate_duplicate_percentage(uid, miner_responses, engine, penalty_name="
 def _find_identical_reply(uid, miner_responses, response, engine, penalty_name="Identical replies"):
     """Applies penalty if identical replies are found"""
     penalty = 0.0
-    engine_response = [data for data in response["engines"] if data["name"] == engine][0]
-    if any(engine_response == entry for item in miner_responses for entry in item.get('engine_data', [])):
-        penalty += 0.5
-    
-    bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
+    engine_response = [data for data in response["engines"] if data["name"] == engine]
+    if not engine_response:
+        return penalty
+    if len(engine_response) > 0:
+        if any(engine_response == entry for item in miner_responses for entry in item.get('engine_data', [])):
+            penalty += 0.5
+        
+        bt.logging.debug(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
     return penalty
 
 def check_penalty(uid, miner_responses, response):
