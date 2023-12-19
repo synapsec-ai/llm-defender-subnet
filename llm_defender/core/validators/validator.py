@@ -542,8 +542,5 @@ class PromptInjectionValidator(BaseNeuron):
         )
         if result:
             bt.logging.success("Successfully set weights.")
-
-            # Update validators knowledge of the last updated block
-            self.last_updated_block = self.subtensor.block
         else:
             bt.logging.error("Failed to set weights.")

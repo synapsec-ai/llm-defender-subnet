@@ -183,6 +183,8 @@ def main(validator: PromptInjectionValidator):
                 # Set weights for the miners
                 try:
                     validator.set_weights()
+                    # Update validators knowledge of the last updated block
+                    validator.last_updated_block = validator.subtensor.block
                 except TimeoutError as e:
                     bt.logging.error(f'Setting weights timed out: {e}')
 
