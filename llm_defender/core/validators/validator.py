@@ -222,7 +222,7 @@ class PromptInjectionValidator(BaseNeuron):
                 }
                 bt.logging.info(response.output["engines"])
                 bt.logging.info(response.output)
-                bt.logging.info(response.hotkey)
+                bt.logging.info(hotkey)
                 text_class = [
                     data
                     for data in response.output["engines"]
