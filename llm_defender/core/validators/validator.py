@@ -83,6 +83,7 @@ class PromptInjectionValidator(BaseNeuron):
             raise AttributeError from e
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
+        bt.logging.info(f'Self.hotkeys at init: {len(self.hotkeys)}')
 
         return wallet, subtensor, dendrite, metagraph
 
@@ -412,12 +413,12 @@ class PromptInjectionValidator(BaseNeuron):
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:
-            bt.logging.debug(len(self.hotkeys))
+            bt.logging.info(f'During checking: {len(self.hotkeys)}')
             current_hotkeys = self.metagraph.hotkeys
             for i, hotkey in enumerate(current_hotkeys):
                 if self.hotkeys[i] != hotkey:
                     bt.logging.debug(
-                        f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
+                        f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                     )
                     bt.logging.debug(f"Scores before reset: {self.scores}")
                     self.scores[i] = 0.0
@@ -491,6 +492,8 @@ class PromptInjectionValidator(BaseNeuron):
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+        
+        bt.logging.info(f'After loading state: {len(self.hotkeys)}')
     
     @timeout_decorator(timeout=30)
     def set_weights(self):
