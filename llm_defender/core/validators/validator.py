@@ -220,6 +220,9 @@ class PromptInjectionValidator(BaseNeuron):
                     "confidence": response.output["confidence"],
                     # "synapse_uuid": response.output["synapse_uuid"],
                 }
+                bt.logging.info(response.output["engines"])
+                bt.logging.info(response.output)
+                bt.logging.info(response.hotkey)
                 text_class = [
                     data
                     for data in response.output["engines"]
