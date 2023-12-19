@@ -3,23 +3,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 
-# Sample documents
-document_1 = "This is the first document"
-document_2 = "This document is the second document"
-document_3 = "And this is the third one"
-
-# Create a CountVectorizer to convert text to word count vectors
-vectorizer = CountVectorizer()
-
-# Fit and transform the documents into vectors
-vectorized_docs = vectorizer.fit_transform([document_1, document_2, document_3])
-
-# Calculate cosine similarity between document_1 and document_2
-cosine_sim = cosine_similarity(vectorized_docs[0], vectorized_docs[1])
-
-print(f"Cosine Similarity between document_1 and document_2: {cosine_sim[0][0]}")
-
-
 def _check_response_history(uid, miner_responses, engine, penalty_name="High-similarity score"):
     """Checks the response history to determine the similarity of engine responses"""
     # Isolate engine-specific data

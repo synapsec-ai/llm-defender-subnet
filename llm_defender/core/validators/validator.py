@@ -472,11 +472,11 @@ class PromptInjectionValidator(BaseNeuron):
         """Truncates the local miner state"""
 
         if self.miner_responses:
-            old_size = getsizeof(self.miner_responses)
+            old_size = getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())
             for hotkey in self.miner_responses:
                 self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
 
-            bt.logging.debug(f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses)}')")
+            bt.logging.debug(f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')")
 
     def save_state(self):
         """Saves the state of the validator to a file."""
