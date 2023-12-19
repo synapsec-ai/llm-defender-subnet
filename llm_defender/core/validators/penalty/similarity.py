@@ -48,7 +48,7 @@ def _check_response_history(uid, miner_responses, engine, penalty_name="High-sim
         return penalty
     
     average_similarity = similarities.mean()
-    bt.logging.debug(f'Average similarity: {average_similarity}')
+    bt.logging.trace(f'Average similarity: {average_similarity}')
     
     if average_similarity > 0.9:
         penalty += 3

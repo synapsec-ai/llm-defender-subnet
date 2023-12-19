@@ -310,7 +310,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         # Calculate score for the speed of the response
-        bt.logging.debug(
+        bt.logging.trace(
             f"Calculating speed_score for {hotkey} with response_time: {response_time} and timeout {self.timeout}"
         )
         if response_time > self.timeout:
