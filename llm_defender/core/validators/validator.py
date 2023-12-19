@@ -220,9 +220,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "confidence": response.output["confidence"],
                     # "synapse_uuid": response.output["synapse_uuid"],
                 }
-                bt.logging.info(response.output["engines"])
-                bt.logging.info(response.output)
-                bt.logging.info(hotkey)
+
                 text_class = [
                     data
                     for data in response.output["engines"]
@@ -241,20 +239,18 @@ class PromptInjectionValidator(BaseNeuron):
                     if data["name"] == "engine:yara"
                 ]
 
-                bt.logging.info(f'{text_class}')
-                bt.logging.info(f'{type(text_class)}')
-                bt.logging.info(f'{vector_search}, {yara}')
-                if len(text_class == 0):
-                    bt.logging.info(text_class)
-                    bt.logging.info(response.output)
-                if len(vector_search == 0):
-                    bt.logging.info(text_class)
-                    bt.logging.info(response.output)
-                if len(yara == 0):
-                    bt.logging.info(text_class)
-                    bt.logging.info(response.output)
-                    
-                engine_data = [text_class[0], vector_search[0], yara[0]]
+                engine_data = []
+
+                if text_class:
+                    if len(text_class) > 0:
+                        engine_data.append(text_class[0])
+                if vector_search:
+                    if len(vector_search) > 0:
+                        engine_data.append(vector_search[0])
+                if yara:
+                    if len(yara) > 0:
+                        engine_data.append(yara[0])
+
                 responses_valid_uids.append(processed_uids[i])
 
                 # if response.output["subnet_version"] > self.subnet_version:
