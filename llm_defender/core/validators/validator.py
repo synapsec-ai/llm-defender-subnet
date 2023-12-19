@@ -19,6 +19,7 @@ from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt, timeout_decorator
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
+from sys import getsizeof
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -189,7 +190,7 @@ class PromptInjectionValidator(BaseNeuron):
                     distance_score
                 ) = speed_score = engine_score = penalty_multiplier = 0.0
                 miner_response = {}
-                engine_data = {}
+                engine_data = []
                 responses_invalid_uids.append(processed_uids[i])
             else:
                 response_time = response.dendrite.process_time
@@ -341,7 +342,7 @@ class PromptInjectionValidator(BaseNeuron):
         speed_weight = 0.2
         num_engines_weight = 0.1
 
-        bt.logging.debug(
+        bt.logging.trace(
             f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
         )
 
@@ -471,10 +472,11 @@ class PromptInjectionValidator(BaseNeuron):
         """Truncates the local miner state"""
 
         if self.miner_responses:
+            old_size = getsizeof(self.miner_responses)
             for hotkey in self.miner_responses:
                 self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
 
-            bt.logging.debug("Truncated miner response list")
+            bt.logging.debug(f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses)}')")
 
     def save_state(self):
         """Saves the state of the validator to a file."""
