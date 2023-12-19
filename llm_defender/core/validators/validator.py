@@ -240,6 +240,8 @@ class PromptInjectionValidator(BaseNeuron):
                     for data in response.output["engines"]
                     if data["name"] == "engine:yara"
                 ]
+
+                bt.logging.info(f'{text_class}, {vector_search}, {yara}')
                 if len(text_class == 0):
                     bt.logging.info(text_class)
                     bt.logging.info(response.output)
