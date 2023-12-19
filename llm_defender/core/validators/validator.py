@@ -413,16 +413,23 @@ class PromptInjectionValidator(BaseNeuron):
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:
-            bt.logging.info(f'During checking: {len(self.hotkeys)}')
-            current_hotkeys = self.metagraph.hotkeys
-            for i, hotkey in enumerate(current_hotkeys):
-                if self.hotkeys[i] != hotkey:
-                    bt.logging.debug(
-                        f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
-                    )
-                    bt.logging.debug(f"Scores before reset: {self.scores}")
-                    self.scores[i] = 0.0
-                    bt.logging.debug(f"Scores after reset: {self.scores}")
+            # Check if known state len matches with current metagraph hotkey length
+            if len(self.hotkeys) == len(self.metagraph.hotkeys):
+                bt.logging.info(f'During checking: {len(self.hotkeys)}')
+                current_hotkeys = self.metagraph.hotkeys
+                for i, hotkey in enumerate(current_hotkeys):
+                    if self.hotkeys[i] != hotkey:
+                        bt.logging.debug(
+                            f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
+                        )
+                        bt.logging.debug(f"Scores before reset: {self.scores}")
+                        self.scores[i] = 0.0
+                        bt.logging.debug(f"Scores after reset: {self.scores}")
+            else:
+                # Init default scores
+                bt.logging.info(f'Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}')
+                self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+                bt.logging.info(f"Validation weights have been initialized: {self.scores}")
 
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
