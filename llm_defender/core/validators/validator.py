@@ -411,17 +411,20 @@ class PromptInjectionValidator(BaseNeuron):
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
-        current_hotkeys = self.metagraph.hotkeys
-        for i, hotkey in enumerate(current_hotkeys):
-            if self.hotkeys[i] != hotkey:
-                bt.logging.debug(
-                    f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
-                )
-                bt.logging.debug(f"Scores before reset: {self.scores}")
-                self.scores[i] = 0.0
-                bt.logging.debug(f"Scores after reset: {self.scores}")
+        if self.hotkeys:
+            current_hotkeys = self.metagraph.hotkeys
+            for i, hotkey in enumerate(current_hotkeys):
+                if self.hotkeys[i] != hotkey:
+                    bt.logging.debug(
+                        f"Index '{i} has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
+                    )
+                    bt.logging.debug(f"Scores before reset: {self.scores}")
+                    self.scores[i] = 0.0
+                    bt.logging.debug(f"Scores after reset: {self.scores}")
 
-        self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+        else:
+            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
