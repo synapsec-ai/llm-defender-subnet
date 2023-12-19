@@ -488,7 +488,7 @@ class PromptInjectionValidator(BaseNeuron):
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
     
-    @timeout_decorator(timeout=10)
+    @timeout_decorator(timeout=30)
     def set_weights(self):
         """Sets the weights for the subnet"""
 
@@ -510,8 +510,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         if result:
             bt.logging.success("Successfully set weights.")
-            bt.logging.info(f"Weights: {weights}")
-
+            
             # Update validators knowledge of the last updated block
             self.last_updated_block = self.subtensor.block
         else:
