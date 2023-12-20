@@ -179,7 +179,7 @@ class PromptInjectionValidator(BaseNeuron):
         for i, response in enumerate(responses):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
             # Set the score for empty responses to 0
-            if not response.output:
+            if not response.output or not all(item in response.output for item in ["prompt", "confidence", "engines"]):
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
@@ -300,6 +300,16 @@ class PromptInjectionValidator(BaseNeuron):
             score: An instance of float depicting the score for the
             response
         """
+
+        # Validate the engine responses contain the correct fields
+        for engine_response in response["engines"]:
+            for key in ["name", "confidence", "data"]:
+                if key not in engine_response.keys():
+                    # If any of the responses are invalid we can just return zeros right away
+                    bt.logging.debug(f'Received an invalid response: {response} from hotkey: {hotkey}')
+                    return 0.0, 0.0, 0.0, 0.0, 0.0
+                if engine_response[key] is None:
+                    return 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Calculate distances to target value for each engine and take the mean
         distances = [
