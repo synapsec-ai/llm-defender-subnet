@@ -54,9 +54,6 @@ def _find_identical_reply(uid, miner_responses, response, engine, penalty_name="
 
 def check_penalty(uid, miner_responses, response):
     """This function checks the total penalty score within duplicate category"""
-    if not isinstance(uid, str) or not isinstance(miner_responses, list) or not isinstance(response, dict):
-        # Received invalid data from miner, apply max penalty
-        return 20.0
     
     penalty = 0.0
     for engine in ["engine:text_classification", "engine:yara", "engine:vector_search"]:
