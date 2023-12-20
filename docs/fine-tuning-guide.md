@@ -155,7 +155,6 @@ $ python3 scripts/fine_tuning_helpers/text_classification_helper.py
 {'name': 'engine:text_classification', 'confidence': 1.0, 'data': {'outcome': 'INJECTION', 'score': 0.9999783039093018}}
 {'name': 'engine:text_classification', 'confidence': 0.0, 'data': {'outcome': 'SAFE', 'score': 0.9999998807907104}}
 {'name': 'engine:text_classification', 'confidence': 0.0, 'data': {'outcome': 'SAFE', 'score': 0.9999998807907104}}
-
 ```
 
 When validating the output, verify that there are values for the `name` and `confidence` keys within the dict returned. If these are missing, your miner will get a score of zero from the validators. The confidence score should reflect the type of the prompt: 1.0 means you are absolutely sure it is injection and 0.0 means you're absolute sure it is not. For more advanced scenarios, you may want to adjust the logic so that values other than 1.0 and 0.0 are used for cases that you are not absolutely certain of. The content of the `data` field is arbitrary but it **must be** populated by using the `_populate_data()` function.
@@ -182,3 +181,15 @@ $ pm2 start scripts/run.sh \
 ```
 
 Thats it, now your miner is running with a different model and hopefully producing better incentive. If you want to revert back to the default state, simply relaunch the miner by setting the value for the `--branch` parameter to `main`.
+
+The text classification engine can also be tune by fine-tuning the model itself. This however is out-of-scope for this guide, as the purpose of this guide is to ensure that the subnet specific topics that relate to the tuning of the miners are covered.
+
+### Scenario 2 - Add YARA rules
+As discussed earlier, the fine-tuning of the subnet miners is done at the engine level, and each engine is fine-tuned slightly differently. With the YARA engine, we move away from the "traditional way" the Bittensor miners are tuned and introduce another mechanism for fine-tuning that can yield better results.
+
+> [!NOTE]  
+> It is recommended to follow the same Git practices discussed in the Scenario 1.
+
+### Scenario 3 - Modify engine weights
+> [!NOTE]  
+> It is recommended to follow the same Git practices discussed in the Scenario 1.
