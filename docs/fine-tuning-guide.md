@@ -190,6 +190,15 @@ As discussed earlier, the fine-tuning of the subnet miners is done at the engine
 > [!NOTE]  
 > It is recommended to follow the same Git practices discussed in the Scenario 1.
 
+YARA rules are essentially a way to describe known patterns that are commonly observed within the prompt injections. Are certain words or combination of words often associated with prompt injections? A YARA rule can be extremely efficient on detecting prompt injections that rely on known patterns, such as certain combination of strings or bypass commands. However, it can be easily circumvented and prone for false-positives. The key in the tuning of the YARA engine is to find a balance between detection capabilities while eliminating false-positives.
+
+XXX
+
 ### Scenario 3 - Modify engine weights
+Fine-tuning can also be done by modifying the weights for the engine. By default, the weights are equal between all engines (i.e., 1/3) but if you decide to focus on fine-tuning only a single engine, you may want to also adjust such that the miner gives more weight to the responses produced by a single engine. You'll gain best results by fine-tuning all the engines, but sometimes it may be wise to focus resources on the engine you are most familiar with.
+
 > [!NOTE]  
 > It is recommended to follow the same Git practices discussed in the Scenario 1.
+
+
+XXX
