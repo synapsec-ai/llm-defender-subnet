@@ -466,7 +466,7 @@ class PromptInjectionValidator(BaseNeuron):
             with open(state_path, "rb") as pickle_file:
                 self.miner_responses = pickle.load(pickle_file)
 
-            bt.logging.debug("Saves miner states loaded from a file")
+            bt.logging.debug("Loaded miner state from a file")
 
     def truncate_miner_state(self):
         """Truncates the local miner state"""
@@ -474,7 +474,9 @@ class PromptInjectionValidator(BaseNeuron):
         if self.miner_responses:
             old_size = getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())
             for hotkey in self.miner_responses:
+                bt.logging.trace(f'First entry before truncation: {self.miner_responses[hotkey][0]}')
                 self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
+                bt.logging.trace(f'First entry after truncation: {self.miner_responses[hotkey][0]}')
 
             bt.logging.debug(f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')")
 
