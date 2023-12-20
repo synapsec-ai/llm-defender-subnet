@@ -157,7 +157,7 @@ $ python3 scripts/fine_tuning_helpers/text_classification_helper.py
 {'name': 'engine:text_classification', 'confidence': 0.0, 'data': {'outcome': 'SAFE', 'score': 0.9999998807907104}}
 ```
 
-When validating the output, verify that there are values for the `name` and `confidence` keys within the dict returned. If these are missing, your miner will get a score of zero from the validators. The confidence score should reflect the type of the prompt: 1.0 means you are absolutely sure it is injection and 0.0 means you're absolute sure it is not. For more advanced scenarios, you may want to adjust the logic so that values other than 1.0 and 0.0 are used for cases that you are not absolutely certain of. The content of the `data` field is arbitrary but it **must be** populated by using the `_populate_data()` function.
+When validating the output, verify that there are values for the `name`, `confidence` and `data` keys within the dict returned. If these are missing, your miner will get a score of zero from the validators. The confidence score should reflect the type of the prompt: 1.0 means you are absolutely sure it is injection and 0.0 means you're absolute sure it is not. For more advanced scenarios, you may want to adjust the logic so that values other than 1.0 and 0.0 are used for cases that you are not absolutely certain of. The content of the `data` field is arbitrary but it **must be** populated by using the `_populate_data()` function.
 
 The response is based on the values of `self.output` and `self.confidence` so it is vital these values are populated accordingly. If the output of your modified engine looks same as in the examples above, you should be good to go.
 
