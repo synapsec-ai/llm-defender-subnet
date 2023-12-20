@@ -9,17 +9,17 @@ Typical example usage:
     foo.bar()
 """
 import copy
+import pickle
 from argparse import ArgumentParser
 from typing import Tuple
-import torch
-import pickle
+from sys import getsizeof
 from os import path
+import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt, timeout_decorator
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
-from sys import getsizeof
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -387,7 +387,7 @@ class PromptInjectionValidator(BaseNeuron):
         penalty_score = 1.0
         # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
         penalty_score += penalty.similarity.check_penalty(
-            uid, self.miner_responses[hotkey], response
+            uid, self.miner_responses[hotkey]
         )
         penalty_score += penalty.duplicate.check_penalty(
             uid, self.miner_responses[hotkey], response
@@ -472,13 +472,16 @@ class PromptInjectionValidator(BaseNeuron):
         """Truncates the local miner state"""
 
         if self.miner_responses:
-            old_size = getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())
+            old_size = getsizeof(self.miner_responses) + sum(
+                getsizeof(key) + getsizeof(value)
+                for key, value in self.miner_responses.items()
+            )
             for hotkey in self.miner_responses:
-                bt.logging.trace(f'First entry before truncation: {self.miner_responses[hotkey][0]}')
                 self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
-                bt.logging.trace(f'First entry after truncation: {self.miner_responses[hotkey][0]}')
 
-            bt.logging.debug(f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')")
+            bt.logging.debug(
+                f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')"
+            )
 
     def save_state(self):
         """Saves the state of the validator to a file."""

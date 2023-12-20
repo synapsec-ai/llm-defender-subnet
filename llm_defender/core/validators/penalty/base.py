@@ -1,11 +1,15 @@
 import bittensor as bt
 
 
-def _check_prompt_response_mismatch(uid, response, prompt, penalty_name="Prompt/Response mismatch"):
+def _check_prompt_response_mismatch(
+    uid, response, prompt, penalty_name="Prompt/Response mismatch"
+):
     penalty = 0.0
     if response["prompt"] != prompt:
         penalty = 20.0
-    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
+    bt.logging.trace(
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
+    )
     return penalty
 
 
@@ -13,11 +17,15 @@ def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bo
     penalty = 0.0
     if response["confidence"] > 1.0 or response["confidence"] < 0.0:
         penalty = 20.0
-    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'")
+    bt.logging.trace(
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
+    )
     return penalty
 
 
-def _check_confidence_history(uid, miner_responses, penalty_name="Suspicious confidence history"):
+def _check_confidence_history(
+    uid, miner_responses, penalty_name="Suspicious confidence history"
+):
     total_confidence = 0
     count = 0
     penalty = 0.0
@@ -39,7 +47,9 @@ def _check_confidence_history(uid, miner_responses, penalty_name="Suspicious con
     elif average_confidence < 0.35:
         penalty += 3
 
-    bt.logging.trace(f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'")
+    bt.logging.trace(
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'"
+    )
 
     return penalty
 
@@ -47,7 +57,10 @@ def _check_confidence_history(uid, miner_responses, penalty_name="Suspicious con
 def check_penalty(uid, miner_responses, response, prompt):
     """This function checks the total penalty score within duplicate
     category"""
-    
+    if not uid or not miner_responses or not response or not prompt:
+        # Apply penalty if invalid values are provided to the function
+        return 10.0
+
     penalty = 0.0
     penalty += _check_prompt_response_mismatch(uid, response, prompt)
     penalty += _check_confidence_validity(uid, response)
