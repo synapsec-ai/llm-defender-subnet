@@ -46,6 +46,8 @@ def _check_confidence_history(
         penalty += 2
     elif average_confidence < 0.35:
         penalty += 3
+    elif average_confidence > 0.9:
+        penalty += 4
 
     bt.logging.trace(
         f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'"

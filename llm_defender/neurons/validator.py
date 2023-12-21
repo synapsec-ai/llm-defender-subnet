@@ -10,6 +10,7 @@ import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from uuid import uuid4
+from llm_defender import __version__ as version
 
 
 def main(validator: PromptInjectionValidator):
@@ -18,7 +19,7 @@ def main(validator: PromptInjectionValidator):
     """
 
     # Step 7: The Main Validation Loop
-    bt.logging.info("Starting validator loop")
+    bt.logging.info(f"Starting validator loop with version: {version}")
 
     while True:
         try:

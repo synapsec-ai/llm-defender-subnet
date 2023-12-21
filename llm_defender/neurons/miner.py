@@ -8,7 +8,7 @@ import bittensor as bt
 import torch
 
 from llm_defender.core.miners.miner import PromptInjectionMiner
-
+from llm_defender import __version__ as version
 
 def main(miner: PromptInjectionMiner):
     """
@@ -89,6 +89,7 @@ def main(miner: PromptInjectionMiner):
 
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
+                    f"Version:{version} | "
                     f"Step:{miner.step} | "
                     f"Block:{miner.metagraph.block.item()} | "
                     f"Stake:{miner.metagraph.S[miner.miner_uid]} | "

@@ -6,7 +6,7 @@ import bittensor as bt
 
 def get_prompt():
     # Generate random probabilities for three functions
-    probabilities_list = [random.random() for _ in range(3)]
+    probabilities_list = [random.random() for _ in range(4)]
     total_probability = sum(probabilities_list)
 
     # Normalize probabilities to sum up to 1
@@ -21,10 +21,16 @@ def get_prompt():
 
     # Select function based on random number
     if rand_num <= probabilities_list[0]:
+        bt.logging.trace('Getting injection prompt from file')
         return _get_injection_prompt_from_file()
     elif rand_num <= probabilities_list[0] + probabilities_list[1]:
+        bt.logging.trace('Getting safe prompt from file')
+        return _get_safe_prompt_from_file()
+    elif rand_num <= probabilities_list[0] + probabilities_list[1] + probabilities_list[2]:
+        bt.logging.trace('Getting safe prompt from file')
         return _get_safe_prompt_from_file()
     else:
+        bt.logging.trace('Getting injection prompt from template')
         return _get_injection_prompt_from_template()
 
 
