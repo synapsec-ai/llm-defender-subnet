@@ -171,14 +171,14 @@ class PromptInjectionMiner(BaseNeuron):
         validator has been deserialized, which means we can utilize the
         data to control the behavior of this function.
         """
-
-        # bt.logging.debug(
-        #     f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
-        # )
-        # if synapse.subnet_version > self.subnet_version:
-        #     bt.logging.warning(
-        #         f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version}). Please update the miner."
-        #     )
+        if synapse.subnet_version:
+            bt.logging.debug(
+                f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
+            )   
+            if synapse.subnet_version > self.subnet_version:
+                bt.logging.warning(
+                    f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version}). Please update the miner."
+                )
 
         # Responses are stored in a list
         output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
@@ -216,11 +216,16 @@ class PromptInjectionMiner(BaseNeuron):
         output["confidence"] = self.calculate_overall_confidence(engine_confidences, engine_weights)
 
         # Add subnet version to the output
-        # output["subnet_version"] = self.subnet_version
+        if self.subnet_version:
+            output["subnet_version"] = self.subnet_version
+        else:
+            output["subnet_version"] = None
 
         # Add synapse UUID to the output
-        # output["synapse_uuid"] = synapse.synapse_uuid
-        output["synapse_uuid"] = None
+        if output["synapse_uuid"]:
+            output["synapse_uuid"] = synapse.synapse_uuid
+        else:
+            output["synapse_uuid"] = None
 
         synapse.output = output
 

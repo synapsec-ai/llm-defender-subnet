@@ -18,17 +18,17 @@ class LLMDefenderProtocol(bt.Synapse):
     engine: typing.Optional[str] = None
     output: typing.Optional[dict] = None
 
-    # synapse_uuid: str = pydantic.Field(
-    #     ...,
-    #     description="Synapse UUID",
-    #     allow_mutation=False
-    # )
+    synapse_uuid: str = pydantic.Field(
+        ...,
+        description="Synapse UUID",
+        allow_mutation=False
+    )
 
-    # subnet_version: int = pydantic.Field(
-    #     ...,
-    #     description="Current subnet version",
-    #     allow_mutation=False,
-    # )
+    subnet_version: int = pydantic.Field(
+        ...,
+        description="Current subnet version",
+        allow_mutation=False,
+    )
 
     roles: typing.List[str] = pydantic.Field(
         ...,

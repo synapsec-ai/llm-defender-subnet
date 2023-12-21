@@ -157,11 +157,14 @@ class PromptInjectionValidator(BaseNeuron):
         processed_uids: torch.tensor,
         query: dict,
         responses: list,
-        # synapse_uuid: str,
+        synapse_uuid: str,
     ) -> list:
         """
         This function processes the responses received from the miners.
         """
+
+        if not synapse_uuid:
+            synapse_uuid = None
 
         # processed_uids = processed_uids.tolist()
         # Determine target value for scoring
@@ -215,10 +218,15 @@ class PromptInjectionValidator(BaseNeuron):
                 )
                 new_score = self.scores[processed_uids[i]]
 
+                if not response.output["synapse_uuid"]:
+                    miner_response_uuid = None
+                else:
+                    miner_response_uuid = response.output["synapse_uuid"]
+                
                 miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
-                    # "synapse_uuid": response.output["synapse_uuid"],
+                    "synapse_uuid": miner_response_uuid,
                 }
 
                 text_class = [
@@ -253,10 +261,11 @@ class PromptInjectionValidator(BaseNeuron):
 
                 responses_valid_uids.append(processed_uids[i])
 
-                # if response.output["subnet_version"] > self.subnet_version:
-                #     bt.logging.warning(
-                #         f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than ours ({self.subnet_version}). Please update the validator.'
-                #     )
+                if response.output["subnet_version"]:
+                    if response.output["subnet_version"] > self.subnet_version:
+                        bt.logging.warning(
+                            f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than ours ({self.subnet_version}). Please update the validator.'
+                        )
 
             # Create response data object
             data = {
@@ -264,7 +273,7 @@ class PromptInjectionValidator(BaseNeuron):
                 "hotkey": hotkey,
                 "target": target,
                 "original_prompt": query["prompt"],
-                # "synapse_uuid": synapse_uuid,
+                "synapse_uuid": synapse_uuid,
                 "response": miner_response,
                 "engine_scores": {
                     "distance_score": float(distance_score),

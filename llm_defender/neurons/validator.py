@@ -129,7 +129,7 @@ def main(validator: PromptInjectionValidator):
             query = validator.serve_prompt().get_dict()
 
             # Broadcast query to valid Axons
-            # synapse_uuid = str(uuid4())
+            synapse_uuid = str(uuid4())
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
@@ -138,7 +138,7 @@ def main(validator: PromptInjectionValidator):
                     roles=["internal"],
                     analyzer=["Prompt Injection"],
                     subnet_version=validator.subnet_version,
-                    # synapse_uuid=synapse_uuid
+                    synapse_uuid=synapse_uuid
                 ),
                 timeout=validator.timeout,
                 deserialize=True,
@@ -157,7 +157,7 @@ def main(validator: PromptInjectionValidator):
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
                 query=query, processed_uids=list_of_uids, responses=responses, 
-                # synapse_uuid=synapse_uuid
+                synapse_uuid=synapse_uuid
             )
 
             for res in response_data:
