@@ -222,7 +222,8 @@ class PromptInjectionMiner(BaseNeuron):
             output["subnet_version"] = None
 
         # Add synapse UUID to the output
-        if output["synapse_uuid"]:
+        bt.logging.debug(f'Synapse: {synapse}')
+        if synapse.synapse_uuid:
             output["synapse_uuid"] = synapse.synapse_uuid
         else:
             output["synapse_uuid"] = None
