@@ -1,7 +1,7 @@
 module.exports = {
     apps : [
         {
-            name: "llm-defender-subnet-updater-dev",
+            name: "llm-defender-subnet-updater",
             interpreter: "/bin/bash",
             script: "./scripts/updater.sh",
             env: {
