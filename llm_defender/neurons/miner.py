@@ -8,7 +8,7 @@ import bittensor as bt
 import torch
 
 from llm_defender.core.miners.miner import PromptInjectionMiner
-
+from llm_defender import __version__ as version
 
 def main(miner: PromptInjectionMiner):
     """
@@ -50,7 +50,7 @@ def main(miner: PromptInjectionMiner):
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
-            if miner.step % 10 == 0:
+            if miner.step % 20 == 0:
                 # Periodically update the weights on the Bittensor blockchain.
                 current_block = miner.subtensor.block
                 if (
@@ -80,7 +80,7 @@ def main(miner: PromptInjectionMiner):
 
                     miner.last_updated_block = miner.subtensor.block
 
-                if miner.step % 100 == 0:
+                if miner.step % 600 == 0:
                     bt.logging.debug(
                         f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
                     )
@@ -89,6 +89,7 @@ def main(miner: PromptInjectionMiner):
 
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
+                    f"Version:{version} | "
                     f"Step:{miner.step} | "
                     f"Block:{miner.metagraph.block.item()} | "
                     f"Stake:{miner.metagraph.S[miner.miner_uid]} | "

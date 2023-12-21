@@ -3,6 +3,8 @@ This module implements common classes that are used by one or more core
 features and their engines.
 """
 import gc
+import multiprocessing
+
 
 class EnginePrompt:
     """
@@ -28,16 +30,11 @@ class EngineResponse:
     responses produced by the miners.
     """
 
-    def __init__(
-        self,
-        confidence: float,
-        data: dict,
-        name: str
-    ):
+    def __init__(self, confidence: float, data: dict, name: str):
         self.confidence = confidence
         self.data = data
         self.name = name
-    
+
     def get_dict(self) -> dict:
         """
         This function returns dict representation of the class
@@ -68,12 +65,47 @@ def normalize_list(input_list: list) -> list:
 
     return normalized_list
 
-def cleanup(variables: list=None):
+
+def cleanup(variables: list = None):
     """This is a generic cleanup function"""
     if variables:
         for variable in variables:
             variable = None
             del variable
-    
+
     gc.collect()
- 
+
+
+def _run_function(result_dict, func, args, kwargs):
+    """Helper function for the timeout() function"""
+    result = func(*args, **kwargs)
+    result_dict["result"] = result
+
+
+def timeout_decorator(timeout):
+    """Uses multiprocessing to create an arbitrary timeout for a
+    function call. This function is used for ensuring a stuck function
+    call does not block the execution of the neuron script"""
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            manager = multiprocessing.Manager()
+            result = manager.dict()
+
+            process = multiprocessing.Process(
+                target=_run_function, args=(result, func, args, kwargs)
+            )
+            process.start()
+            process.join(timeout=timeout)
+
+            if process.is_alive():
+                process.terminate()
+                process.join()
+                raise TimeoutError(
+                    f"Function '{func.__name__}' execution timed out after {timeout} seconds."
+                )
+            return result["result"]
+
+        return wrapper
+
+    return decorator
