@@ -194,7 +194,7 @@ YARA rules are essentially a way to describe known patterns that are commonly ob
 
 XXX
 
-### Scenario 3 - Modify engine weights
+### Scenario 3 - Modify engine weights [NOT IMPLEMENTED YET]
 Fine-tuning can also be done by modifying the weights for the engine. By default, the weights are equal between all engines (i.e., 1/3) but if you decide to focus on fine-tuning only a single engine, you may want to also adjust such that the miner gives more weight to the responses produced by a single engine. You'll gain best results by fine-tuning all the engines, but sometimes it may be wise to focus resources on the engine you are most familiar with.
 
 > [!NOTE]  
