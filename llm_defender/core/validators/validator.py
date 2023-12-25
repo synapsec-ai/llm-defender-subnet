@@ -182,7 +182,9 @@ class PromptInjectionValidator(BaseNeuron):
         for i, response in enumerate(responses):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
             # Set the score for empty responses to 0
-            if not response.output or not all(item in response.output for item in ["prompt", "confidence", "engines"]):
+            if not response.output or not all(
+                item in response.output for item in ["prompt", "confidence", "engines"]
+            ):
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
@@ -191,7 +193,7 @@ class PromptInjectionValidator(BaseNeuron):
                 new_score = self.scores[processed_uids[i]]
                 response_score = (
                     distance_score
-                ) = speed_score = engine_score = penalty_multiplier = 0.0
+                ) = speed_score = engine_score = distance_penalty_multiplier = general_penalty_multiplier= 0.0
                 miner_response = {}
                 engine_data = []
                 responses_invalid_uids.append(processed_uids[i])
@@ -202,7 +204,8 @@ class PromptInjectionValidator(BaseNeuron):
                     distance_score,
                     speed_score,
                     engine_score,
-                    penalty_multiplier,
+                    distance_penalty_multiplier,
+                    general_penalty_multiplier
                 ) = self.calculate_score(
                     response=response.output,
                     target=target,
@@ -222,7 +225,7 @@ class PromptInjectionValidator(BaseNeuron):
                     miner_response_uuid = None
                 else:
                     miner_response_uuid = response.output["synapse_uuid"]
-                
+
                 miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
@@ -279,7 +282,9 @@ class PromptInjectionValidator(BaseNeuron):
                     "distance_score": float(distance_score),
                     "speed_score": float(speed_score),
                     "engine_score": float(engine_score),
-                    "penalty_multiplier": float(penalty_multiplier),
+                    "distance_penalty_multiplier": float(distance_penalty_multiplier),
+                    "general_penalty_multiplier": float(general_penalty_multiplier),
+                    "response_score": float(response_score)
                 },
                 "weight_scores": {
                     "new": float(new_score),
@@ -315,10 +320,12 @@ class PromptInjectionValidator(BaseNeuron):
             for key in ["name", "confidence", "data"]:
                 if key not in engine_response.keys():
                     # If any of the responses are invalid we can just return zeros right away
-                    bt.logging.debug(f'Received an invalid response: {response} from hotkey: {hotkey}')
-                    return 0.0, 0.0, 0.0, 0.0, 0.0
+                    bt.logging.debug(
+                        f"Received an invalid response: {response} from hotkey: {hotkey}"
+                    )
+                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                 if engine_response[key] is None:
-                    return 0.0, 0.0, 0.0, 0.0, 0.0
+                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Calculate distances to target value for each engine and take the mean
         distances = [
@@ -354,28 +361,40 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds individual scores:\nDistance: {distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0, 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Determine final score
-        distance_weight = 0.7
-        speed_weight = 0.2
+        distance_weight = 0.8
+        speed_weight = 0.1
         num_engines_weight = 0.1
 
         bt.logging.trace(
             f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
         )
 
-        penalty_score = self.apply_penalty(response, hotkey, prompt)
-        if penalty_score >= 20:
-            penalty_multiplier = 0.0
-        elif penalty_score > 0.0:
-            penalty_multiplier = 1 - ((penalty_score / 2.0) / 10)
-        else:
-            penalty_multiplier = 1.0
+        similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
+            response, hotkey, prompt
+        )
+
+        distance_penalty_multiplier = 1.0
+        general_penalty_multiplier = 1.0
+
+        if base_penalty >= 20:
+            distance_penalty_multiplier = 0.0
+        elif base_penalty > 0.0:
+            distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
+
+        if sum([similarity_penalty, duplicate_penalty]) >= 20:
+            general_penalty_multiplier = 0.0
+        elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
+            general_penalty_multiplier = 1 - (
+                ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
+            )
+
         score = (
-            distance_weight * distance_score
-            + speed_weight * speed_score
-            + num_engines_weight * engine_score * penalty_multiplier
+            (distance_weight * distance_score) * distance_penalty_multiplier
+            + (speed_weight * speed_score) * general_penalty_multiplier
+            + (num_engines_weight * engine_score) * general_penalty_multiplier
         )
 
         if score > 1.0 or score < 0.0:
@@ -383,9 +402,9 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds score: {score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0, 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-        return score, distance_score, speed_score, engine_score, penalty_multiplier
+        return score, distance_score, speed_score, engine_score, distance_penalty_multiplier, general_penalty_multiplier
 
     def apply_penalty(self, response, hotkey, prompt) -> float:
         """
@@ -403,22 +422,22 @@ class PromptInjectionValidator(BaseNeuron):
         # Get UID
         uid = self.metagraph.hotkeys.index(hotkey)
 
-        penalty_score = 1.0
+        similarity = base = duplicate = 0.0
         # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
-        penalty_score += penalty.similarity.check_penalty(
+        similarity += penalty.similarity.check_penalty(
             uid, self.miner_responses[hotkey]
         )
-        penalty_score += penalty.duplicate.check_penalty(
-            uid, self.miner_responses[hotkey], response
-        )
-        penalty_score += penalty.base.check_penalty(
+        base += penalty.base.check_penalty(
             uid, self.miner_responses[hotkey], response, prompt
+        )
+        duplicate += penalty.duplicate.check_penalty(
+            uid, self.miner_responses[hotkey], response
         )
 
         bt.logging.trace(
-            f"Penalty score '{penalty_score}' for response '{response}' from UID '{uid}'"
+            f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
         )
-        return penalty_score
+        return similarity, base, duplicate
 
     def serve_prompt(self) -> EnginePrompt:
         """Generates a prompt to serve to a miner

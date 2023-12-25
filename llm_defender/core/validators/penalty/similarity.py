@@ -42,16 +42,16 @@ def _check_response_history(
     bt.logging.trace(f"Average similarity: {average_similarity}")
 
     if average_similarity > 0.9:
-        penalty += 3
-    elif average_similarity > 0.8:
         penalty += 2
-    elif average_similarity > 0.7:
+    elif average_similarity > 0.8:
         penalty += 1
-    elif average_similarity > 0.6:
+    elif average_similarity > 0.7:
         penalty += 0.5
+    elif average_similarity > 0.6:
+        penalty += 0.25
 
     bt.logging.trace(
-        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average confidence: '{average_similarity}'"
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average similarity: '{average_similarity}'"
     )
     return penalty
 
@@ -63,7 +63,7 @@ def check_penalty(uid, miner_responses):
 
     if not uid or not miner_responses:
         # Apply penalty if invalid values are provided to the function
-        return 10.0
+        return 20.0
 
     for engine in ["engine:text_classification", "engine:yara", "engine:vector_search"]:
         penalty += _check_response_history(uid, miner_responses, engine)

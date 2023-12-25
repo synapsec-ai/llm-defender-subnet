@@ -41,11 +41,11 @@ def _check_confidence_history(
     average_confidence = total_confidence / count if count > 0 else 0
 
     if average_confidence >= 0.45 and average_confidence <= 0.55:
-        penalty += 5
+        penalty += 7
     elif average_confidence < 0.45 and average_confidence >= 0.35:
-        penalty += 2
+        penalty += 4
     elif average_confidence < 0.35:
-        penalty += 3
+        penalty += 6
     elif average_confidence > 0.9:
         penalty += 4
 
@@ -55,13 +55,17 @@ def _check_confidence_history(
 
     return penalty
 
-
 def check_penalty(uid, miner_responses, response, prompt):
     """This function checks the total penalty score within duplicate
     category"""
     if not uid or not miner_responses or not response or not prompt:
         # Apply penalty if invalid values are provided to the function
         return 10.0
+
+    if len(miner_responses) < 50:
+        # Apply base penalty if we do not have a sufficient number of responses to process
+        bt.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len/(miner_responses)}')
+        return 5
 
     penalty = 0.0
     penalty += _check_prompt_response_mismatch(uid, response, prompt)
