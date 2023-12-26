@@ -41,7 +41,7 @@ If you are not familiar with Bittensor, you should first perform the following a
 > [!NOTE]  
 > Validators need to establish an internet connection with the miner. This requires ensuring that the port specified in --axon.port is reachable on the virtual machine via the internet. This involves either opening the port on the firewall or configuring port forwarding.
 
-Run miner:
+Run miner (if you run multiple miners, make sure the name and axon.port are unique):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -57,7 +57,7 @@ $ bash scripts/run_neuron.sh \
 ```
 You can optionally provide --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
-Run validator:
+Run validator (if you run multiple validators, make sure the name is unique):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -72,7 +72,7 @@ $ bash scripts/run_neuron.sh \
 ```
 You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
-Run auto-updater (recommended):
+Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -88,6 +88,27 @@ The `run_neuron.sh` script creates \<instance_name>.config.js files containing t
 
 > [!WARNING]  
 > The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
+
+## Troubleshooting 101
+(1) How to run clean installation?
+```
+$ cd llm-defender-subnet
+$ deactivate
+$ rm -rf ~/.llm-defender-subnet
+$ rm -rf ~/.cache/chroma
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e .
+```
+
+(2) How to check from logs that my miner is working? If you see SUCCESS log entries in your miner log, your miner is working.
+```
+$ grep "SUCCESS" ~/.pm2/logs/llm-defender-subnet-miner0-out.log
+2023-12-09 12:27:38.034 |     SUCCESS      | Processed synapse from UID: 19 - Confidence: 0.3333333730697632
+2023-12-09 12:27:43.231 |     SUCCESS      | Processed synapse from UID: 83 - Confidence: 0.3333333730697632
+2023-12-09 12:27:43.671 |     SUCCESS      | Processed synapse from UID: 21 - Confidence: 0.3333333730697632
+2023-12-09 12:27:46.779 |     SUCCESS      | Processed synapse from UID: 87 - Confidence: 0.3333333730697632
+```
 
 
 ## Capabilities
