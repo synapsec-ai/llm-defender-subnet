@@ -1,11 +1,17 @@
 from argparse import ArgumentParser
 import logging
+import sys
 from time import sleep
 import git
 import subprocess
 import random
 
-logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger('logger')
+logger.setLevel(logging.INFO)
+logHandler = logging.StreamHandler(sys.stdout)
+logHandler.setLevel(logging.INFO)
+logger.addHandler(logHandler)
 
 def run(args):
     """Monitors the given git branch for updates and restart given PM2
@@ -22,31 +28,31 @@ def run(args):
 
             # Check if there are changes in the remote repository
             if repo.refs[args.branch].commit != repo.refs[f'origin/{args.branch}'].commit:
-                logging.info('Changes detected in remote branch: %s', args.branch)
-                logging.info('Pulling remote branch: %s', args.branch)
+                logger.info('Changes detected in remote branch: %s', args.branch)
+                logger.info('Pulling remote branch: %s', args.branch)
                 origin.pull(args.branch)
                 repo.git.checkout(args.branch)
-                logging.info('Checked out to branch: %s', args.branch)
+                logger.info('Checked out to branch: %s', args.branch)
 
                 # Restart pm2 instances
                 for instance_name in args.pm2_instance_names:
                     try:
                         sleep_duration = random.randint(1,60)
-                        logging.info('Sleeping for %s seconds before restart', sleep_duration)
+                        logger.info('Sleeping for %s seconds before restart', sleep_duration)
                         sleep(sleep_duration)
                         subprocess.run(f'git checkout {args.branch} && pm2 restart {instance_name}', check=True, shell=True)
-                        logging.info('Restarted PM2 process: %s', instance_name)
+                        logger.info('Restarted PM2 process: %s', instance_name)
                     except subprocess.CalledProcessError as e:
-                        logging.error('Unable to restart PM2 instance: %s', e)
+                        logger.error('Unable to restart PM2 instance: %s', e)
                 
-                logging.info('All processes have been restarted')
+                logger.info('All processes have been restarted')
             else:
-                logging.info('No changes detected in remote branch: %s', args.branch)
+                logger.info('No changes detected in remote branch: %s', args.branch)
 
-            logging.info('Sleeping for %s seconds.', args.update_interval)
+            logger.info('Sleeping for %s seconds.', args.update_interval)
             sleep(int(args.update_interval))
         except Exception as e:
-            logging.error('Error occurred: %s', e)
+            logger.error('Error occurred: %s', e)
             raise Exception from e
 
 if __name__ == '__main__':
