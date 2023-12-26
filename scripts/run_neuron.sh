@@ -159,11 +159,12 @@ generate_pm2_launch_file_and_launch() {
     local axon_port="${args['axon.port']}"
     local axon_ip="${args['axon.ip']}"
     local wallet_path="${args['wallet.path']}"
-    local seq="${args['sequence']}"
+    local name="${args['name']}"
+    local max_memory_restart="${args['max_memory_restart']}"
 
     # Construct argument list for the neuron
-    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]]; then
-        echo "netuid, wallet.name, and wallet.hotkey are mandatory arguments."
+    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]] || -z "$name" || -z "$max_memory_restart"; then
+        echo "name, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
 
@@ -194,27 +195,21 @@ generate_pm2_launch_file_and_launch() {
     fi
 
     
-    cat <<EOF > llm-defender-${profile}-${seq}.config.js
+    cat <<EOF > ${name}.config.js
 module.exports = {
     apps: [
         {
-            "name"                  : "llm-defender-${profile}-${seq}",
+            "name"                  : "${name}",
             "script"                : "${neuron_script}",
             "interpreter"           : "${interpreter}",
             "args"                  : "${args}",
-            "max_memory_restart"    : "10G"
-        },
-        {
-            "name"                  : "llm-defender-auto-updater-${profile}-${seq}",
-            "script"                : "${cwd}/scripts/auto_updater.py",
-            "interpreter"           : "${interpreter}",
-            "args"                  : "--branch ${branch} --pm2_instance_names llm-defender-${profile}-${seq} --update_interval ${update_interval}"
+            "max_memory_restart"    : "${max_memory_restart}"
         }
     ]
 }
 EOF
 
-    eval "pm2 start llm-defender-${profile}-${seq}.config.js"
+    eval "pm2 start ${name}.config.js"
 }
 
 echo "### START OF EXECUTION ###"
