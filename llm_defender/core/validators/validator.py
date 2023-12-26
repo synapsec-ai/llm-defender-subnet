@@ -499,7 +499,7 @@ class PromptInjectionValidator(BaseNeuron):
         with open(f"{self.base_path}/miners.pickle", "wb") as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
-        bt.logging.debug("Saves miner states to a file")
+        bt.logging.debug("Saved miner states to a file")
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
@@ -536,12 +536,13 @@ class PromptInjectionValidator(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
+                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys
             },
             self.base_path + "/state.pt",
         )
 
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}, blacklisted_miner_hotkeys: {self.blacklisted_miner_hotkeys}"
         )
 
     def load_state(self):
@@ -557,6 +558,8 @@ class PromptInjectionValidator(BaseNeuron):
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
             self.last_updated_block = state["last_updated_block"]
+            if "blacklisted_miner_hotkeys" in state.keys():
+                self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
 
             bt.logging.info(f"Scores loaded from saved file: {self.scores}")
         else:
@@ -720,8 +723,6 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         bt.logging.trace(f'Blacklisted UIDs: {blacklisted_uids_tensor}')
-        bt.logging.trace(f'Invalid UIDs: {invalid_uids}')
-        bt.logging.trace(f'UIDs with stake: {uids_with_stake}')
 
         # Determine the UIDs to filter
         uids_to_filter = torch.logical_not(~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake)
