@@ -48,7 +48,6 @@ $ source .venv/bin/activate
 $ bash scripts/run_neuron.sh \
 --name llm-defender-miner-0 \
 --max_memory_restart 10G \
---update_interval 300 \
 --branch main \
 --netuid 14 \
 --profile miner \
@@ -65,7 +64,6 @@ $ source .venv/bin/activate
 $ bash scripts/run_neuron.sh \
 --name llm-defender-validator-0 \
 --max_memory_restart 5G \
---update_interval 300 \
 --branch main \
 --netuid 14 \
 --profile validator \

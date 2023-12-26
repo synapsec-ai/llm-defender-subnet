@@ -163,7 +163,7 @@ generate_pm2_launch_file_and_launch() {
     local max_memory_restart="${args['max_memory_restart']}"
 
     # Construct argument list for the neuron
-    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" ]] || -z "$name" || -z "$max_memory_restart"; then
+    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" ]]; then
         echo "name, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
