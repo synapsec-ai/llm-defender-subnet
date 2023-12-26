@@ -55,7 +55,7 @@ $ bash scripts/run_neuron.sh \
 --wallet.hotkey YourHotkeyGoesHere \
 --axon.port 15000
 ```
-You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
+You can optionally provide --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run validator:
 ```
@@ -73,7 +73,6 @@ $ bash scripts/run_neuron.sh \
 You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run auto-updater (recommended):
-Run validator:
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -83,7 +82,9 @@ $ bash scripts/run_auto_updater.sh \
 --pm2_instance_names llm-defender-validator-0 llm-defender-miner-0
 ```
 
-replace pm2_instance_names with correct instance from the earlier run commands for validator and/or miner
+Replace the values for pm2_instance_names with the correct instance names from the earlier run commands. If you're running your miner/validator/auto-updater from branch other than main, you need to be in that particular branch when you create the PM2 instances.
+
+The `run_neuron.sh` script creates \<instance_name>.config.js files containing the PM2 ecosystem configuration.
 
 > [!WARNING]  
 > The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
