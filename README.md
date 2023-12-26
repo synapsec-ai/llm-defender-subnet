@@ -1,4 +1,4 @@
-# Bittensor LLM Defender Subnet
+# Bittensor LLM Defender Subnet (sn14)
 This repository contains the source code for the LLM Defender subnet running on top of [Bittensor network](https://github.com/opentensor/bittensor). The LLM Defender subnet provides Large Language Model (LLM) developers a way to decentralize the computing required to detect and prevent various attacks and exploits against LLM applications. 
 
 ## Summary
