@@ -2,24 +2,28 @@
 declare -A args
 
 parse_arguments() {
+    local pm2_instance_names=false
 
     while [[ $# -gt 0 ]]; do
-        if [[ $1 == "--"* ]]; then
+        if [[ $1 == "--pm2_instance_names" ]]; then
+            pm2_instance_names=true
+            shift
+            continue
+        elif [[ $1 == "--"* ]]; then
+            pm2_instance_names=false
             arg_name=${1:2}  # Remove leading "--" from the argument name
-
-            # Special handling for logging argument
-            if [[ "$arg_name" == "logging"* ]]; then
-                shift
-                if [[ $1 != "--"* ]]; then
-                    IFS='.' read -ra parts <<< "$arg_name"
-                    echo ${parts[1]}
-                    args[${parts[0]}]=${parts[1]}
-                fi
-            else
-                shift
-                args[$arg_name]="$1"  # Assign the argument value to the argument name
-            fi
         fi
+
+        if [ "$pm2_instance_names" = true ]; then
+            if [[ $1 == "--"* ]]; then
+                pm2_instance_names=false
+            else
+                args["pm2_instance_names"]+=" $1"  # Concatenate values
+            fi
+        else
+            args[$arg_name]=$1
+        fi
+
         shift
     done
 
@@ -27,6 +31,7 @@ parse_arguments() {
         echo "Argument: $key, Value: ${args[$key]}"
     done
 }
+
 
 generate_pm2_launch_file_and_launch() {
     echo "Generating PM2 launch file"
