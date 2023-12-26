@@ -80,6 +80,10 @@ def main(miner: PromptInjectionMiner):
 
                     miner.last_updated_block = miner.subtensor.block
 
+                if miner.step % 300 == 0:
+                    # Check if the miners hotkey is on the remote blacklist
+                    miner.check_remote_blacklist()
+                
                 if miner.step % 600 == 0:
                     bt.logging.debug(
                         f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
@@ -90,6 +94,7 @@ def main(miner: PromptInjectionMiner):
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (
                     f"Version:{version} | "
+                    f"Blacklist:{miner.hotkey_blacklisted} | "
                     f"Step:{miner.step} | "
                     f"Block:{miner.metagraph.block.item()} | "
                     f"Stake:{miner.metagraph.S[miner.miner_uid]} | "

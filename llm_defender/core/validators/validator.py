@@ -19,7 +19,7 @@ from pathlib import Path
 import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.utils import EnginePrompt, timeout_decorator
+from llm_defender.base.utils import EnginePrompt, timeout_decorator, validate_miner_blacklist
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
@@ -593,24 +593,6 @@ class PromptInjectionValidator(BaseNeuron):
         else:
             bt.logging.error("Failed to set weights.")
 
-    def _validate_miner_blacklist(self, miner_blacklist) -> bool:
-        """The local blacklist must be a JSON array:
-        [
-            {"hotkey": "5FZV8fBTpEo51pxxPd5AqdpwN3BzK8rxog6VYFiGd6H7pPKY", "reason": "Exploitation"},
-            {"hotkey": "5FMjfXzFuW6wLYVGTrvE5Zd66T1dvgv3qKKhWeTFWXoQm3jS", "reason": "Exploitation"}
-        ]
-        """
-        if miner_blacklist:
-            return bool(
-                isinstance(miner_blacklist, list)
-                and all(
-                    isinstance(item, dict)
-                    and all(key in item for key in ["hotkey", "reason"])
-                    for item in miner_blacklist
-                )
-            )
-        return False
-
     def _get_local_miner_blacklist(self) -> list:
         """Returns the blacklisted miners hotkeys from the local file."""
 
@@ -624,7 +606,7 @@ class PromptInjectionValidator(BaseNeuron):
                     file_content = file.read()
 
                 miner_blacklist = json.loads(file_content)
-                if self._validate_miner_blacklist(miner_blacklist):
+                if validate_miner_blacklist(miner_blacklist):
                     bt.logging.trace(f"Loaded miner blacklist: {miner_blacklist}")
                     return miner_blacklist
 
@@ -651,7 +633,7 @@ class PromptInjectionValidator(BaseNeuron):
             res = requests.get(url=blacklist_api_url, timeout=12)
             if res.status_code == 200:
                 miner_blacklist = res.json()
-                if self._validate_miner_blacklist(miner_blacklist):
+                if validate_miner_blacklist(miner_blacklist):
                     bt.logging.trace(
                         f"Loaded remote miner blacklist: {miner_blacklist}"
                     )
@@ -740,6 +722,8 @@ class PromptInjectionValidator(BaseNeuron):
         if self.max_targets < 256:
             start_idx = self.max_targets * self.target_group
             end_idx = min(len(uids_to_query), self.max_targets * (self.target_group + 1))
+            if start_idx == end_idx:
+                return [],[]
             if start_idx >= len(uids_to_query):
                 raise IndexError("Starting index for querying the miners is out-of-bounds")
             

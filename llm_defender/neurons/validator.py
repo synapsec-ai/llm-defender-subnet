@@ -72,6 +72,8 @@ def main(validator: PromptInjectionValidator):
 
             # Get list of UIDs to query
             uids_to_query, list_of_uids = validator.get_uids_to_query(all_axons=all_axons)
+            if not uids_to_query:
+                bt.logging.warning(f'UIDs to query is empty: {uids_to_query}')
             
             # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()
