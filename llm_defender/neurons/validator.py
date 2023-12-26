@@ -40,7 +40,12 @@ def main(validator: PromptInjectionValidator):
                 validator.save_miner_state()
 
             if validator.step % 20 == 0:
+            
+                # Truncate local miner response state file
                 validator.truncate_miner_state()
+            
+                # Update local knowledge of blacklisted miner hotkeys
+                validator.check_blacklisted_miner_hotkeys()
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -65,66 +70,9 @@ def main(validator: PromptInjectionValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            # Filter uids to send the request to
-            uids_with_stake = validator.metagraph.total_stake >= 0.0
-            bt.logging.trace(f"UIDs to filter: {uids_with_stake}")
-
-            # Filter out uids with an IP address of 0.0.0.0
-            invalid_uids = torch.tensor(
-                [
-                    bool(value)
-                    for value in [
-                        ip != "0.0.0.0"
-                        for ip in [
-                            validator.metagraph.neurons[uid].axon_info.ip
-                            for uid in validator.metagraph.uids.tolist()
-                        ]
-                    ]
-                ],
-                dtype=torch.bool,
-            )
-            bt.logging.trace(f"Invalid UIDs to filter: {invalid_uids}")
-
-            # Define which UIDs to filter out from the valid list of uids
-            uids_to_filter = torch.where(
-                uids_with_stake == False, uids_with_stake, invalid_uids
-            )
-
-            bt.logging.trace(f"UIDs to select for the query: {uids_to_filter}")
-
-            # Define UIDs to query
-            uids_to_query = [
-                axon
-                for axon, keep_flag in zip(all_axons, uids_to_filter)
-                if keep_flag.item()
-            ]
-
-            # Reduce the number of simultaneous UIDs to query
-            if validator.max_targets < 256:
-                start_idx = validator.max_targets * validator.target_group
-                end_idx = min(len(uids_to_query), validator.max_targets * (validator.target_group + 1))
-                if start_idx >= len(uids_to_query):
-                    raise IndexError("Starting index for querying the miners is out-of-bounds")
-                
-                if end_idx >= len(uids_to_query):
-                    end_idx = len(uids_to_query)
-                    validator.target_group = 0
-                else:
-                    validator.target_group += 1
-                
-                bt.logging.debug(f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'")
-                uids_to_query = uids_to_query[start_idx:end_idx] 
-
-            list_of_uids = [
-                validator.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
-            ]
-            list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
-
-            bt.logging.info(f"Sending query to the following UIDs: {list_of_uids}")
-            bt.logging.trace(
-                f"Sending query to the following hotkeys: {list_of_hotkeys}"
-            )
-
+            # Get list of UIDs to query
+            uids_to_query, list_of_uids = validator.get_uids_to_query(all_axons=all_axons)
+            
             # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()
 

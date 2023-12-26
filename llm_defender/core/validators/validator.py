@@ -10,16 +10,19 @@ Typical example usage:
 """
 import copy
 import pickle
+import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
 from os import path
+from pathlib import Path
 import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import EnginePrompt, timeout_decorator
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
+import requests
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -46,6 +49,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.miner_responses = None
         self.max_targets = None
         self.target_group = None
+        self.blacklisted_miner_hotkeys = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -585,3 +589,176 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.success("Successfully set weights.")
         else:
             bt.logging.error("Failed to set weights.")
+
+    def _validate_miner_blacklist(self, miner_blacklist) -> bool:
+        """The local blacklist must be a JSON array:
+        [
+            {"hotkey": "5FZV8fBTpEo51pxxPd5AqdpwN3BzK8rxog6VYFiGd6H7pPKY", "reason": "Exploitation"},
+            {"hotkey": "5FMjfXzFuW6wLYVGTrvE5Zd66T1dvgv3qKKhWeTFWXoQm3jS", "reason": "Exploitation"}
+        ]
+        """
+        if miner_blacklist:
+            return bool(
+                isinstance(miner_blacklist, list)
+                and all(
+                    isinstance(item, dict)
+                    and all(key in item for key in ["hotkey", "reason"])
+                    for item in miner_blacklist
+                )
+            )
+        return False
+
+    def _get_local_miner_blacklist(self) -> list:
+        """Returns the blacklisted miners hotkeys from the local file."""
+
+        # Check if local blacklist exists
+        blacklist_file = f"{self.base_path}/miner_blacklist.json"
+        if Path(blacklist_file).is_file():
+            # Load the contents of the local blaclist
+            bt.logging.trace(f"Reading local blacklist file: {blacklist_file}")
+            try:
+                with open(blacklist_file, "r", encoding="utf-8") as file:
+                    file_content = file.read()
+
+                miner_blacklist = json.loads(file_content)
+                if self._validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(f"Loaded miner blacklist: {miner_blacklist}")
+                    return miner_blacklist
+
+                bt.logging.trace(
+                    f"Loaded miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+            except OSError as e:
+                bt.logging.error(f"Unable to read blacklist file: {e}")
+            except json.JSONDecodeError as e:
+                bt.logging.error(
+                    f"Unable to parse JSON from path: {blacklist_file} with error: {e}"
+                )
+        else:
+            bt.logging.trace(f"No local miner blacklist file in path: {blacklist_file}")
+
+        return []
+
+    def _get_remote_miner_blacklist(self) -> list:
+        """Retrieves the remote blacklist"""
+
+        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
+
+        try:
+            res = requests.get(url=blacklist_api_url, timeout=12)
+            if res.status_code == 200:
+                miner_blacklist = res.json()
+                if self._validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(
+                        f"Loaded remote miner blacklist: {miner_blacklist}"
+                    )
+                    return miner_blacklist
+                bt.logging.trace(
+                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+
+            else:
+                bt.logging.warning(
+                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                )
+
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
+
+        return []
+
+    def check_blacklisted_miner_hotkeys(self):
+        """Combines local and remote miner blacklists and returns list of hotkeys"""
+
+        miner_blacklist = (
+            self._get_local_miner_blacklist() + self._get_remote_miner_blacklist()
+        )
+
+        self.blacklisted_miner_hotkeys = [
+            item["hotkey"] for item in miner_blacklist if "hotkey" in item
+        ]
+
+    def get_uids_to_query(self, all_axons) -> list:
+        """Returns the list of UIDs to query"""
+
+        # Get UIDs with a positive stake
+        uids_with_stake = self.metagraph.total_stake >= 0.0
+        bt.logging.trace(f"UIDs with a positive stake: {uids_with_stake}")
+
+        # Get UIDs with an IP address of 0.0.0.0
+        invalid_uids = torch.tensor(
+            [
+                bool(value)
+                for value in [
+                    ip != "0.0.0.0"
+                    for ip in [
+                        self.metagraph.neurons[uid].axon_info.ip
+                        for uid in self.metagraph.uids.tolist()
+                    ]
+                ]
+            ],
+            dtype=torch.bool,
+        )
+        bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
+
+        # Get UIDs that have their hotkey blacklisted
+        blacklisted_uids = []
+        if self.blacklisted_miner_hotkeys:
+            for hotkey in self.blacklisted_miner_hotkeys:
+                if hotkey in self.metagraph.hotkeys:
+                    blacklisted_uids.append(self.metagraph.hotkeys.index(hotkey))
+                else:
+                    bt.logging.trace(f'Blacklisted hotkey {hotkey} was not found from metagraph')
+            
+            bt.logging.debug(f'Blacklisted the following UIDs: {blacklisted_uids}')
+        
+        # Convert blacklisted UIDs to tensor
+        blacklisted_uids_tensor = torch.tensor(
+            [uid not in blacklisted_uids for uid in self.metagraph.uids.tolist()],dtype=torch.bool
+        )
+
+        bt.logging.trace(f'Blacklisted UIDs: {blacklisted_uids_tensor}')
+        bt.logging.trace(f'Invalid UIDs: {invalid_uids}')
+        bt.logging.trace(f'UIDs with stake: {uids_with_stake}')
+
+        # Determine the UIDs to filter
+        uids_to_filter = torch.logical_not(~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake)
+
+        bt.logging.trace(f'UIDs to filter: {uids_to_filter}')
+
+        # Define UIDs to query
+        uids_to_query = [
+            axon
+            for axon, keep_flag in zip(all_axons, uids_to_filter)
+            if keep_flag.item()
+        ]
+
+        # Reduce the number of simultaneous UIDs to query
+        if self.max_targets < 256:
+            start_idx = self.max_targets * self.target_group
+            end_idx = min(len(uids_to_query), self.max_targets * (self.target_group + 1))
+            if start_idx >= len(uids_to_query):
+                raise IndexError("Starting index for querying the miners is out-of-bounds")
+            
+            if end_idx >= len(uids_to_query):
+                end_idx = len(uids_to_query)
+                self.target_group = 0
+            else:
+                self.target_group += 1
+            
+            bt.logging.debug(f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'")
+            uids_to_query = uids_to_query[start_idx:end_idx] 
+
+        list_of_uids = [
+            self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
+        ]
+        list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
+
+        bt.logging.info(f"Sending query to the following UIDs: {list_of_uids}")
+        bt.logging.trace(
+            f"Sending query to the following hotkeys: {list_of_hotkeys}"
+        )
+
+        return uids_to_query, list_of_uids
