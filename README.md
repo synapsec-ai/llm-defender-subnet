@@ -45,9 +45,9 @@ Run miner:
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
-$ pm2 start scripts/run.sh \
---name llm-defender-subnet-miner0 \
---watch ./llm-defender,./scripts -- \
+$ bash scripts/run_neuron.sh \
+--sequence 0 \
+--update_interval 300
 --branch main \
 --netuid 14 \
 --profile miner \
@@ -61,9 +61,9 @@ Run validator:
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
-$ pm2 start scripts/run.sh \
---name llm-defender-subnet-validator0 \
---watch ./llm-defender,./scripts -- \
+$ bash scripts/run_neuron.sh \
+--sequence 0 \
+--update_interval 300
 --branch main \
 --netuid 14 \
 --profile validator \
@@ -71,11 +71,6 @@ $ pm2 start scripts/run.sh \
 --wallet.hotkey YourHotkeyGoesHere
 ```
 You can optionally provide  --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
-
-Run auto-updater (only one instance needs to be running if multiple miners and/or validators are running):
-```
-$ pm2 start updater.config.js
-```
 
 > [!WARNING]  
 > The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
