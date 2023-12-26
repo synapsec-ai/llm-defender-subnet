@@ -27,20 +27,20 @@ def _calculate_duplicate_percentage(
 
     if engine == "engine:yara":
         if duplicate_percentage > 0.95:
-            penalty += 0.5
+            penalty += 0.25
     elif engine == "engine:vector_search":
         if duplicate_percentage > 0.15:
-            penalty += 1
+            penalty += 0.5
     elif engine == "engine:text_classification":
         if duplicate_percentage > 0.5:
             if duplicate_percentage > 0.95:
-                penalty += 1.5
+                penalty += 1.0
             elif duplicate_percentage > 0.9:
-                penalty += 1
+                penalty += 0.66
             elif duplicate_percentage > 0.8:
-                penalty += 0.5
+                penalty += 0.33
             else:
-                penalty += 0.25
+                penalty += 0.15
     bt.logging.trace(
         f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Duplicate % for {engine}: {duplicate_percentage}"
     )

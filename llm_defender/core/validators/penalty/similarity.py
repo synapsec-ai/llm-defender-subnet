@@ -42,13 +42,13 @@ def _check_response_history(
     bt.logging.trace(f"Average similarity: {average_similarity}")
 
     if average_similarity > 0.9:
-        penalty += 2
+        penalty += 1.0
     elif average_similarity > 0.8:
-        penalty += 1
+        penalty += 0.66
     elif average_similarity > 0.7:
-        penalty += 0.5
+        penalty += 0.33
     elif average_similarity > 0.6:
-        penalty += 0.25
+        penalty += 0.10
 
     bt.logging.trace(
         f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average similarity: '{average_similarity}'"
