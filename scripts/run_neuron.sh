@@ -1,6 +1,7 @@
 #!/bin/bash
 declare -A args
 
+
 check_runtime_environment() {
     if ! python --version "$1" &>/dev/null; then
         echo "ERROR: Python is not available. Make sure Python is installed and venv has been activated."
