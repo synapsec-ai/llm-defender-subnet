@@ -64,7 +64,7 @@ def check_penalty(uid, miner_responses, response, prompt):
 
     if len(miner_responses) < 50:
         # Apply base penalty if we do not have a sufficient number of responses to process
-        bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len/(miner_responses)}')
+        bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}')
         return 5
 
     penalty = 0.0
