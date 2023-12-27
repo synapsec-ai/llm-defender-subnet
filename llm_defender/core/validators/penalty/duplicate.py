@@ -27,20 +27,20 @@ def _calculate_duplicate_percentage(
 
     if engine == "engine:yara":
         if duplicate_percentage > 0.95:
-            penalty += 1
+            penalty += 0.25
     elif engine == "engine:vector_search":
         if duplicate_percentage > 0.15:
-            penalty += 2
+            penalty += 0.5
     elif engine == "engine:text_classification":
         if duplicate_percentage > 0.5:
             if duplicate_percentage > 0.95:
-                penalty += 3
+                penalty += 1.0
             elif duplicate_percentage > 0.9:
-                penalty += 2
+                penalty += 0.66
             elif duplicate_percentage > 0.8:
-                penalty += 1
+                penalty += 0.33
             else:
-                penalty += 0.5
+                penalty += 0.15
     bt.logging.trace(
         f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Duplicate % for {engine}: {duplicate_percentage}"
     )
@@ -62,7 +62,7 @@ def _find_identical_reply(
             for item in miner_responses
             for entry in item.get("engine_data", [])
         ):
-            penalty += 0.5
+            penalty += 0.25
 
         bt.logging.trace(
             f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
@@ -74,7 +74,7 @@ def check_penalty(uid, miner_responses, response):
     """This function checks the total penalty score within duplicate category"""
     if not uid or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
-        return 10.0
+        return 20.0
 
     penalty = 0.0
     for engine in ["engine:text_classification", "engine:yara", "engine:vector_search"]:

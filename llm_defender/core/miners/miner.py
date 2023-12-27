@@ -11,13 +11,14 @@ Typical example usage:
 from argparse import ArgumentParser
 from typing import Tuple
 import sys
+import requests
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
 from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
 from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
-
+from llm_defender.base.utils import validate_miner_blacklist
 
 class PromptInjectionMiner(BaseNeuron):
     """Summary of the class
@@ -44,6 +45,8 @@ class PromptInjectionMiner(BaseNeuron):
         self.yara_rules = YaraEngine().initialize()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
+
+        self.hotkey_blacklisted = False
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:
         """This function setups the neuron.
@@ -255,3 +258,40 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.debug(f'Calculated weighted confidence: {weighted_sum}. Original confidence: {sum(confidences)/len(confidences)}')
         
         return overall_score
+
+    def check_remote_blacklist(self):
+        """Retrieves the remote blacklist"""
+
+        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
+
+        try:
+            res = requests.get(url=blacklist_api_url, timeout=12)
+            if res.status_code == 200:
+                miner_blacklist = res.json()
+                if validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(
+                        f"Loaded remote miner blacklist: {miner_blacklist}"
+                    )
+
+                    is_blacklisted = False
+                    for blacklist_entry in miner_blacklist:
+                        if blacklist_entry["hotkey"] == self.wallet.hotkey.ss58_address:
+                            bt.logging.warning(f'Your hotkey has been blacklisted. Reason: {blacklist_entry["reason"]}')
+                            is_blacklisted = True
+                    
+                    self.hotkey_blacklisted = is_blacklisted
+                        
+                    
+                bt.logging.trace(
+                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+
+            else:
+                bt.logging.warning(
+                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                )
+
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the blacklist API: {e}")

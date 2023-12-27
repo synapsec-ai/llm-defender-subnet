@@ -109,3 +109,21 @@ def timeout_decorator(timeout):
         return wrapper
 
     return decorator
+
+def validate_miner_blacklist(miner_blacklist) -> bool:
+    """The local blacklist must be a JSON array:
+    [
+        {"hotkey": "5FZV8fBTpEo51pxxPd5AqdpwN3BzK8rxog6VYFiGd6H7pPKY", "reason": "Exploitation"},
+        {"hotkey": "5FMjfXzFuW6wLYVGTrvE5Zd66T1dvgv3qKKhWeTFWXoQm3jS", "reason": "Exploitation"}
+    ]
+    """
+    if miner_blacklist:
+        return bool(
+            isinstance(miner_blacklist, list)
+            and all(
+                isinstance(item, dict)
+                and all(key in item for key in ["hotkey", "reason"])
+                for item in miner_blacklist
+            )
+        )
+    return False

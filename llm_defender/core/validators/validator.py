@@ -10,16 +10,19 @@ Typical example usage:
 """
 import copy
 import pickle
+import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
 from os import path
+from pathlib import Path
 import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.utils import EnginePrompt, timeout_decorator
+from llm_defender.base.utils import EnginePrompt, timeout_decorator, validate_miner_blacklist
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
+import requests
 
 
 class PromptInjectionValidator(BaseNeuron):
@@ -46,6 +49,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.miner_responses = None
         self.max_targets = None
         self.target_group = None
+        self.blacklisted_miner_hotkeys = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -133,25 +137,29 @@ class PromptInjectionValidator(BaseNeuron):
         self.metagraph = metagraph
 
         # Read command line arguments and perform actions based on them
-        args = self.parser.parse_args()
-
-        if args.load_state:
-            self.load_state()
-            self.load_miner_state()
+        args = self._parse_args(parser=self.parser)
+        
+        if args:
+            if args.load_state:
+                self.load_state()
+                self.load_miner_state()
+            if args.max_targets:
+                self.max_targets = args.max_targets
+            else:
+                self.max_targets = 256
         else:
             # Setup initial scoring weights
             self.scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
             bt.logging.debug(f"Validation weights have been initialized: {self.scores}")
-
-        if args.max_targets:
-            self.max_targets = args.max_targets
-        else:
             self.max_targets = 256
 
         self.target_group = 0
 
         return True
 
+    def _parse_args(self, parser):
+        return parser.parse_args()
+    
     def process_responses(
         self,
         processed_uids: torch.tensor,
@@ -182,7 +190,9 @@ class PromptInjectionValidator(BaseNeuron):
         for i, response in enumerate(responses):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
             # Set the score for empty responses to 0
-            if not response.output or not all(item in response.output for item in ["prompt", "confidence", "engines"]):
+            if not response.output or not all(
+                item in response.output for item in ["prompt", "confidence", "engines"]
+            ):
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
@@ -191,7 +201,7 @@ class PromptInjectionValidator(BaseNeuron):
                 new_score = self.scores[processed_uids[i]]
                 response_score = (
                     distance_score
-                ) = speed_score = engine_score = penalty_multiplier = 0.0
+                ) = speed_score = engine_score = distance_penalty_multiplier = general_penalty_multiplier= 0.0
                 miner_response = {}
                 engine_data = []
                 responses_invalid_uids.append(processed_uids[i])
@@ -202,7 +212,8 @@ class PromptInjectionValidator(BaseNeuron):
                     distance_score,
                     speed_score,
                     engine_score,
-                    penalty_multiplier,
+                    distance_penalty_multiplier,
+                    general_penalty_multiplier
                 ) = self.calculate_score(
                     response=response.output,
                     target=target,
@@ -222,7 +233,7 @@ class PromptInjectionValidator(BaseNeuron):
                     miner_response_uuid = None
                 else:
                     miner_response_uuid = response.output["synapse_uuid"]
-                
+
                 miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
@@ -279,7 +290,9 @@ class PromptInjectionValidator(BaseNeuron):
                     "distance_score": float(distance_score),
                     "speed_score": float(speed_score),
                     "engine_score": float(engine_score),
-                    "penalty_multiplier": float(penalty_multiplier),
+                    "distance_penalty_multiplier": float(distance_penalty_multiplier),
+                    "general_penalty_multiplier": float(general_penalty_multiplier),
+                    "response_score": float(response_score)
                 },
                 "weight_scores": {
                     "new": float(new_score),
@@ -315,10 +328,12 @@ class PromptInjectionValidator(BaseNeuron):
             for key in ["name", "confidence", "data"]:
                 if key not in engine_response.keys():
                     # If any of the responses are invalid we can just return zeros right away
-                    bt.logging.debug(f'Received an invalid response: {response} from hotkey: {hotkey}')
-                    return 0.0, 0.0, 0.0, 0.0, 0.0
+                    bt.logging.debug(
+                        f"Received an invalid response: {response} from hotkey: {hotkey}"
+                    )
+                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                 if engine_response[key] is None:
-                    return 0.0, 0.0, 0.0, 0.0, 0.0
+                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Calculate distances to target value for each engine and take the mean
         distances = [
@@ -354,28 +369,40 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds individual scores:\nDistance: {distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0, 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
         # Determine final score
-        distance_weight = 0.7
-        speed_weight = 0.2
+        distance_weight = 0.8
+        speed_weight = 0.1
         num_engines_weight = 0.1
 
         bt.logging.trace(
             f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
         )
 
-        penalty_score = self.apply_penalty(response, hotkey, prompt)
-        if penalty_score >= 20:
-            penalty_multiplier = 0.0
-        elif penalty_score > 0.0:
-            penalty_multiplier = 1 - ((penalty_score / 2.0) / 10)
-        else:
-            penalty_multiplier = 1.0
+        similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
+            response, hotkey, prompt
+        )
+
+        distance_penalty_multiplier = 1.0
+        general_penalty_multiplier = 1.0
+
+        if base_penalty >= 20:
+            distance_penalty_multiplier = 0.0
+        elif base_penalty > 0.0:
+            distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
+
+        if sum([similarity_penalty, duplicate_penalty]) >= 20:
+            general_penalty_multiplier = 0.0
+        elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
+            general_penalty_multiplier = 1 - (
+                ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
+            )
+
         score = (
-            distance_weight * distance_score
-            + speed_weight * speed_score
-            + num_engines_weight * engine_score * penalty_multiplier
+            (distance_weight * distance_score) * distance_penalty_multiplier
+            + (speed_weight * speed_score) * general_penalty_multiplier
+            + (num_engines_weight * engine_score) * general_penalty_multiplier
         )
 
         if score > 1.0 or score < 0.0:
@@ -383,42 +410,42 @@ class PromptInjectionValidator(BaseNeuron):
                 f"Calculated out-of-bounds score: {score} for the response: {response} from hotkey: {hotkey}"
             )
 
-            return 0.0, 0.0, 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-        return score, distance_score, speed_score, engine_score, penalty_multiplier
+        return score, distance_score, speed_score, engine_score, distance_penalty_multiplier, general_penalty_multiplier
 
-    def apply_penalty(self, response, hotkey, prompt) -> float:
+    def apply_penalty(self, response, hotkey, prompt) -> tuple:
         """
         Applies a penalty score based on the response and previous
         responses received from the miner.
         """
 
         # If hotkey is not found from list of responses, penalties
-        # cannot be calculated
+        # cannot be calculated.
         if not self.miner_responses:
-            return 1.0
+            return 5.0, 5.0, 5.0
         if not hotkey in self.miner_responses.keys():
-            return 1.0
+            return 5.0, 5.0, 5.0
 
         # Get UID
         uid = self.metagraph.hotkeys.index(hotkey)
 
-        penalty_score = 1.0
+        similarity = base = duplicate = 0.0
         # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
-        penalty_score += penalty.similarity.check_penalty(
+        similarity += penalty.similarity.check_penalty(
             uid, self.miner_responses[hotkey]
         )
-        penalty_score += penalty.duplicate.check_penalty(
-            uid, self.miner_responses[hotkey], response
-        )
-        penalty_score += penalty.base.check_penalty(
+        base += penalty.base.check_penalty(
             uid, self.miner_responses[hotkey], response, prompt
+        )
+        duplicate += penalty.duplicate.check_penalty(
+            uid, self.miner_responses[hotkey], response
         )
 
         bt.logging.trace(
-            f"Penalty score '{penalty_score}' for response '{response}' from UID '{uid}'"
+            f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
         )
-        return penalty_score
+        return similarity, base, duplicate
 
     def serve_prompt(self) -> EnginePrompt:
         """Generates a prompt to serve to a miner
@@ -476,7 +503,7 @@ class PromptInjectionValidator(BaseNeuron):
         with open(f"{self.base_path}/miners.pickle", "wb") as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
-        bt.logging.debug("Saves miner states to a file")
+        bt.logging.debug("Saved miner states to a file")
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
@@ -513,12 +540,13 @@ class PromptInjectionValidator(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
+                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys
             },
             self.base_path + "/state.pt",
         )
 
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}, blacklisted_miner_hotkeys: {self.blacklisted_miner_hotkeys}"
         )
 
     def load_state(self):
@@ -534,6 +562,8 @@ class PromptInjectionValidator(BaseNeuron):
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
             self.last_updated_block = state["last_updated_block"]
+            if "blacklisted_miner_hotkeys" in state.keys():
+                self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
 
             bt.logging.info(f"Scores loaded from saved file: {self.scores}")
         else:
@@ -566,3 +596,158 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.success("Successfully set weights.")
         else:
             bt.logging.error("Failed to set weights.")
+
+    def _get_local_miner_blacklist(self) -> list:
+        """Returns the blacklisted miners hotkeys from the local file."""
+
+        # Check if local blacklist exists
+        blacklist_file = f"{self.base_path}/miner_blacklist.json"
+        if Path(blacklist_file).is_file():
+            # Load the contents of the local blaclist
+            bt.logging.trace(f"Reading local blacklist file: {blacklist_file}")
+            try:
+                with open(blacklist_file, "r", encoding="utf-8") as file:
+                    file_content = file.read()
+
+                miner_blacklist = json.loads(file_content)
+                if validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(f"Loaded miner blacklist: {miner_blacklist}")
+                    return miner_blacklist
+
+                bt.logging.trace(
+                    f"Loaded miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+            except OSError as e:
+                bt.logging.error(f"Unable to read blacklist file: {e}")
+            except json.JSONDecodeError as e:
+                bt.logging.error(
+                    f"Unable to parse JSON from path: {blacklist_file} with error: {e}"
+                )
+        else:
+            bt.logging.trace(f"No local miner blacklist file in path: {blacklist_file}")
+
+        return []
+
+    def _get_remote_miner_blacklist(self) -> list:
+        """Retrieves the remote blacklist"""
+
+        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
+
+        try:
+            res = requests.get(url=blacklist_api_url, timeout=12)
+            if res.status_code == 200:
+                miner_blacklist = res.json()
+                if validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(
+                        f"Loaded remote miner blacklist: {miner_blacklist}"
+                    )
+                    return miner_blacklist
+                bt.logging.trace(
+                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+
+            else:
+                bt.logging.warning(
+                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                )
+
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
+
+        return []
+
+    def check_blacklisted_miner_hotkeys(self):
+        """Combines local and remote miner blacklists and returns list of hotkeys"""
+
+        miner_blacklist = (
+            self._get_local_miner_blacklist() + self._get_remote_miner_blacklist()
+        )
+
+        self.blacklisted_miner_hotkeys = [
+            item["hotkey"] for item in miner_blacklist if "hotkey" in item
+        ]
+
+    def get_uids_to_query(self, all_axons) -> list:
+        """Returns the list of UIDs to query"""
+
+        # Get UIDs with a positive stake
+        uids_with_stake = self.metagraph.total_stake >= 0.0
+        bt.logging.trace(f"UIDs with a positive stake: {uids_with_stake}")
+
+        # Get UIDs with an IP address of 0.0.0.0
+        invalid_uids = torch.tensor(
+            [
+                bool(value)
+                for value in [
+                    ip != "0.0.0.0"
+                    for ip in [
+                        self.metagraph.neurons[uid].axon_info.ip
+                        for uid in self.metagraph.uids.tolist()
+                    ]
+                ]
+            ],
+            dtype=torch.bool,
+        )
+        bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
+
+        # Get UIDs that have their hotkey blacklisted
+        blacklisted_uids = []
+        if self.blacklisted_miner_hotkeys:
+            for hotkey in self.blacklisted_miner_hotkeys:
+                if hotkey in self.metagraph.hotkeys:
+                    blacklisted_uids.append(self.metagraph.hotkeys.index(hotkey))
+                else:
+                    bt.logging.trace(f'Blacklisted hotkey {hotkey} was not found from metagraph')
+            
+            bt.logging.debug(f'Blacklisted the following UIDs: {blacklisted_uids}')
+        
+        # Convert blacklisted UIDs to tensor
+        blacklisted_uids_tensor = torch.tensor(
+            [uid not in blacklisted_uids for uid in self.metagraph.uids.tolist()],dtype=torch.bool
+        )
+
+        bt.logging.trace(f'Blacklisted UIDs: {blacklisted_uids_tensor}')
+
+        # Determine the UIDs to filter
+        uids_to_filter = torch.logical_not(~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake)
+
+        bt.logging.trace(f'UIDs to filter: {uids_to_filter}')
+
+        # Define UIDs to query
+        uids_to_query = [
+            axon
+            for axon, keep_flag in zip(all_axons, uids_to_filter)
+            if keep_flag.item()
+        ]
+
+        # Reduce the number of simultaneous UIDs to query
+        if self.max_targets < 256:
+            start_idx = self.max_targets * self.target_group
+            end_idx = min(len(uids_to_query), self.max_targets * (self.target_group + 1))
+            if start_idx == end_idx:
+                return [],[]
+            if start_idx >= len(uids_to_query):
+                raise IndexError("Starting index for querying the miners is out-of-bounds")
+            
+            if end_idx >= len(uids_to_query):
+                end_idx = len(uids_to_query)
+                self.target_group = 0
+            else:
+                self.target_group += 1
+            
+            bt.logging.debug(f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'")
+            uids_to_query = uids_to_query[start_idx:end_idx] 
+
+        list_of_uids = [
+            self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
+        ]
+        list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
+
+        bt.logging.info(f"Sending query to the following UIDs: {list_of_uids}")
+        bt.logging.trace(
+            f"Sending query to the following hotkeys: {list_of_hotkeys}"
+        )
+
+        return uids_to_query, list_of_uids
