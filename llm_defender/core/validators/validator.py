@@ -137,25 +137,29 @@ class PromptInjectionValidator(BaseNeuron):
         self.metagraph = metagraph
 
         # Read command line arguments and perform actions based on them
-        args = self.parser.parse_args()
-
-        if args.load_state:
-            self.load_state()
-            self.load_miner_state()
+        args = self._parse_args(parser=self.parser)
+        
+        if args:
+            if args.load_state:
+                self.load_state()
+                self.load_miner_state()
+            if args.max_targets:
+                self.max_targets = args.max_targets
+            else:
+                self.max_targets = 256
         else:
             # Setup initial scoring weights
             self.scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
             bt.logging.debug(f"Validation weights have been initialized: {self.scores}")
-
-        if args.max_targets:
-            self.max_targets = args.max_targets
-        else:
             self.max_targets = 256
 
         self.target_group = 0
 
         return True
 
+    def _parse_args(self, parser):
+        return parser.parse_args()
+    
     def process_responses(
         self,
         processed_uids: torch.tensor,
@@ -410,18 +414,18 @@ class PromptInjectionValidator(BaseNeuron):
 
         return score, distance_score, speed_score, engine_score, distance_penalty_multiplier, general_penalty_multiplier
 
-    def apply_penalty(self, response, hotkey, prompt) -> float:
+    def apply_penalty(self, response, hotkey, prompt) -> tuple:
         """
         Applies a penalty score based on the response and previous
         responses received from the miner.
         """
 
         # If hotkey is not found from list of responses, penalties
-        # cannot be calculated
+        # cannot be calculated.
         if not self.miner_responses:
-            return 1.0
+            return 5.0, 5.0, 5.0
         if not hotkey in self.miner_responses.keys():
-            return 1.0
+            return 5.0, 5.0, 5.0
 
         # Get UID
         uid = self.metagraph.hotkeys.index(hotkey)

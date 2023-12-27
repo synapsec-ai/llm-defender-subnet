@@ -37,7 +37,7 @@ def run(args):
                 # Restart pm2 instances
                 for instance_name in args.pm2_instance_names:
                     try:
-                        sleep_duration = random.randint(0,30)
+                        sleep_duration = random.randint(15,90)
                         logger.info('Sleeping for %s seconds before restart', sleep_duration)
                         sleep(sleep_duration)
                         subprocess.run(f'git checkout {args.branch} && pm2 restart {instance_name}', check=True, shell=True)
