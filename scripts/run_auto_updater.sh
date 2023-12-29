@@ -41,6 +41,7 @@ generate_pm2_launch_file_and_launch() {
     local branch="${args['branch']}"
     local update_interval="${args['update_interval']}"
     local pm2_instance_names="${args['pm2_instance_names']}"
+    local prepare_miners="${args['prepare_miners']}"
     
     cat <<EOF > llm-defender-auto-updater.config.js
 module.exports = {
@@ -49,7 +50,7 @@ module.exports = {
             "name"                  : "llm-defender-auto-updater",
             "script"                : "${cwd}/scripts/auto_updater.py",
             "interpreter"           : "${interpreter}",
-            "args"                  : "--branch ${branch} --pm2_instance_names ${pm2_instance_names} --update_interval ${update_interval}"
+            "args"                  : "--branch ${branch} --pm2_instance_names ${pm2_instance_names} --update_interval ${update_interval} --prepare_miners ${prepare_miners}"
         }
     ]
 }
