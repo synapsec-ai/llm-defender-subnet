@@ -96,12 +96,12 @@ def main(validator: PromptInjectionValidator):
 
             # Process blacklisted UIDs
             for uid in blacklisted_uids:
-                bt.logging.debug(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
+                bt.logging.trace(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
                 validator.scores[uid] = (
                     validator.neuron_config.alpha * validator.scores[uid]
                     + (1 - validator.neuron_config.alpha) * 0.0
                 )
-                bt.logging.debug(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
+                bt.logging.trace(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
 
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):

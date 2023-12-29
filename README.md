@@ -46,7 +46,7 @@ Run miner (if you run multiple miners, make sure the name and axon.port are uniq
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
 $ bash scripts/run_neuron.sh \
---name llm-defender-miner-0 \
+--name llm-defender-subnet-miner-0 \
 --install_only 0 \
 --max_memory_restart 10G \
 --branch main \
@@ -54,16 +54,17 @@ $ bash scripts/run_neuron.sh \
 --profile miner \
 --wallet.name YourColdkeyGoesHere \
 --wallet.hotkey YourHotkeyGoesHere \
---axon.port 15000
+--axon.port 15000 \
+--miner_set_weights True
 ```
-You can optionally provide --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
+You can optionally provide --miner_set_weights True|False, --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
 Run validator (if you run multiple validators, make sure the name is unique):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
 $ bash scripts/run_neuron.sh \
---name llm-defender-validator-0 \
+--name llm-defender-subnet-validator-0 \
 --install_only 0 \
 --max_memory_restart 5G \
 --branch main \
@@ -72,9 +73,9 @@ $ bash scripts/run_neuron.sh \
 --wallet.name YourColdkeyGoesHere \
 --wallet.hotkey YourHotkeyGoesHere
 ```
-You can optionally provide --miner_set_weights True|False, --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
+You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
-If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False.
+If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False. The parameter defaults to True.
 
 Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
 ```
@@ -83,7 +84,7 @@ $ source .venv/bin/activate
 $ bash scripts/run_auto_updater.sh \
 --update_interval 300 \
 --branch main \
---pm2_instance_names llm-defender-validator-0 llm-defender-miner-0 \
+--pm2_instance_names llm-defender-subnet-validator-0 llm-defender-subnet-miner-0 \
 --prepare_miners True
 ```
 
