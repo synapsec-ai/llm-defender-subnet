@@ -105,12 +105,12 @@ def main(validator: PromptInjectionValidator):
 
             # Process UIDs we did not query (set scores to 0)
             for uid in uids_not_to_query:
-                bt.logging.debug(f'Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}')
+                bt.logging.trace(f'Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}')
                 validator.scores[uid] = (
                     validator.neuron_config.alpha * validator.scores[uid]
                     + (1 - validator.neuron_config.alpha) * 0.0
                 )
-                bt.logging.debug(f'Set score for not queried UID: {uid}. New score: {validator.scores[uid]}')
+                bt.logging.trace(f'Set score for not queried UID: {uid}. New score: {validator.scores[uid]}')
                 
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
@@ -118,12 +118,12 @@ def main(validator: PromptInjectionValidator):
                 time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
-                    bt.logging.debug(f'Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}')
+                    bt.logging.trace(f'Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}')
                     validator.scores[uid] = (
                         validator.neuron_config.alpha * validator.scores[uid]
                         + (1 - validator.neuron_config.alpha) * 0.0
                     )
-                    bt.logging.debug(f'Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}')
+                    bt.logging.trace(f'Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}')
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
