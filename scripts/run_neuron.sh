@@ -233,7 +233,7 @@ if [[ "$profile" == "miner" ]]; then
 fi
 
 if [[ "$install_only" == 1 ]]; then
-    echo "Installation done. PM2 ecosystem files not created or PM2 instance launched, because install_only=1"
+    echo "Installation done. PM2 ecosystem files not created and PM2 instance was not launched as install_only is set to True."
 else
     echo "Generating PM2 ecosystem file"
     generate_pm2_launch_file
