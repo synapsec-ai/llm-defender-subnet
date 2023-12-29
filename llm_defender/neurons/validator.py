@@ -94,6 +94,15 @@ def main(validator: PromptInjectionValidator):
                 deserialize=True,
             )
 
+            # Process blacklisted UIDs
+            for uid in blacklisted_uids:
+                bt.logging.debug(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
+                validator.scores[uid] = (
+                    validator.neuron_config.alpha * validator.scores[uid]
+                    + (1 - validator.neuron_config.alpha) * 0.0
+                )
+                bt.logging.debug(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
+
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
@@ -107,7 +116,7 @@ def main(validator: PromptInjectionValidator):
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
                 query=query, processed_uids=list_of_uids, responses=responses,
-                synapse_uuid=synapse_uuid, blacklisted_uids=blacklisted_uids
+                synapse_uuid=synapse_uuid
             )
 
             for res in response_data:

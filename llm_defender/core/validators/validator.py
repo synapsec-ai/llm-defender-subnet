@@ -165,13 +165,12 @@ class PromptInjectionValidator(BaseNeuron):
         processed_uids: torch.tensor,
         query: dict,
         responses: list,
-        synapse_uuid: str,
-        blacklisted_uids: list
+        synapse_uuid: str
     ) -> list:
         """
         This function processes the responses received from the miners.
         """
-
+        
         if not synapse_uuid:
             synapse_uuid = None
 
@@ -188,13 +187,6 @@ class PromptInjectionValidator(BaseNeuron):
 
         responses_invalid_uids = []
         responses_valid_uids = []
-
-        # Process blacklisted UIDs
-        for uid in blacklisted_uids:
-            self.scores[uid] = (
-                self.neuron_config.alpha * self.scores[uid]
-                + (1 - self.neuron_config.alpha) * 0.0
-            )
 
         for i, response in enumerate(responses):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
