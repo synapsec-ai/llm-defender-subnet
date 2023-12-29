@@ -62,7 +62,6 @@ parse_arguments() {
                 shift
                 if [[ $1 != "--"* ]]; then
                     IFS='.' read -ra parts <<< "$arg_name"
-                    echo ${parts[1]}
                     args[${parts[0]}]=${parts[1]}
                 fi
             else
@@ -80,9 +79,6 @@ parse_arguments() {
 
 pull_repo_and_checkout_branch() {
     local branch="${args['branch']}"
-    local script_path="scripts/run.sh"
-
-    initial_hash=$(md5sum "$script_path" | awk '{ print $1 }')
 
     # Pull the latest repository
     git pull --all
@@ -97,13 +93,6 @@ pull_repo_and_checkout_branch() {
     git fetch &>/dev/null  # Silence output from fetch command
     if ! git rev-parse --quiet --verify "origin/$current_branch" >/dev/null; then
         echo "You are using a branch that does not exists in remote. Make sure your local branch is up-to-date with the latest version in the main branch. Auto-updater will not be enabled."
-    fi
-
-    current_hash=$(md5sum "$script_path" | awk '{ print $1 }')
-
-    if [ "$initial_hash" != "$current_hash" ]; then
-        echo "The run.sh script has changed, exiting. Please relaunch the startup script"
-        exit 2
     fi
 }
 
@@ -141,7 +130,7 @@ run_preparation() {
     echo "Preparation script executed correctly"
 }
 
-generate_pm2_launch_file_and_launch() {
+generate_pm2_launch_file() {
     echo "Generating PM2 launch file"
     local cwd=$(pwd)
     local profile="${args['profile']}"
@@ -162,6 +151,7 @@ generate_pm2_launch_file_and_launch() {
     local wallet_path="${args['wallet.path']}"
     local name="${args['name']}"
     local max_memory_restart="${args['max_memory_restart']}"
+    local miner_set_weights="${args['miner_set_weights']}"
 
     # Construct argument list for the neuron
     if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" ]]; then
@@ -191,6 +181,10 @@ generate_pm2_launch_file_and_launch() {
         args+=" --wallet.path $wallet_path"
     fi
 
+    if [[ -n "$miner_set_weights" ]]; then
+        args+=" --miner_set_weights $miner_set_weights"
+    fi
+
     if [[ -n "$logging_value" ]]; then
         args+=" --logging.$logging_value"
     fi
@@ -209,7 +203,10 @@ module.exports = {
     ]
 }
 EOF
+}
 
+launch_pm2_instance() {
+    local name="${args['name']}"
     eval "pm2 start ${name}.config.js"
 }
 
@@ -218,6 +215,7 @@ echo "### START OF EXECUTION ###"
 parse_arguments "$@"
 
 profile="${args['profile']}"
+install_only="${args['install_only']}"
 
 check_runtime_environment
 echo "Python venv checks completed. Sleeping 2 seconds."
@@ -234,5 +232,11 @@ if [[ "$profile" == "miner" ]]; then
     echo "Preparation done. Sleeping 2 seconds."
 fi
 
-echo "Generating PM2 ecosystem file and starting the ecosystem"
-generate_pm2_launch_file_and_launch
+if [[ "$install_only" == 1 ]]; then
+    echo "Installation done. PM2 ecosystem files not created and PM2 instance was not launched as install_only is set to True."
+else
+    echo "Generating PM2 ecosystem file"
+    generate_pm2_launch_file
+    echo "Launching PM instance"
+    launch_pm2_instance
+fi

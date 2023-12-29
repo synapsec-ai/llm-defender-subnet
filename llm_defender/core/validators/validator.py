@@ -165,12 +165,12 @@ class PromptInjectionValidator(BaseNeuron):
         processed_uids: torch.tensor,
         query: dict,
         responses: list,
-        synapse_uuid: str,
+        synapse_uuid: str
     ) -> list:
         """
         This function processes the responses received from the miners.
         """
-
+        
         if not synapse_uuid:
             synapse_uuid = None
 
@@ -187,6 +187,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         responses_invalid_uids = []
         responses_valid_uids = []
+
         for i, response in enumerate(responses):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
             # Set the score for empty responses to 0
@@ -194,11 +195,13 @@ class PromptInjectionValidator(BaseNeuron):
                 item in response.output for item in ["prompt", "confidence", "engines"]
             ):
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
+                bt.logging.trace(f'Setting weights for invalid response from UID: {processed_uids[i]}. Old score: {old_score}')
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
                 new_score = self.scores[processed_uids[i]]
+                bt.logging.trace(f'Setting weights for invalid response from UID: {processed_uids[i]}. New score: {new_score}')
                 response_score = (
                     distance_score
                 ) = speed_score = engine_score = distance_penalty_multiplier = general_penalty_multiplier= 0.0
@@ -722,6 +725,20 @@ class PromptInjectionValidator(BaseNeuron):
             if keep_flag.item()
         ]
 
+        # Define UIDs to filter
+        final_axons_to_filter = [
+            axon
+            for axon, keep_flag in zip(all_axons, uids_to_filter)
+            if not keep_flag.item()
+        ]
+
+        uids_not_to_query = [
+            self.metagraph.hotkeys.index(axon.hotkey) for axon in final_axons_to_filter
+        ]
+
+        bt.logging.trace(f'Final axons to filter: {final_axons_to_filter}')
+        bt.logging.debug(f'Filtered UIDs: {uids_not_to_query}')
+
         # Reduce the number of simultaneous UIDs to query
         if self.max_targets < 256:
             start_idx = self.max_targets * self.target_group
@@ -743,11 +760,11 @@ class PromptInjectionValidator(BaseNeuron):
         list_of_uids = [
             self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
         ]
+
         list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
 
-        bt.logging.info(f"Sending query to the following UIDs: {list_of_uids}")
         bt.logging.trace(
             f"Sending query to the following hotkeys: {list_of_hotkeys}"
         )
 
-        return uids_to_query, list_of_uids
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query

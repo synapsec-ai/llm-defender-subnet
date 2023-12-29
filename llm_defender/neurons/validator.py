@@ -71,7 +71,7 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
             # Get list of UIDs to query
-            uids_to_query, list_of_uids = validator.get_uids_to_query(all_axons=all_axons)
+            uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f'UIDs to query is empty: {uids_to_query}')
             
@@ -94,11 +94,36 @@ def main(validator: PromptInjectionValidator):
                 deserialize=True,
             )
 
+            # Process blacklisted UIDs (set scores to 0)
+            # for uid in blacklisted_uids:
+            #     bt.logging.debug(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
+            #     validator.scores[uid] = (
+            #         validator.neuron_config.alpha * validator.scores[uid]
+            #         + (1 - validator.neuron_config.alpha) * 0.0
+            #     )
+            #     bt.logging.debug(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
+
+            # Process UIDs we did not query (set scores to 0)
+            for uid in uids_not_to_query:
+                bt.logging.trace(f'Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}')
+                validator.scores[uid] = (
+                    validator.neuron_config.alpha * validator.scores[uid]
+                    + (1 - validator.neuron_config.alpha) * 0.0
+                )
+                bt.logging.trace(f'Set score for not queried UID: {uid}. New score: {validator.scores[uid]}')
+                
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
                 time.sleep(bt.__blocktime__)
-                # If we receive empty responses from all axons we do not need to proceed further, as there is nothing to do
+                # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
+                for uid in list_of_uids:
+                    bt.logging.trace(f'Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}')
+                    validator.scores[uid] = (
+                        validator.neuron_config.alpha * validator.scores[uid]
+                        + (1 - validator.neuron_config.alpha) * 0.0
+                    )
+                    bt.logging.trace(f'Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}')
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
@@ -106,7 +131,7 @@ def main(validator: PromptInjectionValidator):
             # Process the responses
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
-                query=query, processed_uids=list_of_uids, responses=responses, 
+                query=query, processed_uids=list_of_uids, responses=responses,
                 synapse_uuid=synapse_uuid
             )
 

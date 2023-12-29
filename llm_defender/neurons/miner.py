@@ -55,7 +55,7 @@ def main(miner: PromptInjectionMiner):
                 current_block = miner.subtensor.block
                 if (
                     current_block - miner.last_updated_block > 100
-                    and miner.set_miner_weights == True
+                    and miner.miner_set_weights == True
                 ):
                     weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
                     weights[miner.miner_uid] = 1.0
