@@ -62,7 +62,6 @@ parse_arguments() {
                 shift
                 if [[ $1 != "--"* ]]; then
                     IFS='.' read -ra parts <<< "$arg_name"
-                    echo ${parts[1]}
                     args[${parts[0]}]=${parts[1]}
                 fi
             else
