@@ -29,6 +29,8 @@ from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
 
+import llm_defender.core.validators.scoring as scoring
+
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -184,51 +186,36 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        if not synapse_uuid:
-            synapse_uuid = None
-
-        # processed_uids = processed_uids.tolist()
         # Determine target value for scoring
         if query["data"]["isPromptInjection"] is True:
             target = 1.0
         else:
             target = 0.0
-
         bt.logging.debug(f"Confidence target set to: {target}")
 
+        # Initiate the response objects
         response_data = []
-
         responses_invalid_uids = []
         responses_valid_uids = []
 
+        # Check each response
         for i, response in enumerate(responses):
+            # Get the hotkey for the response
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
-            # Set the score for empty responses to 0
-            if not response.output or not all(
-                item in response.output for item in ["prompt", "confidence", "engines"]
-            ):
-                old_score = copy.deepcopy(self.scores[processed_uids[i]])
-                bt.logging.trace(
-                    f"Setting weights for invalid response from UID: {processed_uids[i]}. Old score: {old_score}"
+
+            # Get the default response object
+            response_object = scoring.process.get_response_object(
+                processed_uids[i], hotkey, target, query["prompt"], synapse_uuid
+            )
+
+            # Set the score for invalid responses to 0.0
+            if not scoring.process.validate_response(response):
+                self.scores, old_score = scoring.process.assign_score_for_uid(
+                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0
                 )
-                self.scores[processed_uids[i]] = (
-                    self.neuron_config.alpha * self.scores[processed_uids[i]]
-                    + (1 - self.neuron_config.alpha) * 0.0
-                )
-                new_score = self.scores[processed_uids[i]]
-                bt.logging.trace(
-                    f"Setting weights for invalid response from UID: {processed_uids[i]}. New score: {new_score}"
-                )
-                response_score = (
-                    distance_score
-                ) = (
-                    speed_score
-                ) = (
-                    engine_score
-                ) = distance_penalty_multiplier = general_penalty_multiplier = 0.0
-                miner_response = {}
-                engine_data = []
                 responses_invalid_uids.append(processed_uids[i])
+
+            # Calculate score for valid response
             else:
                 response_time = response.dendrite.process_time
                 (
@@ -246,12 +233,12 @@ class PromptInjectionValidator(BaseNeuron):
                     hotkey=hotkey,
                 )
 
-                old_score = copy.deepcopy(self.scores[processed_uids[i]])
-                self.scores[processed_uids[i]] = (
-                    self.neuron_config.alpha * self.scores[processed_uids[i]]
-                    + (1 - self.neuron_config.alpha) * response_score
+                self.scores, old_score = scoring.process.assign_score_for_uid(
+                    self.scores,
+                    processed_uids[i],
+                    self.neuron_config.alpha,
+                    response_score,
                 )
-                new_score = self.scores[processed_uids[i]]
 
                 if not response.output["synapse_uuid"]:
                     miner_response_uuid = None
@@ -302,33 +289,26 @@ class PromptInjectionValidator(BaseNeuron):
                             f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than ours ({self.subnet_version}). Please update the validator.'
                         )
 
-            # Create response data object
-            data = {
-                "UID": processed_uids[i],
-                "hotkey": hotkey,
-                "target": target,
-                "original_prompt": query["prompt"],
-                "synapse_uuid": synapse_uuid,
-                "response": miner_response,
-                "engine_scores": {
+                # Populate response data
+                response_object["response"] = miner_response
+                response_object["engine_data"] = engine_data
+                response_object["engine_scores"] = {
                     "distance_score": float(distance_score),
                     "speed_score": float(speed_score),
                     "engine_score": float(engine_score),
                     "distance_penalty_multiplier": float(distance_penalty_multiplier),
                     "general_penalty_multiplier": float(general_penalty_multiplier),
                     "response_score": float(response_score),
-                },
-                "weight_scores": {
-                    "new": float(new_score),
+                }
+                response_object["weight_scores"] = {
+                    "new": float(self.scores[processed_uids[i]]),
                     "old": float(old_score),
-                    "change": float(new_score) - float(old_score),
-                },
-                "engine_data": engine_data,
-            }
+                    "change": float(self.scores[processed_uids[i]]) - float(old_score),
+                }
 
-            bt.logging.debug(f"Processed response: {data}")
+            bt.logging.debug(f"Processed response: {response_object}")
 
-            response_data.append(data)
+            response_data.append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
