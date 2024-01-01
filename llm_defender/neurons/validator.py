@@ -5,11 +5,10 @@ import time
 import traceback
 import sys
 from argparse import ArgumentParser
-import torch
+from uuid import uuid4
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
-from uuid import uuid4
 from llm_defender import __version__ as version
 
 
@@ -25,13 +24,12 @@ def main(validator: PromptInjectionValidator):
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                bt.logging.debug(
-                    f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
-                )
-                validator.metagraph.sync(subtensor=validator.subtensor)
-
-                # Update local knowledge of the hotkeys
-                validator.check_hotkeys()
+                
+                # Sync metagraph
+                try:
+                    validator.sync_metagraph()
+                except TimeoutError as e:
+                    bt.logging.error(f'Metagraph sync timed out: {e}')
 
                 # Save state
                 validator.save_state()
@@ -50,25 +48,6 @@ def main(validator: PromptInjectionValidator):
             # Get all axons
             all_axons = validator.metagraph.axons
             bt.logging.trace(f"All axons: {all_axons}")
-
-            # If there are more axons than scores, append the scores list
-            if len(validator.metagraph.uids.tolist()) > len(validator.scores):
-                bt.logging.info(
-                    f"Discovered new Axons, current scores: {validator.scores}"
-                )
-                validator.scores = torch.cat(
-                    (
-                        validator.scores,
-                        torch.zeros(
-                            (
-                                len(validator.metagraph.uids.tolist())
-                                - len(validator.scores)
-                            ),
-                            dtype=torch.float32,
-                        ),
-                    )
-                )
-                bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
             # Get list of UIDs to query
             uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query = validator.get_uids_to_query(all_axons=all_axons)
@@ -149,14 +128,13 @@ def main(validator: PromptInjectionValidator):
             bt.logging.debug(f"Scores: {validator.scores}")
             bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
 
-            # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
             if current_block - validator.last_updated_block > 100:
                 
-                # Set weights for the miners
+                # Periodically update the weights on the Bittensor blockchain.
                 try:
                     validator.set_weights()
                     # Update validators knowledge of the last updated block
@@ -166,10 +144,7 @@ def main(validator: PromptInjectionValidator):
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
-            # Resync our local state with the latest state from the blockchain.
-            validator.metagraph = validator.subtensor.metagraph(
-                validator.neuron_config.netuid
-            )
+
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
             time.sleep(bt.__blocktime__)
 

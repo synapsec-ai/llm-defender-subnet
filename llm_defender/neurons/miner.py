@@ -134,8 +134,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--miner_set_weights",
-        type=bool,
-        default=True,
+        type=str,
+        default="True",
         help="Determines if miner should set weights or not",
     )
 
