@@ -587,8 +587,8 @@ class PromptInjectionValidator(BaseNeuron):
         previous_metagraph = copy.deepcopy(self.metagraph)
 
         # Sync the metagraph
-        self.metagraph = self.subtensor.metagraph(self.neuron_config.netuid)
         self.metagraph.sync(subtensor=self.subtensor)
+        self.metagraph = self.subtensor.metagraph(self.neuron_config.netuid)
 
         # Update local knowledge of the hotkeys
         self.check_hotkeys()

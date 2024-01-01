@@ -146,6 +146,7 @@ def main(validator: PromptInjectionValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
+            bt.logging.debug(f'Sleeping for: {bt.__blocktime__} seconds')
             time.sleep(bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
