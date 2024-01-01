@@ -576,49 +576,18 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
     
     @timeout_decorator(timeout=30)
-    def sync_metagraph(self):
+    def sync_metagraph(self, metagraph, subtensor, netuid):
         """Syncs the metagraph"""
 
         bt.logging.debug(
             f"Syncing metagraph: {self.metagraph} with subtensor: {self.subtensor}"
         )
 
-        # Store current metagraph
-        previous_metagraph = copy.deepcopy(self.metagraph)
-
         # Sync the metagraph
-        self.metagraph.sync(subtensor=self.subtensor)
-        self.metagraph = self.subtensor.metagraph(self.neuron_config.netuid)
+        metagraph.sync(subtensor=subtensor)
+        synced_metagraph = subtensor.metagraph(netuid)
 
-        # Update local knowledge of the hotkeys
-        self.check_hotkeys()
-
-        # Check for changes in the axons
-        if previous_metagraph.axons == self.metagraph.axons:
-            bt.logging.debug('No changes detected in metagraph.axons')
-            return
-            
-        # If there are more axons than scores, append the scores list
-        if len(self.metagraph.uids.tolist()) > len(self.scores):
-            bt.logging.info(
-                f"Discovered new Axons, current scores: {self.scores}"
-            )
-            self.scores = torch.cat(
-                (
-                    self.scores,
-                    torch.zeros(
-                        (
-                            len(self.metagraph.uids.tolist())
-                            - len(self.scores)
-                        ),
-                        dtype=torch.float32,
-                    ),
-                )
-            )
-            bt.logging.info(f"Updated scores, new scores: {self.scores}")
-        
-        return
-        
+        return synced_metagraph
 
     @timeout_decorator(timeout=30)
     def set_weights(self):
