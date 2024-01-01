@@ -587,11 +587,11 @@ class PromptInjectionValidator(BaseNeuron):
         previous_metagraph = copy.deepcopy(self.metagraph)
 
         # Sync the metagraph
-        self.metagraph.sync(subtensor=self.subtensor)
+        self.metagraph = self.metagraph.sync(subtensor=self.subtensor)
 
         # Update local knowledge of the hotkeys
         self.check_hotkeys()
-        
+
         # Check for changes in the axons
         if previous_metagraph.axons == self.metagraph.axons:
             bt.logging.debug('No changes detected in metagraph.axons')
