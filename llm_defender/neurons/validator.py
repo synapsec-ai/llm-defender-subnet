@@ -27,11 +27,10 @@ def main(validator: PromptInjectionValidator):
             if validator.step % 5 == 0:
                 # Sync metagraph
                 try:
-                    bt.logging.debug(f'Metagraph pre-sync: {validator.metagraph}')
                     validator.metagraph = validator.sync_metagraph(
                         validator.metagraph, validator.subtensor
                     )
-                    bt.logging.debug(f'Metagraph post-sync: {validator.metagraph}')
+                    bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
                 except TimeoutError as e:
                     bt.logging.error(f"Metagraph sync timed out: {e}")
 
@@ -128,6 +127,7 @@ def main(validator: PromptInjectionValidator):
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
                 time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
