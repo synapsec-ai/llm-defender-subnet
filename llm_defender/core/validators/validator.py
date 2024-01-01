@@ -576,7 +576,7 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
     
     @timeout_decorator(timeout=30)
-    def sync_metagraph(self, metagraph, subtensor, netuid):
+    def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
 
         bt.logging.debug(
@@ -585,9 +585,8 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Sync the metagraph
         metagraph.sync(subtensor=subtensor)
-        synced_metagraph = subtensor.metagraph(netuid)
 
-        return synced_metagraph
+        return metagraph
 
     @timeout_decorator(timeout=30)
     def set_weights(self):

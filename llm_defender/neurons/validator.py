@@ -28,9 +28,7 @@ def main(validator: PromptInjectionValidator):
                 # Sync metagraph
                 try:
                     validator.metagraph = validator.sync_metagraph(
-                        validator.metagraph,
-                        validator.subtensor,
-                        validator.neuron_config.netuid,
+                        validator.subtensor
                     )
                 except TimeoutError as e:
                     bt.logging.error(f"Metagraph sync timed out: {e}")
