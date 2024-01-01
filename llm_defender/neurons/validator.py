@@ -29,7 +29,7 @@ def main(validator: PromptInjectionValidator):
                 try:
                     bt.logging.debug(f'Metagraph pre-sync: {validator.metagraph}')
                     validator.metagraph = validator.sync_metagraph(
-                        validator.subtensor
+                        validator.metagraph, validator.subtensor
                     )
                     bt.logging.debug(f'Metagraph post-sync: {validator.metagraph}')
                 except TimeoutError as e:
