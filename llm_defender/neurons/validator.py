@@ -27,9 +27,11 @@ def main(validator: PromptInjectionValidator):
             if validator.step % 5 == 0:
                 # Sync metagraph
                 try:
+                    bt.logging.debug(f'Metagraph pre-sync: {validator.metagraph}')
                     validator.metagraph = validator.sync_metagraph(
                         validator.subtensor
                     )
+                    bt.logging.debug(f'Metagraph post-sync: {validator.metagraph}')
                 except TimeoutError as e:
                     bt.logging.error(f"Metagraph sync timed out: {e}")
 
