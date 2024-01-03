@@ -37,7 +37,10 @@ class PromptInjectionMiner(BaseNeuron):
         )
 
         args = parser.parse_args()
-        self.miner_set_weights = args.miner_set_weights
+        if args.miner_set_weights == "False":
+            self.miner_set_weights = False
+        else:
+            self.miner_set_weights = True
 
         self.chromadb_client = VectorEngine().initialize()
 

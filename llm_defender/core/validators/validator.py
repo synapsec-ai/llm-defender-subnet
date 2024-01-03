@@ -574,6 +574,19 @@ class PromptInjectionValidator(BaseNeuron):
             # Setup initial scoring weights
             self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
             bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+    
+    @timeout_decorator(timeout=30)
+    def sync_metagraph(self, metagraph, subtensor):
+        """Syncs the metagraph"""
+
+        bt.logging.debug(
+            f"Syncing metagraph: {self.metagraph} with subtensor: {self.subtensor}"
+        )
+
+        # Sync the metagraph
+        metagraph.sync(subtensor=subtensor)
+
+        return metagraph
 
     @timeout_decorator(timeout=30)
     def set_weights(self):

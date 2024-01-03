@@ -5,11 +5,11 @@ import time
 import traceback
 import sys
 from argparse import ArgumentParser
+from uuid import uuid4
 import torch
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
-from uuid import uuid4
 from llm_defender import __version__ as version
 
 
@@ -25,10 +25,14 @@ def main(validator: PromptInjectionValidator):
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                bt.logging.debug(
-                    f"Syncing metagraph: {validator.metagraph} with subtensor: {validator.subtensor}"
-                )
-                validator.metagraph.sync(subtensor=validator.subtensor)
+                # Sync metagraph
+                try:
+                    validator.metagraph = validator.sync_metagraph(
+                        validator.metagraph, validator.subtensor
+                    )
+                    bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
+                except TimeoutError as e:
+                    bt.logging.error(f"Metagraph sync timed out: {e}")
 
                 # Update local knowledge of the hotkeys
                 validator.check_hotkeys()
@@ -40,10 +44,9 @@ def main(validator: PromptInjectionValidator):
                 validator.save_miner_state()
 
             if validator.step % 20 == 0:
-            
                 # Truncate local miner response state file
                 validator.truncate_miner_state()
-            
+
                 # Update local knowledge of blacklisted miner hotkeys
                 validator.check_blacklisted_miner_hotkeys()
 
@@ -71,10 +74,15 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
             # Get list of UIDs to query
-            uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query = validator.get_uids_to_query(all_axons=all_axons)
+            (
+                uids_to_query,
+                list_of_uids,
+                blacklisted_uids,
+                uids_not_to_query,
+            ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
-                bt.logging.warning(f'UIDs to query is empty: {uids_to_query}')
-            
+                bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
+
             # Get the query to send to the valid Axons
             query = validator.serve_prompt().get_dict()
 
@@ -88,7 +96,7 @@ def main(validator: PromptInjectionValidator):
                     roles=["internal"],
                     analyzer=["Prompt Injection"],
                     subnet_version=validator.subnet_version,
-                    synapse_uuid=synapse_uuid
+                    synapse_uuid=synapse_uuid,
                 ),
                 timeout=validator.timeout,
                 deserialize=True,
@@ -105,25 +113,34 @@ def main(validator: PromptInjectionValidator):
 
             # Process UIDs we did not query (set scores to 0)
             for uid in uids_not_to_query:
-                bt.logging.trace(f'Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}')
+                bt.logging.trace(
+                    f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
+                )
                 validator.scores[uid] = (
                     validator.neuron_config.alpha * validator.scores[uid]
                     + (1 - validator.neuron_config.alpha) * 0.0
                 )
-                bt.logging.trace(f'Set score for not queried UID: {uid}. New score: {validator.scores[uid]}')
-                
+                bt.logging.trace(
+                    f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
+                )
+
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
                 time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
-                    bt.logging.trace(f'Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}')
+                    bt.logging.trace(
+                        f"Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}"
+                    )
                     validator.scores[uid] = (
                         validator.neuron_config.alpha * validator.scores[uid]
                         + (1 - validator.neuron_config.alpha) * 0.0
                     )
-                    bt.logging.trace(f'Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}')
+                    bt.logging.trace(
+                        f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
+                    )
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
@@ -131,8 +148,10 @@ def main(validator: PromptInjectionValidator):
             # Process the responses
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
-                query=query, processed_uids=list_of_uids, responses=responses,
-                synapse_uuid=synapse_uuid
+                query=query,
+                processed_uids=list_of_uids,
+                responses=responses,
+                synapse_uuid=synapse_uuid,
             )
 
             for res in response_data:
@@ -149,28 +168,24 @@ def main(validator: PromptInjectionValidator):
             bt.logging.debug(f"Scores: {validator.scores}")
             bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
 
-            # Periodically update the weights on the Bittensor blockchain.
             current_block = validator.subtensor.block
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
             if current_block - validator.last_updated_block > 100:
-                
-                # Set weights for the miners
+                # Periodically update the weights on the Bittensor blockchain.
                 try:
                     validator.set_weights()
                     # Update validators knowledge of the last updated block
                     validator.last_updated_block = validator.subtensor.block
                 except TimeoutError as e:
-                    bt.logging.error(f'Setting weights timed out: {e}')
+                    bt.logging.error(f"Setting weights timed out: {e}")
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
-            # Resync our local state with the latest state from the blockchain.
-            validator.metagraph = validator.subtensor.metagraph(
-                validator.neuron_config.netuid
-            )
+
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
+            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
             time.sleep(bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
