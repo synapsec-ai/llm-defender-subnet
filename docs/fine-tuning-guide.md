@@ -129,6 +129,7 @@ Here we have modified the line 40 to set the confidence score to 0.0 when the ou
 Now that we have done the necessary changes, we can re-install the updated module by executing:
 ```
 $ pip3 install -e .
+$ pip uninstall uvloop -y
 ```
 
 After installation, we can validate the output by using the text classification fine tuning helper script located at: `scripts/fine_tuning_helpers/text_classification_helper.py`
