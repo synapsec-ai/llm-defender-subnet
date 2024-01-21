@@ -108,6 +108,21 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
+    
+    def check_whitelist(self, hotkey):
+        """Checks if a given validator hotkey has been whitelisted."""
+
+        if isinstance(hotkey, bool) or not isinstance(hotkey, str):
+            return False
+        
+        whitelisted_hotkeys = [
+            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX" # sn14 mainnet test validator
+        ]
+
+        if hotkey in whitelisted_hotkeys:
+            return True
+
+        return False
 
     def blacklist(self, synapse: LLMDefenderProtocol) -> Tuple[bool, str]:
         """
@@ -125,6 +140,13 @@ class PromptInjectionMiner(BaseNeuron):
         This function must return [True, ""] for blacklisted requests
         and [False, ""] for non-blacklisted requests.
         """
+
+        # Check whitelisted hotkeys (queries should always be allowed)
+        if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
+            bt.logging.info(
+                f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey})"
+            )
+            return (False, f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey}")
 
         # Blacklist entities that have not registered their hotkey
         if synapse.dendrite.hotkey not in self.metagraph.hotkeys:
