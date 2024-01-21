@@ -154,6 +154,9 @@ class PromptInjectionValidator(BaseNeuron):
             if self.load_validator_state:
                 self.load_state()
                 self.load_miner_state()
+            else:
+                self.init_default_scores()
+                
             if args.max_targets:
                 self.max_targets = args.max_targets
             else:
