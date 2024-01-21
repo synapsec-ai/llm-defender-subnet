@@ -55,6 +55,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.max_targets = None
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
+        self.load_validator_state = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -145,7 +146,12 @@ class PromptInjectionValidator(BaseNeuron):
         args = self._parse_args(parser=self.parser)
 
         if args:
-            if args.load_state:
+            if args.load_state == "False":
+                self.load_validator_state = False
+            else:
+                self.load_validator_state = True
+            
+            if args.load_validator_state:
                 self.load_state()
                 self.load_miner_state()
             if args.max_targets:
@@ -534,13 +540,17 @@ class PromptInjectionValidator(BaseNeuron):
 
                 bt.logging.debug("Loaded miner state from a file")
             except Exception as e:
-                bt.logging.error(f'Miner response data reset because a failure to read the miner response data, error: {e}')
+                bt.logging.error(
+                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
+                )
 
                 # Rename the current miner state file if exception
                 # occurs and reset the default state
-                rename(state_path, f'{state_path}-{int(datetime.now().timestamp())}.autorecovery')
+                rename(
+                    state_path,
+                    f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                )
                 self.miner_responses = None
-
 
     def truncate_miner_state(self):
         """Truncates the local miner state"""
@@ -586,23 +596,45 @@ class PromptInjectionValidator(BaseNeuron):
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
         bt.logging.info(f"Validation weights have been initialized: {self.scores}")
 
+    def reset_validator_state(self, state_path):
+        """Inits the default validator state. Should be invoked only
+        when an exception occurs and the state needs to reset."""
+
+        # Rename current state file in case manual recovery is needed
+        rename(
+            state_path,
+            f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+        )
+
+        self.init_default_scores()
+        self.step = 0
+        self.last_updated_block = 0
+        self.hotkeys = None
+    
     def load_state(self):
         """Loads the state of the validator from a file."""
 
         # Load the state of the validator from file.
         state_path = self.base_path + "/state.pt"
         if path.exists(state_path):
-            bt.logging.info("Loading validator state.")
-            state = torch.load(state_path)
-            bt.logging.debug(f"Loaded the following state from file: {state}")
-            self.step = state["step"]
-            self.scores = state["scores"]
-            self.hotkeys = state["hotkeys"]
-            self.last_updated_block = state["last_updated_block"]
-            if "blacklisted_miner_hotkeys" in state.keys():
-                self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
+            try:
+                bt.logging.info("Loading validator state.")
+                state = torch.load(state_path)
+                bt.logging.debug(f"Loaded the following state from file: {state}")
+                self.step = state["step"]
+                self.scores = state["scores"]
+                self.hotkeys = state["hotkeys"]
+                self.last_updated_block = state["last_updated_block"]
+                if "blacklisted_miner_hotkeys" in state.keys():
+                    self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
 
-            bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+            except Exception as e:
+                bt.logging.error(
+                    f"Validator state reset because an exception occurred: {e}"
+                )
+                self.reset_validator_state(state_path=state_path)
+
         else:
             self.init_default_scores()
 

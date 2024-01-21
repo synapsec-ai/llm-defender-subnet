@@ -217,8 +217,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--load_state",
-        type=bool,
-        default=True,
+        type=str,
+        default="True",
         help="WARNING: Setting this value to False clears the old state.",
     )
 
