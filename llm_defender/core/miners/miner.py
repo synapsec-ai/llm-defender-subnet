@@ -116,7 +116,7 @@ class PromptInjectionMiner(BaseNeuron):
             return False
         
         whitelisted_hotkeys = [
-            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX" # sn14 mainnet test validator
+            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX" # sn14 dev team test validator
         ]
 
         if hotkey in whitelisted_hotkeys:
