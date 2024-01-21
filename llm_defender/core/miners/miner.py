@@ -41,6 +41,8 @@ class PromptInjectionMiner(BaseNeuron):
             self.miner_set_weights = False
         else:
             self.miner_set_weights = True
+        
+        self.validator_min_stake = parser.validator_min_stake
 
         self.chromadb_client = VectorEngine().initialize()
 
@@ -140,7 +142,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         # Blacklist entities that have insufficient stake
         stake = float(self.metagraph.S[uid])
-        if stake <= 0.0:
+        if stake <= self.validator_min_stake:
             bt.logging.info(
                 f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
             )
