@@ -35,7 +35,6 @@ class LLMDefenderProtocol(bt.Synapse):
         title="Roles",
         description="An immutable list depicting the roles",
         allow_mutation=False,
-        regex=r"^(internal|external)$",
     )
 
     analyzer: typing.List[str] = pydantic.Field(
@@ -43,7 +42,6 @@ class LLMDefenderProtocol(bt.Synapse):
         title="analyzer",
         description="An immutable list depicting the analyzers to execute",
         allow_mutation=False,
-        regex=r"^(Prompt Injection)$",
     )
 
     def get_analyzers(self) -> list:
