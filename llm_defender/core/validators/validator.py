@@ -24,6 +24,7 @@ from llm_defender.base.utils import (
     EnginePrompt,
     timeout_decorator,
     validate_miner_blacklist,
+    validate_numerical_value,
 )
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
@@ -317,36 +318,128 @@ class PromptInjectionValidator(BaseNeuron):
 
         return response_data
 
+    def get_response_object(
+        self,
+        total_score: float = 0.0,
+        distance_score: float = 0.0,
+        speed_score: float = 0.0,
+        engine_score: float = 0.0,
+        distance_penalty: float = 0.0,
+        general_penalty: float = 0.0,
+    ) -> dict:
+        """This method returns the score object. Calling the method
+        without arguments returns default response used for invalid
+        responses."""
+
+        res = {
+            "scores": {
+                "total": total_score,
+                "distance": distance_score,
+                "speed": speed_score,
+                "engine": engine_score,
+            },
+            "penalties": {"distance": distance_penalty, "general": general_penalty},
+        }
+
+        return res
+
+    def calculate_distance_score(self, target: float, engine_response: dict) -> float:
+        """This function calculates the distance score for a response
+
+        The distance score is a result of the absolute distance for the
+        response from each of the engine compared to the target value.
+        The lower the distance the better the response is.
+
+        Arguments:
+            target:
+                A float depicting the target confidence (0.0 or 1.0)
+
+            engine_response:
+                A dict containing the individual response produces by an
+                engine
+
+        Returns:
+            distance:
+                A dict containing the scores associated with the engine
+        """
+
+        if not validate_numerical_value(engine_response["confidence"], float, 0.0, 1.0):
+            return 0.0
+
+        distance = abs(target - engine_response["confidence"])
+
+        return distance
+
+    def validate_response_data(self, engine_response: dict) -> bool:
+        """Validates the engine response contains correct data
+        
+        Arguments:
+            engine_response:
+                A dict containing the individual response produces by an
+                engine
+        
+        Returns:
+            result:
+                A bool depicting the validity of the response
+        """
+        
+        if isinstance(engine_response, bool) or not isinstance(engine_response, dict):
+            return False
+        
+        required_keys = ["name", "confidence", "data"]
+        for _,key in enumerate(required_keys):
+            if key not in engine_response.keys():
+                return False
+            if engine_response[key] is None or isinstance(engine_response[key], bool):
+                return False
+            
+        return True
+
+    def calculate_total_distance_score(self, distance_scores):
+        """Calculates the final distance score given all responses
+        
+        Arguments:
+            distance_scores:
+                A list of the distance scores
+        
+        Returns:
+            total_distance_score:
+                A float containing the total distance score used for the
+                score calculation
+        """
+        if isinstance(distance_scores, bool) or not isinstance(distance_scores, list):
+            return 0.0
+        
+        if len(distance_scores) > 0:
+            total_distance_score = 1 - sum(distance_scores) / len(distance_scores)
+        else:
+            total_distance_score = 1 - distance_scores
+        
+        return total_distance_score
+
+
     def calculate_score(
         self, response, target: float, prompt: str, response_time: float, hotkey: str
     ) -> float:
         """This function sets the score based on the response.
 
         Returns:
-            score: An instance of float depicting the score for the
-            response
+            score: 
+                An instance of float depicting the score for the response
         """
 
-        # Validate the engine responses contain the correct fields
-        for engine_response in response["engines"]:
-            for key in ["name", "confidence", "data"]:
-                if key not in engine_response.keys():
-                    # If any of the responses are invalid we can just return zeros right away
-                    bt.logging.debug(
-                        f"Received an invalid response: {response} from hotkey: {hotkey}"
-                    )
-                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                if engine_response[key] is None:
-                    return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-
-        # Calculate distances to target value for each engine and take the mean
-        distances = [
-            abs(target - confidence)
-            for confidence in [engine["confidence"] for engine in response["engines"]]
-        ]
-        distance_score = (
-            1 - sum(distances) / len(distances) if len(distances) > 0 else 1.0
-        )
+        # Validate the engine responses and calculate distance score
+        distance_scores = []
+        for _,engine_response in response["engines"]:
+            if not self.validate_response_data(engine_response):
+                bt.logging.debug(
+                    f"Received an invalid response: {response} from hotkey: {hotkey}"
+                )
+                return self.get_response_object()
+            
+            distance_scores.append(self.calculate_distance_score(target, engine_response))
+    
+        total_distance_score = self.calculate_total_distance_score(distance_scores)
 
         # Calculate score for the speed of the response
         bt.logging.trace(
@@ -365,12 +458,12 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Validate individual scores
         if (
-            not (0.0 <= distance_score <= 1.0)
+            not (0.0 <= total_distance_score <= 1.0)
             or not (0.0 <= speed_score <= 1.0)
             or not (0.0 <= engine_score <= 1.0)
         ):
             bt.logging.error(
-                f"Calculated out-of-bounds individual scores:\nDistance: {distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
+                f"Calculated out-of-bounds individual scores:\nDistance: {total_distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
             )
 
             return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
@@ -381,7 +474,7 @@ class PromptInjectionValidator(BaseNeuron):
         num_engines_weight = 0.1
 
         bt.logging.trace(
-            f"Scores: Distance: {distance_score}, Speed: {speed_score}, Engine: {engine_score}"
+            f"Scores: Distance: {total_distance_score}, Speed: {speed_score}, Engine: {engine_score}"
         )
 
         similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
@@ -404,7 +497,7 @@ class PromptInjectionValidator(BaseNeuron):
             )
 
         score = (
-            (distance_weight * distance_score) * distance_penalty_multiplier
+            (distance_weight * total_distance_score) * distance_penalty_multiplier
             + (speed_weight * speed_score) * general_penalty_multiplier
             + (num_engines_weight * engine_score) * general_penalty_multiplier
         )
@@ -418,7 +511,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         return (
             score,
-            distance_score,
+            total_distance_score,
             speed_score,
             engine_score,
             distance_penalty_multiplier,
