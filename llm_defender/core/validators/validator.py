@@ -151,7 +151,7 @@ class PromptInjectionValidator(BaseNeuron):
             else:
                 self.load_validator_state = True
             
-            if args.load_validator_state:
+            if self.load_validator_state:
                 self.load_state()
                 self.load_miner_state()
             if args.max_targets:
@@ -610,6 +610,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.step = 0
         self.last_updated_block = 0
         self.hotkeys = None
+        self.blacklisted_miner_hotkeys = None
     
     def load_state(self):
         """Loads the state of the validator from a file."""
