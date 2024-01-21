@@ -68,15 +68,15 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
     """Assigns a score to an UID
 
     Arguments:
-        scores
+        scores:
             Current Tensor of scores
-        uid
+        uid:
             UID of the neuron to set the score for
-        alpha
+        alpha:
             Scaling factor used for the degradation
 
     Returns:
-        scores
+        scores:
             An updated Tensor of the scores
     """
 
@@ -97,9 +97,9 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         )
 
     # Ensure UID is correctly defined
-    if (0 > uid > 256) or not isinstance(uid, int):
+    if (0 > uid > 255) or not isinstance(uid, int):
         logging.error(f"Value for UID is incorrect: {uid}")
-        raise AttributeError(f"UID must be in range (0, 256). Value: {uid}")
+        raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:

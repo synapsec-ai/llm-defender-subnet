@@ -42,6 +42,37 @@ class EngineResponse:
         return {"name": self.name, "confidence": self.confidence, "data": self.data}
 
 
+def validate_numerical_value(value, value_type, min_value, max_value):
+    """Validates that a given value is a specific type and between the
+    given range
+
+    Arguments:
+        value
+            Value to validate
+        type
+            Python type  
+        min
+            Minimum value
+        max
+            Maximum value
+    
+    Returns:
+        result
+            A bool depicting the outcome of the validation
+    
+    """
+
+    if not value:
+        return False
+    
+    if isinstance(value, bool) or not isinstance(value, value_type):
+        return False
+    
+    if min_value > value > max_value:
+        return False
+    
+    return True
+
 def normalize_list(input_list: list) -> list:
     """
     This function normalizes a list so that values are between [0,1] and
