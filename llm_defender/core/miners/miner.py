@@ -42,7 +42,7 @@ class PromptInjectionMiner(BaseNeuron):
         else:
             self.miner_set_weights = True
         
-        self.validator_min_stake = parser.validator_min_stake
+        self.validator_min_stake = args.validator_min_stake
 
         self.chromadb_client = VectorEngine().initialize()
 
@@ -116,7 +116,7 @@ class PromptInjectionMiner(BaseNeuron):
             return False
         
         whitelisted_hotkeys = [
-            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX" # sn14 dev team test validator
+            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX", # sn14 dev team test validator
         ]
 
         if hotkey in whitelisted_hotkeys:
