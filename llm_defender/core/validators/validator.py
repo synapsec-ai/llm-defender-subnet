@@ -278,7 +278,7 @@ class PromptInjectionValidator(BaseNeuron):
                 if response.output["subnet_version"]:
                     if response.output["subnet_version"] > self.subnet_version:
                         bt.logging.warning(
-                            f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than ours ({self.subnet_version}). Please update the validator.'
+                            f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({self.subnet_version}). Please update the validator.'
                         )
 
                 # Populate response data

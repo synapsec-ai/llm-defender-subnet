@@ -183,7 +183,7 @@ class PromptInjectionMiner(BaseNeuron):
             )   
             if synapse.subnet_version > self.subnet_version:
                 bt.logging.warning(
-                    f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than ours ({self.subnet_version}). Please update the miner."
+                    f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
                 )
 
         # Responses are stored in a list
