@@ -14,12 +14,17 @@ import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
-from os import path
+from datetime import datetime
+from os import path, rename
 from pathlib import Path
 import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.utils import EnginePrompt, timeout_decorator, validate_miner_blacklist
+from llm_defender.base.utils import (
+    EnginePrompt,
+    timeout_decorator,
+    validate_miner_blacklist,
+)
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
@@ -50,6 +55,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.max_targets = None
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
+        self.load_validator_state = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -138,19 +144,26 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Read command line arguments and perform actions based on them
         args = self._parse_args(parser=self.parser)
-        
+
         if args:
-            if args.load_state:
+            if args.load_state == "False":
+                self.load_validator_state = False
+            else:
+                self.load_validator_state = True
+            
+            if self.load_validator_state:
                 self.load_state()
                 self.load_miner_state()
+            else:
+                self.init_default_scores()
+                
             if args.max_targets:
                 self.max_targets = args.max_targets
             else:
                 self.max_targets = 256
         else:
             # Setup initial scoring weights
-            self.scores = torch.zeros_like(metagraph.S, dtype=torch.float32)
-            bt.logging.debug(f"Validation weights have been initialized: {self.scores}")
+            self.init_default_scores()
             self.max_targets = 256
 
         self.target_group = 0
@@ -159,18 +172,18 @@ class PromptInjectionValidator(BaseNeuron):
 
     def _parse_args(self, parser):
         return parser.parse_args()
-    
+
     def process_responses(
         self,
         processed_uids: torch.tensor,
         query: dict,
         responses: list,
-        synapse_uuid: str
+        synapse_uuid: str,
     ) -> list:
         """
         This function processes the responses received from the miners.
         """
-        
+
         if not synapse_uuid:
             synapse_uuid = None
 
@@ -195,16 +208,24 @@ class PromptInjectionValidator(BaseNeuron):
                 item in response.output for item in ["prompt", "confidence", "engines"]
             ):
                 old_score = copy.deepcopy(self.scores[processed_uids[i]])
-                bt.logging.trace(f'Setting weights for invalid response from UID: {processed_uids[i]}. Old score: {old_score}')
+                bt.logging.trace(
+                    f"Setting weights for invalid response from UID: {processed_uids[i]}. Old score: {old_score}"
+                )
                 self.scores[processed_uids[i]] = (
                     self.neuron_config.alpha * self.scores[processed_uids[i]]
                     + (1 - self.neuron_config.alpha) * 0.0
                 )
                 new_score = self.scores[processed_uids[i]]
-                bt.logging.trace(f'Setting weights for invalid response from UID: {processed_uids[i]}. New score: {new_score}')
+                bt.logging.trace(
+                    f"Setting weights for invalid response from UID: {processed_uids[i]}. New score: {new_score}"
+                )
                 response_score = (
                     distance_score
-                ) = speed_score = engine_score = distance_penalty_multiplier = general_penalty_multiplier= 0.0
+                ) = (
+                    speed_score
+                ) = (
+                    engine_score
+                ) = distance_penalty_multiplier = general_penalty_multiplier = 0.0
                 miner_response = {}
                 engine_data = []
                 responses_invalid_uids.append(processed_uids[i])
@@ -216,7 +237,7 @@ class PromptInjectionValidator(BaseNeuron):
                     speed_score,
                     engine_score,
                     distance_penalty_multiplier,
-                    general_penalty_multiplier
+                    general_penalty_multiplier,
                 ) = self.calculate_score(
                     response=response.output,
                     target=target,
@@ -295,7 +316,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "engine_score": float(engine_score),
                     "distance_penalty_multiplier": float(distance_penalty_multiplier),
                     "general_penalty_multiplier": float(general_penalty_multiplier),
-                    "response_score": float(response_score)
+                    "response_score": float(response_score),
                 },
                 "weight_scores": {
                     "new": float(new_score),
@@ -415,7 +436,14 @@ class PromptInjectionValidator(BaseNeuron):
 
             return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-        return score, distance_score, speed_score, engine_score, distance_penalty_multiplier, general_penalty_multiplier
+        return (
+            score,
+            distance_score,
+            speed_score,
+            engine_score,
+            distance_penalty_multiplier,
+            general_penalty_multiplier,
+        )
 
     def apply_penalty(self, response, hotkey, prompt) -> tuple:
         """
@@ -492,10 +520,7 @@ class PromptInjectionValidator(BaseNeuron):
                 bt.logging.info(
                     f"Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}"
                 )
-                self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-                bt.logging.info(
-                    f"Validation weights have been initialized: {self.scores}"
-                )
+                self.init_default_scores()
 
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
@@ -512,10 +537,23 @@ class PromptInjectionValidator(BaseNeuron):
         """Loads the miner state from a file"""
         state_path = f"{self.base_path}/miners.pickle"
         if path.exists(state_path):
-            with open(state_path, "rb") as pickle_file:
-                self.miner_responses = pickle.load(pickle_file)
+            try:
+                with open(state_path, "rb") as pickle_file:
+                    self.miner_responses = pickle.load(pickle_file)
 
-            bt.logging.debug("Loaded miner state from a file")
+                bt.logging.debug("Loaded miner state from a file")
+            except Exception as e:
+                bt.logging.error(
+                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
+                )
+
+                # Rename the current miner state file if exception
+                # occurs and reset the default state
+                rename(
+                    state_path,
+                    f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                )
+                self.miner_responses = None
 
     def truncate_miner_state(self):
         """Truncates the local miner state"""
@@ -543,7 +581,7 @@ class PromptInjectionValidator(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
-                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys
+                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys,
             },
             self.base_path + "/state.pt",
         )
@@ -552,29 +590,58 @@ class PromptInjectionValidator(BaseNeuron):
             f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}, blacklisted_miner_hotkeys: {self.blacklisted_miner_hotkeys}"
         )
 
+    def init_default_scores(self) -> None:
+        """Validators without previous validation knowledge should start
+        with default score of 0.0 for each UID. The method can also be
+        used to reset the scores in case of an internal error"""
+
+        bt.logging.info("Initiating validator with default scores for each UID")
+        self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+
+    def reset_validator_state(self, state_path):
+        """Inits the default validator state. Should be invoked only
+        when an exception occurs and the state needs to reset."""
+
+        # Rename current state file in case manual recovery is needed
+        rename(
+            state_path,
+            f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+        )
+
+        self.init_default_scores()
+        self.step = 0
+        self.last_updated_block = 0
+        self.hotkeys = None
+        self.blacklisted_miner_hotkeys = None
+    
     def load_state(self):
         """Loads the state of the validator from a file."""
 
         # Load the state of the validator from file.
         state_path = self.base_path + "/state.pt"
         if path.exists(state_path):
-            bt.logging.info("Loading validator state.")
-            state = torch.load(state_path)
-            bt.logging.debug(f"Loaded the following state from file: {state}")
-            self.step = state["step"]
-            self.scores = state["scores"]
-            self.hotkeys = state["hotkeys"]
-            self.last_updated_block = state["last_updated_block"]
-            if "blacklisted_miner_hotkeys" in state.keys():
-                self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
+            try:
+                bt.logging.info("Loading validator state.")
+                state = torch.load(state_path)
+                bt.logging.debug(f"Loaded the following state from file: {state}")
+                self.step = state["step"]
+                self.scores = state["scores"]
+                self.hotkeys = state["hotkeys"]
+                self.last_updated_block = state["last_updated_block"]
+                if "blacklisted_miner_hotkeys" in state.keys():
+                    self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
 
-            bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+            except Exception as e:
+                bt.logging.error(
+                    f"Validator state reset because an exception occurred: {e}"
+                )
+                self.reset_validator_state(state_path=state_path)
+
         else:
-            bt.logging.info("Validator state not found. Starting with default values.")
-            # Setup initial scoring weights
-            self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-            bt.logging.info(f"Validation weights have been initialized: {self.scores}")
-    
+            self.init_default_scores()
+
     @timeout_decorator(timeout=30)
     def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
@@ -715,21 +782,26 @@ class PromptInjectionValidator(BaseNeuron):
                 if hotkey in self.metagraph.hotkeys:
                     blacklisted_uids.append(self.metagraph.hotkeys.index(hotkey))
                 else:
-                    bt.logging.trace(f'Blacklisted hotkey {hotkey} was not found from metagraph')
-            
-            bt.logging.debug(f'Blacklisted the following UIDs: {blacklisted_uids}')
-        
+                    bt.logging.trace(
+                        f"Blacklisted hotkey {hotkey} was not found from metagraph"
+                    )
+
+            bt.logging.debug(f"Blacklisted the following UIDs: {blacklisted_uids}")
+
         # Convert blacklisted UIDs to tensor
         blacklisted_uids_tensor = torch.tensor(
-            [uid not in blacklisted_uids for uid in self.metagraph.uids.tolist()],dtype=torch.bool
+            [uid not in blacklisted_uids for uid in self.metagraph.uids.tolist()],
+            dtype=torch.bool,
         )
 
-        bt.logging.trace(f'Blacklisted UIDs: {blacklisted_uids_tensor}')
+        bt.logging.trace(f"Blacklisted UIDs: {blacklisted_uids_tensor}")
 
         # Determine the UIDs to filter
-        uids_to_filter = torch.logical_not(~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake)
+        uids_to_filter = torch.logical_not(
+            ~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake
+        )
 
-        bt.logging.trace(f'UIDs to filter: {uids_to_filter}')
+        bt.logging.trace(f"UIDs to filter: {uids_to_filter}")
 
         # Define UIDs to query
         uids_to_query = [
@@ -749,26 +821,32 @@ class PromptInjectionValidator(BaseNeuron):
             self.metagraph.hotkeys.index(axon.hotkey) for axon in final_axons_to_filter
         ]
 
-        bt.logging.trace(f'Final axons to filter: {final_axons_to_filter}')
-        bt.logging.debug(f'Filtered UIDs: {uids_not_to_query}')
+        bt.logging.trace(f"Final axons to filter: {final_axons_to_filter}")
+        bt.logging.debug(f"Filtered UIDs: {uids_not_to_query}")
 
         # Reduce the number of simultaneous UIDs to query
         if self.max_targets < 256:
             start_idx = self.max_targets * self.target_group
-            end_idx = min(len(uids_to_query), self.max_targets * (self.target_group + 1))
+            end_idx = min(
+                len(uids_to_query), self.max_targets * (self.target_group + 1)
+            )
             if start_idx == end_idx:
-                return [],[]
+                return [], []
             if start_idx >= len(uids_to_query):
-                raise IndexError("Starting index for querying the miners is out-of-bounds")
-            
+                raise IndexError(
+                    "Starting index for querying the miners is out-of-bounds"
+                )
+
             if end_idx >= len(uids_to_query):
                 end_idx = len(uids_to_query)
                 self.target_group = 0
             else:
                 self.target_group += 1
-            
-            bt.logging.debug(f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'")
-            uids_to_query = uids_to_query[start_idx:end_idx] 
+
+            bt.logging.debug(
+                f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'"
+            )
+            uids_to_query = uids_to_query[start_idx:end_idx]
 
         list_of_uids = [
             self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
@@ -776,8 +854,6 @@ class PromptInjectionValidator(BaseNeuron):
 
         list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
 
-        bt.logging.trace(
-            f"Sending query to the following hotkeys: {list_of_hotkeys}"
-        )
+        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
         return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query

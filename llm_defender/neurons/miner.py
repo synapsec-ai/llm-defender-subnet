@@ -139,6 +139,13 @@ if __name__ == "__main__":
         help="Determines if miner should set weights or not",
     )
 
+    parser.add_argument(
+        "--validator_min_stake",
+        type=float,
+        default=20000.0,
+        help="Determine the minimum stake the validator should have to accept requests",
+    )
+
     # Create a miner based on the Class definitions
     subnet_miner = PromptInjectionMiner(parser=parser)
 
