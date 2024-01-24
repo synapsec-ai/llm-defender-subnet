@@ -75,7 +75,7 @@ def run(args):
                 )
 
                 logger.info('Installing the new subnet version')
-                subprocess.run('pip install -e .', check=True, shell=True)
+                subprocess.run('pip install -e . && pip uninstall -y uvloop', check=True, shell=True)
                 
                 # Restart pm2 instances
                 for instance_name in args.pm2_instance_names:
