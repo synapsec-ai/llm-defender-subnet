@@ -185,3 +185,28 @@ def validate_uid(uid):
     if uid < 0 or uid > 255:
         return False
     return True
+
+def validate_response_data(engine_response: dict) -> bool:
+    """Validates the engine response contains correct data
+    
+    Arguments:
+        engine_response:
+            A dict containing the individual response produces by an
+            engine
+    
+    Returns:
+        result:
+            A bool depicting the validity of the response
+    """
+    
+    if isinstance(engine_response, bool) or not isinstance(engine_response, dict):
+        return False
+    
+    required_keys = ["name", "confidence", "data"]
+    for _,key in enumerate(required_keys):
+        if key not in engine_response.keys():
+            return False
+        if engine_response[key] is None or isinstance(engine_response[key], bool):
+            return False
+        
+    return True

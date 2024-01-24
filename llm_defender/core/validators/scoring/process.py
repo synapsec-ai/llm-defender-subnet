@@ -2,6 +2,82 @@
 from bittensor import logging
 from torch import Tensor
 from copy import deepcopy
+import llm_defender.base.utils as utils
+
+def calculate_distance_score(target: float, engine_response: dict) -> float:
+    """This function calculates the distance score for a response
+
+    The distance score is a result of the absolute distance for the
+    response from each of the engine compared to the target value.
+    The lower the distance the better the response is.
+
+    Arguments:
+        target:
+            A float depicting the target confidence (0.0 or 1.0)
+
+        engine_response:
+            A dict containing the individual response produces by an
+            engine
+
+    Returns:
+        distance:
+            A dict containing the scores associated with the engine
+    """
+
+    if not utils.validate_numerical_value(engine_response["confidence"], float, 0.0, 1.0):
+        return 0.0
+
+    distance = abs(target - engine_response["confidence"])
+
+    return distance
+
+def calculate_total_distance_score(distance_scores):
+    """Calculates the final distance score given all responses
+    
+    Arguments:
+        distance_scores:
+            A list of the distance scores
+    
+    Returns:
+        total_distance_score:
+            A float containing the total distance score used for the
+            score calculation
+    """
+    if isinstance(distance_scores, bool) or not isinstance(distance_scores, list):
+        return 0.0
+    
+    if len(distance_scores) > 0:
+        total_distance_score = 1 - sum(distance_scores) / len(distance_scores)
+    else:
+        total_distance_score = 1 - distance_scores
+    
+    return total_distance_score
+
+def calculate_subscore_distance(response, target) -> list:
+    """Calculates the distance subscore for the response"""
+
+    # Validate the engine responses and calculate distance score
+    distance_scores = []
+    for _,engine_response in response["engines"]:
+        if not utils.validate_response_data(engine_response):
+            return None
+        
+        distance_scores.append(calculate_distance_score(target, engine_response))
+
+    total_distance_score = calculate_total_distance_score(distance_scores)
+
+    return total_distance_score
+
+def calculate_subscore_speed(timeout, response_time):
+    """Calculates the speed subscore for the response"""
+
+    # Calculate score for the speed of the response
+    if response_time > timeout:
+        return None
+
+    speed_score = 1.0 - (response_time / timeout)
+
+    return speed_score
 
 
 def validate_response(response: dict) -> bool:
@@ -120,6 +196,27 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     return scores, old_score
 
+def get_engine_response_object(
+    total_score: float = 0.0,
+    final_distance_score: float = 0.0,
+    final_speed_score: float = 0.0,
+    distance_penalty: float = 0.0,
+    speed_penalty: float = 0.0,
+) -> dict:
+    """This method returns the score object. Calling the method
+    without arguments returns default response used for invalid
+    responses."""
+
+    res = {
+        "scores": {
+            "total": total_score,
+            "distance": final_distance_score,
+            "speed": final_speed_score
+        },
+        "penalties": {"distance": distance_penalty, "speed": speed_penalty},
+    }
+
+    return res
 
 def get_response_object(
     uid: str, hotkey: str, target: float, prompt: str, synapse_uuid: str
@@ -133,14 +230,7 @@ def get_response_object(
         "original_prompt": prompt,
         "synapse_uuid": synapse_uuid,
         "response": {},
-        "engine_scores": {
-            "distance_score": 0.0,
-            "speed_score": 0.0,
-            "engine_score": 0.0,
-            "distance_penalty_multiplier": 0.0,
-            "general_penalty_multiplier": 0.0,
-            "response_score": 0.0,
-        },
+        "engine_scores": get_engine_response_object(),
         "weight_scores": {
             "new": 0.0,
             "old": 0.0,

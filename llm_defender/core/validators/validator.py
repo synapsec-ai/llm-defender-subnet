@@ -153,13 +153,13 @@ class PromptInjectionValidator(BaseNeuron):
                 self.load_validator_state = False
             else:
                 self.load_validator_state = True
-            
+
             if self.load_validator_state:
                 self.load_state()
                 self.load_miner_state()
             else:
                 self.init_default_scores()
-                
+
             if args.max_targets:
                 self.max_targets = args.max_targets
             else:
@@ -219,37 +219,22 @@ class PromptInjectionValidator(BaseNeuron):
             # Calculate score for valid response
             else:
                 response_time = response.dendrite.process_time
-                (
-                    response_score,
-                    distance_score,
-                    speed_score,
-                    engine_score,
-                    distance_penalty_multiplier,
-                    general_penalty_multiplier,
-                ) = self.calculate_score(
-                    response=response.output,
-                    target=target,
-                    prompt=query["prompt"],
-                    response_time=response_time,
-                    hotkey=hotkey,
+
+                scored_response = self.calculate_score(
+                    response.output, target, query["prompt"], response_time, hotkey
                 )
 
                 self.scores, old_score = scoring.process.assign_score_for_uid(
                     self.scores,
                     processed_uids[i],
                     self.neuron_config.alpha,
-                    response_score,
+                    scored_response["scores"]["total"],
                 )
-
-                if not response.output["synapse_uuid"]:
-                    miner_response_uuid = None
-                else:
-                    miner_response_uuid = response.output["synapse_uuid"]
 
                 miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
-                    "synapse_uuid": miner_response_uuid,
+                    "synapse_uuid": response.output["synapse_uuid"],
                 }
 
                 text_class = [
@@ -293,14 +278,7 @@ class PromptInjectionValidator(BaseNeuron):
                 # Populate response data
                 response_object["response"] = miner_response
                 response_object["engine_data"] = engine_data
-                response_object["engine_scores"] = {
-                    "distance_score": float(distance_score),
-                    "speed_score": float(speed_score),
-                    "engine_score": float(engine_score),
-                    "distance_penalty_multiplier": float(distance_penalty_multiplier),
-                    "general_penalty_multiplier": float(general_penalty_multiplier),
-                    "response_score": float(response_score),
-                }
+                response_object["scored_response"] = scored_response
                 response_object["weight_scores"] = {
                     "new": float(self.scores[processed_uids[i]]),
                     "old": float(old_score),
@@ -318,128 +296,8 @@ class PromptInjectionValidator(BaseNeuron):
 
         return response_data
 
-    def get_response_object(
-        self,
-        total_score: float = 0.0,
-        distance_score: float = 0.0,
-        speed_score: float = 0.0,
-        engine_score: float = 0.0,
-        distance_penalty: float = 0.0,
-        general_penalty: float = 0.0,
-    ) -> dict:
-        """This method returns the score object. Calling the method
-        without arguments returns default response used for invalid
-        responses."""
-
-        res = {
-            "scores": {
-                "total": total_score,
-                "distance": distance_score,
-                "speed": speed_score,
-                "engine": engine_score,
-            },
-            "penalties": {"distance": distance_penalty, "general": general_penalty},
-        }
-
-        return res
-
-    def calculate_distance_score(self, target: float, engine_response: dict) -> float:
-        """This function calculates the distance score for a response
-
-        The distance score is a result of the absolute distance for the
-        response from each of the engine compared to the target value.
-        The lower the distance the better the response is.
-
-        Arguments:
-            target:
-                A float depicting the target confidence (0.0 or 1.0)
-
-            engine_response:
-                A dict containing the individual response produces by an
-                engine
-
-        Returns:
-            distance:
-                A dict containing the scores associated with the engine
-        """
-
-        if not validate_numerical_value(engine_response["confidence"], float, 0.0, 1.0):
-            return 0.0
-
-        distance = abs(target - engine_response["confidence"])
-
-        return distance
-
-    def validate_response_data(self, engine_response: dict) -> bool:
-        """Validates the engine response contains correct data
-        
-        Arguments:
-            engine_response:
-                A dict containing the individual response produces by an
-                engine
-        
-        Returns:
-            result:
-                A bool depicting the validity of the response
-        """
-        
-        if isinstance(engine_response, bool) or not isinstance(engine_response, dict):
-            return False
-        
-        required_keys = ["name", "confidence", "data"]
-        for _,key in enumerate(required_keys):
-            if key not in engine_response.keys():
-                return False
-            if engine_response[key] is None or isinstance(engine_response[key], bool):
-                return False
-            
-        return True
-
-    def calculate_total_distance_score(self, distance_scores):
-        """Calculates the final distance score given all responses
-        
-        Arguments:
-            distance_scores:
-                A list of the distance scores
-        
-        Returns:
-            total_distance_score:
-                A float containing the total distance score used for the
-                score calculation
-        """
-        if isinstance(distance_scores, bool) or not isinstance(distance_scores, list):
-            return 0.0
-        
-        if len(distance_scores) > 0:
-            total_distance_score = 1 - sum(distance_scores) / len(distance_scores)
-        else:
-            total_distance_score = 1 - distance_scores
-        
-        return total_distance_score
-
-
-    def calculate_score(
-        self, response, target: float, prompt: str, response_time: float, hotkey: str
-    ) -> float:
-        """This function sets the score based on the response.
-
-        Returns:
-            score: 
-                An instance of float depicting the score for the response
-        """
-
-        # Validate the engine responses and calculate distance score
-        distance_scores = []
-        for _,engine_response in response["engines"]:
-            if not self.validate_response_data(engine_response):
-                bt.logging.debug(
-                    f"Received an invalid response: {response} from hotkey: {hotkey}"
-                )
-                return self.get_response_object()
-            
-            distance_scores.append(self.calculate_distance_score(target, engine_response))
-    
-        total_distance_score = self.calculate_total_distance_score(distance_scores)
+    def calculate_subscore_speed(self, hotkey, response_time):
+        """Calculates the speed subscore for the response"""
 
         # Calculate score for the speed of the response
         bt.logging.trace(
@@ -453,36 +311,17 @@ class PromptInjectionValidator(BaseNeuron):
 
         speed_score = 1.0 - (response_time / self.timeout)
 
-        # Calculate score for the number of engines used
-        engine_score = len(response["engines"]) / self.max_engines
+        return speed_score
 
-        # Validate individual scores
-        if (
-            not (0.0 <= total_distance_score <= 1.0)
-            or not (0.0 <= speed_score <= 1.0)
-            or not (0.0 <= engine_score <= 1.0)
-        ):
-            bt.logging.error(
-                f"Calculated out-of-bounds individual scores:\nDistance: {total_distance_score}\nSpeed: {speed_score}\nEngine: {engine_score} for the response: {response} from hotkey: {hotkey}"
-            )
-
-            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-
-        # Determine final score
-        distance_weight = 0.8
-        speed_weight = 0.1
-        num_engines_weight = 0.1
-
-        bt.logging.trace(
-            f"Scores: Distance: {total_distance_score}, Speed: {speed_score}, Engine: {engine_score}"
-        )
+    def get_response_penalties(self, response, hotkey, prompt):
+        """This function resolves the penalties for the response"""
 
         similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
             response, hotkey, prompt
         )
 
         distance_penalty_multiplier = 1.0
-        general_penalty_multiplier = 1.0
+        speed_penalty = 1.0
 
         if base_penalty >= 20:
             distance_penalty_multiplier = 0.0
@@ -490,32 +329,118 @@ class PromptInjectionValidator(BaseNeuron):
             distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
 
         if sum([similarity_penalty, duplicate_penalty]) >= 20:
-            general_penalty_multiplier = 0.0
+            speed_penalty = 0.0
         elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
-            general_penalty_multiplier = 1 - (
+            speed_penalty = 1 - (
                 ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
             )
 
-        score = (
-            (distance_weight * total_distance_score) * distance_penalty_multiplier
-            + (speed_weight * speed_score) * general_penalty_multiplier
-            + (num_engines_weight * engine_score) * general_penalty_multiplier
+        return distance_penalty_multiplier, speed_penalty
+
+    def calculate_penalized_scores(
+        self,
+        score_weights,
+        distance_score,
+        speed_score,
+        distance_penalty,
+        speed_penalty,
+    ):
+        """Applies the penalties to the score and calculates the final score"""
+
+        final_distance_score = (
+            score_weights["distance"] * distance_score
+        ) * distance_penalty
+        final_speed_score = (score_weights["speed"] * speed_score) * speed_penalty
+
+        total_score = final_distance_score + final_speed_score
+
+        return total_score, final_distance_score, final_speed_score
+
+    def calculate_score(
+        self, response, target: float, prompt: str, response_time: float, hotkey: str
+    ) -> dict:
+        """This function sets the score based on the response.
+
+        Returns:
+            score:
+                An instance of dict containing the scoring information for a response
+        """
+
+        # Calculate distance score
+        distance_score = scoring.process.calculate_subscore_distance(response, target)
+        if not distance_score:
+            bt.logging.debug(
+                f"Received an invalid response: {response} from hotkey: {hotkey}"
+            )
+            distance_score = 0.0
+
+        # Calculate speed score
+        speed_score = scoring.process.calculate_subscore_speed(self.timeout, response_time)
+        if not distance_score:
+            bt.logging.debug(
+                f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
+            )
+            speed_score = 0.0
+
+        # Validate individual scores
+        if not validate_numerical_value(
+            distance_score, float, 0.0, 1.0
+        ) or not validate_numerical_value(speed_score, float, 0.0, 1.0):
+            bt.logging.error(
+                f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
+            )
+            return scoring.process.get_engine_response_object()
+
+        # Set weights for scores
+        score_weights = {"distance": 0.8, "speed": 0.2}
+
+        # Get penalty multipliers
+        distance_penalty, speed_penalty = self.get_response_penalties(
+            response, hotkey, prompt
         )
 
-        if score > 1.0 or score < 0.0:
+        # Apply penalties to scores
+        (
+            total_score,
+            final_distance_score,
+            final_speed_score,
+        ) = self.calculate_penalized_scores(
+            score_weights, distance_score, speed_score, distance_penalty, speed_penalty
+        )
+
+        # Validate individual scores
+        if (
+            not validate_numerical_value(total_score, float, 0.0, 1.0)
+            or not validate_numerical_value(final_distance_score, float, 0.0, 1.0)
+            or not validate_numerical_value(final_speed_score, float, 0.0, 1.0)
+        ):
             bt.logging.error(
-                f"Calculated out-of-bounds score: {score} for the response: {response} from hotkey: {hotkey}"
+                f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
             )
+            return scoring.process.get_engine_response_object()
 
-            return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        # Log the scoring data
+        score_logger = {
+            "hotkey": hotkey,
+            "prompt": prompt,
+            "score_weights": score_weights,
+            "penalties": {"distance": distance_penalty, "speed": speed_penalty},
+            "raw_scores": {"distance": distance_score, "speed": speed_score},
+            "final_scores": {
+                "total": total_score,
+                "distance": final_distance_score,
+                "speed": final_speed_score,
+            },
+        }
 
-        return (
-            score,
-            total_distance_score,
-            speed_score,
-            engine_score,
-            distance_penalty_multiplier,
-            general_penalty_multiplier,
+        bt.logging.debug(f"Calculated score: {score_logger}")
+
+        return scoring.process.get_engine_response_object(
+            total_score=total_score,
+            final_distance_score=final_distance_score,
+            final_speed_score=final_speed_score,
+            distance_penalty=distance_penalty,
+            speed_penalty=speed_penalty,
         )
 
     def apply_penalty(self, response, hotkey, prompt) -> tuple:
@@ -687,7 +612,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.last_updated_block = 0
         self.hotkeys = None
         self.blacklisted_miner_hotkeys = None
-    
+
     def load_state(self):
         """Loads the state of the validator from a file."""
 
