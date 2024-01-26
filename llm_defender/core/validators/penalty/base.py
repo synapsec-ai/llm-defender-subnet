@@ -26,28 +26,35 @@ def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bo
 def _check_confidence_history(
     uid, miner_responses, penalty_name="Suspicious confidence history"
 ):
-    total_confidence = 0
+    total_distance = 0
     count = 0
     penalty = 0.0
     for entry in miner_responses:
         if (
-            "response" in entry
+            "engine_scores" in entry
             and isinstance(entry["response"], dict)
-            and "confidence" in entry["response"]
+            and "distance_score" in entry["engine_scores"]
         ):
-            total_confidence += entry["response"]["confidence"]
+            total_confidence += entry["engine_scores"]["distance_score"]
             count += 1
 
-    average_confidence = total_confidence / count if count > 0 else 0
+    average_distance = total_distance / count if count > 0 else 0
 
-    if average_confidence >= 0.45 and average_confidence <= 0.55:
-        penalty += 7
-    elif average_confidence < 0.45 and average_confidence >= 0.35:
-        penalty += 4
-    elif average_confidence < 0.35:
-        penalty += 6
-    elif average_confidence > 0.9:
-        penalty += 4
+    # penalize miners for exploitation
+    if 0.0 <= average_distance < 0.05:
+        penalty += 10.0
+    # this range denotes miners who perform way better than a purely random guess
+    elif 0.05 <= average_distance < 0.35:
+        penalty += 0.0
+    # this range denotes miners who perform better than a purely random guess
+    elif 0.35 <= average_distance < 0.45:
+        penalty += 2.0
+    # miners in this range are performing at roughly the same efficiency as random 
+    elif 0.45 <= average_distance <= 0.55:
+        penalty += 5.0
+    # miners in this range are performing worse than random
+    elif 0.55 < average_distance <= 1.0:
+        penalty += 10.0
 
     bt.logging.trace(
         f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'"
