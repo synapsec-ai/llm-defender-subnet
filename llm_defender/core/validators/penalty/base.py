@@ -35,7 +35,7 @@ def _check_confidence_history(
             and isinstance(entry["response"], dict)
             and "distance_score" in entry["engine_scores"]
         ):
-            total_confidence += entry["engine_scores"]["distance_score"]
+            total_distance += entry["engine_scores"]["distance_score"]
             count += 1
 
     average_distance = total_distance / count if count > 0 else 0
@@ -57,7 +57,7 @@ def _check_confidence_history(
         penalty += 10.0
 
     bt.logging.trace(
-        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_confidence}'"
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_distance}'"
     )
 
     return penalty
@@ -72,7 +72,7 @@ def check_penalty(uid, miner_responses, response, prompt):
     if len(miner_responses) < 50:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}')
-        return 5
+        return 5.0
 
     penalty = 0.0
     penalty += _check_prompt_response_mismatch(uid, response, prompt)
