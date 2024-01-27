@@ -90,7 +90,9 @@ class TestBasePenaltyFunctions():
             100.0,
             'foo',
             True,
-            False
+            False,
+            [],
+            {}
         ]
         for fuid in faulty_uids:
             print(f"Testing that 10.0 penalty outputted for invalid uid: {fuid}")
