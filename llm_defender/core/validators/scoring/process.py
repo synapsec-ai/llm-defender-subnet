@@ -179,7 +179,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:
-        return scores
+        return scores, scores[uid]
 
     old_score = deepcopy(scores[uid])
     logging.trace(f"Assigning score of 0.0 for UID: {uid}. Current score: {old_score}")
