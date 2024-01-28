@@ -190,6 +190,10 @@ generate_pm2_launch_file() {
         args+=" --logging.$logging_value"
     fi
 
+    if [[ -n "$validator_min_stake" ]]; then 
+        args+=" --validator_min_stake $validator_min_stake"
+    fi
+
     
     cat <<EOF > ${name}.config.js
 module.exports = {
