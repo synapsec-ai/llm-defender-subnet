@@ -118,7 +118,7 @@ def validate_response(response) -> bool:
 
     # Check that the values are not empty
     for key in mandatory_keys:
-        if response.output[key] is None:
+        if response[key] is None:
             logging.trace(
                 f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
             )
