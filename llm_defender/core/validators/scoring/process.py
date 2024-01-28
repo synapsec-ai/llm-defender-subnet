@@ -98,7 +98,7 @@ def validate_response(response: dict) -> bool:
         return False
 
     # Check for type
-    if not isinstance(response, dict):
+    if not isinstance(response.output, dict):
         logging.trace(f"Received an response with incorrect type: {response}")
         return False
 
