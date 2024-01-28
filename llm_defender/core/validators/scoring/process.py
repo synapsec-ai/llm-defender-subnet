@@ -80,7 +80,7 @@ def calculate_subscore_speed(timeout, response_time):
     return speed_score
 
 
-def validate_response(response: dict) -> bool:
+def validate_response(response) -> bool:
     """This method validates the individual response to ensure it has
     been format correctly
 
@@ -93,13 +93,13 @@ def validate_response(response: dict) -> bool:
             An instance of bool depicting the outcome of the validation.
     """
     # Responses without output are not valid
-    if not response or isinstance(response, bool):
-        logging.trace(f"Received an response without an output: {response}")
+    if not response.output or isinstance(response.output, bool):
+        logging.trace(f"Received an response without an output: {response.output}")
         return False
 
     # Check for type
     if not isinstance(response.output, dict):
-        logging.trace(f"Received an response with incorrect type: {response}")
+        logging.trace(f"Received an response with incorrect type: {response.output}")
         return False
 
     # Check for mandatory keys
@@ -110,33 +110,33 @@ def validate_response(response: dict) -> bool:
         "synapse_uuid",
         "subnet_version",
     ]
-    if not all(key in response for key in mandatory_keys):
+    if not all(key in response.output for key in mandatory_keys):
         logging.trace(
-            f"One or more mandatory keys: {mandatory_keys} missing from response: {response}"
+            f"One or more mandatory keys: {mandatory_keys} missing from response: {response.output}"
         )
         return False
 
     # Check that the values are not empty
     for key in mandatory_keys:
-        if response[key] is None:
+        if response.output[key] is None:
             logging.trace(
-                f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
+                f"One or more mandatory keys: {mandatory_keys} are empty in: {response.output}"
             )
             return False
 
     # Check the validity of the confidence score
-    if isinstance(response["confidence"], bool) or not isinstance(
-        response["confidence"], (float, int)
+    if isinstance(response.output["confidence"], bool) or not isinstance(
+        response.output["confidence"], (float, int)
     ):
-        logging.trace(f"Confidence is not correct type: {response}")
+        logging.trace(f"Confidence is not correct type: {response.output['confidence']}")
         return False
 
-    if not 0.0 <= float(response["confidence"]) <= 1.0:
-        logging.trace(f"Confidence is out-of-bounds for response: {response}")
+    if not 0.0 <= float(response.output["confidence"]) <= 1.0:
+        logging.trace(f"Confidence is out-of-bounds for response: {response.output['confidence']}")
         return False
 
     # The response has passed the validation
-    logging.trace(f"Validation succeeded for response: {response}")
+    logging.trace(f"Validation succeeded for response: {response.output}")
     return True
 
 
