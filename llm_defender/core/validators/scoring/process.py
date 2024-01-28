@@ -58,7 +58,7 @@ def calculate_subscore_distance(response, target) -> list:
 
     # Validate the engine responses and calculate distance score
     distance_scores = []
-    for _,engine_response in response["engines"]:
+    for _,engine_response in response.output["engines"]:
         if not utils.validate_response_data(engine_response):
             return None
         
