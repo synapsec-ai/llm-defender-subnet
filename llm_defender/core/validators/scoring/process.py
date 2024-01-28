@@ -230,7 +230,7 @@ def get_response_object(
         "original_prompt": prompt,
         "synapse_uuid": synapse_uuid,
         "response": {},
-        "engine_scores": get_engine_response_object(),
+        "scored_response": get_engine_response_object(),
         "weight_scores": {
             "new": 0.0,
             "old": 0.0,
