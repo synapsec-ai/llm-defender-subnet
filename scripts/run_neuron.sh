@@ -152,6 +152,7 @@ generate_pm2_launch_file() {
     local name="${args['name']}"
     local max_memory_restart="${args['max_memory_restart']}"
     local miner_set_weights="${args['miner_set_weights']}"
+    local validator_min_stake="$args['validator_min_stake']}"
 
     # Construct argument list for the neuron
     if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" ]]; then
