@@ -177,6 +177,10 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         logging.error(f"Value for UID is incorrect: {uid}")
         raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 
+    # Account for a rounding error by setting scores below threshold to 0.0
+    if scores[uid] < 0.0000001:
+        scores[uid] = 0.0
+
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:
         return scores, scores[uid]
