@@ -164,7 +164,7 @@ def validate_miner_blacklist(miner_blacklist) -> bool:
 def validate_uid(uid):
     """
     This method makes sure that a uid is an int instance between 0 and
-    256. It also makes sure that boolean inputs are filtered out as
+    255. It also makes sure that boolean inputs are filtered out as
     non-valid uid's.
 
     Arguments:

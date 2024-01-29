@@ -173,7 +173,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         )
 
     # Ensure UID is correctly defined
-    if (0 > uid > 255) or not isinstance(uid, int):
+    if not utils.validate_uid(uid):
         logging.error(f"Value for UID is incorrect: {uid}")
         raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 
