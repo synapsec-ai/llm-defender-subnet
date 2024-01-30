@@ -50,6 +50,18 @@ class BaseEngine:
     """
 
     def __init__(self, name: str = "BaseEngine"):
+        """
+        Initializes the prompt, confidence, output, name & cache_dir 
+        attributes for the BaseEngine class.
+
+        Arguments:
+            name:
+                A str instance that describes the name of the Engine.
+                Default: 'BaseEngine'
+        
+        Returns:
+            None
+        """        
         self.prompt = None
         self.confidence = None
         self.output = {}

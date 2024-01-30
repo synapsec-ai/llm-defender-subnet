@@ -21,15 +21,79 @@ from llm_defender.core.miners.engines.prompt_injection.vector_search import Vect
 from llm_defender.base.utils import validate_miner_blacklist
 
 class PromptInjectionMiner(BaseNeuron):
-    """Summary of the class
+    """PromptInjectionMiner class for LLM Defender Subnet
 
-    Class description
+    The PromptInjectionMiner class contains all of the code for a Miner neuron 
+    to generate a confidence score for a Prompt Injection Attack.
 
     Attributes:
+        neuron_config: 
+            This attribute holds the configuration settings for the neuron: 
+            bt.subtensor, bt.wallet, bt.logging & bt.axon
+        miner_set_weights: 
+            A boolean attribute that determines whether the miner sets weights. 
+            This is set based on the command-line argument args.miner_set_weights.
+        chromadb_client: 
+            Stores the 'clint' output from VectorEngine.initialize() This is from: 
+            llm_defender/core/miners/engines/prompt_injection/vector_search.py
+        model: 
+            Stores the 'model' output for an engine.
+        tokenizer: 
+            Stores the 'tokenized' output for an engine.
+        yara_rules: 
+            Stores the 'rules' output of YaraEngine.initialize() This is only when using 
+            the YaraEngine, located at:
 
+            llm_defender/core/miners/engines/prompt_injection/yara.py
+        wallet: 
+            Represents an instance of bittensor.wallet returned from the setup() method.
+        subtensor: 
+            An instance of bittensor.subtensor returned from the setup() method.
+        metagraph: 
+            An instance of bittensor.metagraph returned from the setup() method.
+        miner_uid: 
+            An int instance representing the unique identifier of the miner in the network returned 
+            from the setup() method.
+        hotkey_blacklisted: 
+            A boolean flag indicating whether the miner's hotkey is blacklisted. It is initially 
+            set to False and may be updated by the check_remote_blacklist() method.
+        
+    Methods:
+        setup():
+            This function initializes the neuron by registering the configuration.
+        blacklist():
+            This method blacklist requests that are not originating from valid 
+            validators--insufficient hotkeys, entities which are not validators & 
+            entities with insufficient stake 
+        priority():
+            This function defines the priority based on which the validators are 
+            selected. Higher priority value means the input from the validator is 
+            processed faster.
+        forward():
+            The function is executed once the data from the validator has been 
+            deserialized, which means we can utilize the data to control the behavior 
+            of this function.
+        calculate_overall_confidence():
+            This function calculates the overall confidence score for a prompt 
+            injection attack.
+        check_remote_blacklist():
+            This function retrieves the remote blacklist (from the url: 
+            https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api)
     """
 
     def __init__(self, parser: ArgumentParser):
+        """
+        Initializes the PromptInjectionMiner class with attributes neuron_config,
+        miner_set_weights, chromadb_client, model, tokenizer, yara_rules, wallet,
+        subtensor, metagraph, miner_uid & hotkey_blacklisted.
+
+        Arguments:
+            parser:
+                An ArgumentParser instance.
+        
+        Returns:
+            None
+        """
         super().__init__(parser=parser, profile="miner")
 
         self.neuron_config = self.config(
@@ -59,7 +123,7 @@ class PromptInjectionMiner(BaseNeuron):
         The setup function initializes the neuron by registering the
         configuration.
 
-        Args:
+        Arguments:
             None
 
         Returns:
@@ -67,16 +131,16 @@ class PromptInjectionMiner(BaseNeuron):
                 An instance of bittensor.wallet containing information about
                 the wallet
             subtensor:
-                An instance of bittensor.subtensor doing ?
+                An instance of bittensor.subtensor
             metagraph:
-                An instance of bittensor.metagraph doing ?
+                An instance of bittensor.metagraph
             miner_uid:
-                An instance of str consisting of the miner UID
+                An instance of int consisting of the miner UID
 
         Raises:
             AttributeError:
+                The AttributeError is raised if wallet, subtensor & metagraph cannot be logged.
         """
-
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
             f"Initializing miner for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
@@ -110,7 +174,19 @@ class PromptInjectionMiner(BaseNeuron):
         return wallet, subtensor, metagraph, miner_uid
     
     def check_whitelist(self, hotkey):
-        """Checks if a given validator hotkey has been whitelisted."""
+        """
+        Checks if a given validator hotkey has been whitelisted.
+        
+        Arguments:
+            hotkey:
+                A str instance depicting a hotkey.
+                
+        Returns:
+            True:
+                True is returned if the hotkey is whitelisted.
+            False:
+                False is returned if the hotkey is not whitelisted.    
+        """
 
         if isinstance(hotkey, bool) or not isinstance(hotkey, str):
             return False
@@ -134,11 +210,18 @@ class PromptInjectionMiner(BaseNeuron):
         request headers or other data that can be retrieved outside of
         the request data.
 
-        As it currently stats, we want to blacklist requests that are
-        not originating from valid validators.
+        As it currently stands, we want to blacklist requests that are
+        not originating from valid validators. This includes:
+        - unregistered hotkeys 
+        - entities which are not validators 
+        - entities with insufficient stake 
 
-        This function must return [True, ""] for blacklisted requests
-        and [False, ""] for non-blacklisted requests.
+        Returns: 
+            [True, ""] for blacklisted requests where the reason for 
+            blacklisting is contained in the quotes.
+            [False, ""] for non-blacklisted requests, where the quotes 
+            contain a formatted string (f"Hotkey {synapse.dendrite.hotkey} 
+            has insufficient stake: {stake}",)
         """
 
         # Check whitelisted hotkeys (queries should always be allowed)
@@ -184,8 +267,16 @@ class PromptInjectionMiner(BaseNeuron):
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
         validator is processed faster.
-        """
 
+        Inputs:
+            synapse:
+                The synapse should be the LLMDefenderProtocol class 
+                (from llm_defender/base/protocol.py)
+
+        Returns:
+            stake:
+                A float instance of how much TAO is staked.
+        """
         # Otherwise prioritize validators based on their stake
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         stake = float(self.metagraph.S[uid])
@@ -197,9 +288,22 @@ class PromptInjectionMiner(BaseNeuron):
         return stake
 
     def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
-        """The function is executed once the data from the
+        """
+        The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
-        data to control the behavior of this function.
+        data to control the behavior of this function. All confidence 
+        score outputs, alongside other relevant output metadata--subnet_version, 
+        synapse_uuid--are appended to synapse.output.
+
+        Inputs:
+            synapse:
+                The synapse should be the LLMDefenderProtocol class 
+                (from llm_defender/base/protocol.py)
+
+        Returns:
+            synapse:
+                The synapse should be the LLMDefenderProtocol class 
+                (from llm_defender/base/protocol.py)
         """
         if synapse.subnet_version:
             bt.logging.debug(
@@ -267,7 +371,28 @@ class PromptInjectionMiner(BaseNeuron):
         return synapse
     
     def calculate_overall_confidence(self, confidences, weights):
-        """Function to calculate the overall confidence"""
+        """
+        Function to calculate the overall confidence
+        
+        Arguments:
+            confidences:
+                A list containing confidence values (between 0.0 and 1.0)
+            weights:
+                A list containing the weights for each associated confidence value 
+                (the sum of all weights should approximate 1.0 with a tolerance of 0.01)
+
+        Returns:
+            overall_score:
+                A float instance of the overall confidence score given confidences
+                & weights
+
+        Raises:
+            ValueError:
+                The ValueError is raised if
+                    - The number of confidences & weights do not match
+                    - The confidences are not between 0.0 and 1.0
+                    - The sum of the weights does not approximate 1.0 (with a tolerance of 0.01)
+        """
         if len(confidences) != len(weights):
             raise ValueError("Number of confidences and weights should match")
         
@@ -287,7 +412,24 @@ class PromptInjectionMiner(BaseNeuron):
         return overall_score
 
     def check_remote_blacklist(self):
-        """Retrieves the remote blacklist"""
+        """
+        Retrieves the remote blacklist & updates the hotkey_blacklisted 
+        attribute.
+        
+        Arguments:
+            None
+        
+        Returns:
+            None
+
+        Raises:
+            requests.exceptions.JSONDecodeError:
+                requests.exceptions.JSONDecodeError is raised if the response 
+                could not be read from the blacklist API.
+            requests.exceptions.ConnectionError:
+                requests.exceptions.ConnectionError is raised if the function is 
+                unable to connect to the blacklist API.
+        """
 
         blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
 
