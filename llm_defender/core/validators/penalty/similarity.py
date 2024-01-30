@@ -8,7 +8,37 @@ from llm_defender.base.utils import validate_uid
 def _check_response_history(
     uid, miner_responses, engine, penalty_name="High-similarity score"
 ):
-    """Checks the response history to determine the similarity of engine responses"""
+    """
+    This function assesses the similarity of responses from a specific 
+    engine in a miner's response history. It calculates the average cosine 
+    similarity of the engine's output data and applies a penalty based on the 
+    level of similarity.
+    
+    Arguments:
+        uid:
+            An int instance displaying a unique user id for a miner. Must be 
+            between 0 and 255.
+    miner_responses:
+        A iterable instance where each element must be a dict instance 
+        containing flag 'engine_data'. Each value associated with the 'engine_data' 
+        key must itself be a dict instance containing the flags 'name' and 'data'. 
+        The 'name' flag should have a value that is a str instance displaying
+        the name of the specific engine, and the 'data' flag should have a value 
+        that contains the engine outputs.
+    engine:
+        A str instance displaying the name of the engine that we want to 
+        calculate the penalty for.
+    penalty_name:
+        A str instance displaying the name of the penalty operation being performed. 
+        Default is set to 'High-similarity score'.
+
+        This generally should not be modified.
+    
+    Returns:
+        penalty:
+            A float instance representing the penalty score based on the similarity 
+            of responses from a specific engine in a miner's response history. 
+    """
     # Isolate engine-specific data
     penalty = 0.0
     engine_data = [
@@ -58,8 +88,34 @@ def _check_response_history(
 
 
 def check_penalty(uid, miner_responses):
-    """This function checks the total penalty score within similarity
-    category"""
+    """
+    This function checks the total penalty score within the similarity category. 
+    This involves a summation of penalty values for the following methods over 
+    all engines:
+        ---> _check_response_history()
+    
+    A penalty of 20.0 is also added if any of the inputs (uid or miner_responses) 
+    is not inputted.
+        
+    Arguments:
+        uid:
+            An int instance displaying a unique user id for a miner. Must be 
+            between 0 and 255.
+        miner_responses:
+            A iterable instance where each element must be a dict instance 
+            containing flag 'engine_data'. Each value associated with the 
+            'engine_data' key must itself be a dict instance containing the
+            flags 'name' and 'data'. The 'name' flag should have a value that 
+            is a str instance displaying the name of the specific engine, and 
+            the 'data' flag should have a value that contains the engine 
+            outputs.
+        
+    Returns:
+        penalty:
+            The final penalty value for the _check_response_history() method. 
+            A penalty of 20.0 is also added if any of the inputs (uid or miner_responses) 
+            is not inputted.
+    """
     penalty = 0.0
 
     if not validate_uid(uid) or not miner_responses:
