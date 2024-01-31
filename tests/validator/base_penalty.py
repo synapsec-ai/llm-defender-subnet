@@ -136,9 +136,12 @@ class TestBasePenaltyFunctions():
         print("Test successful.")
 
 
-if __name__ == '__main__':
+def main():
     test_base = TestBasePenaltyFunctions()
     test_base.test_check_prompt_response_mismatch()
     test_base.test_check_confidence_validity()
     test_base.test_check_confidence_history()
     test_base.test_check_penalty()
+
+if __name__ == '__main__':
+    main()
