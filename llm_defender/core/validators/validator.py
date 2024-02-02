@@ -21,7 +21,6 @@ import torch
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
-    EnginePrompt,
     timeout_decorator,
     validate_miner_blacklist,
     validate_numerical_value,
@@ -188,10 +187,8 @@ class PromptInjectionValidator(BaseNeuron):
         """
 
         # Determine target value for scoring
-        if query["data"]["isPromptInjection"] is True:
-            target = 1.0
-        else:
-            target = 0.0
+        target = query["label"]
+        
         bt.logging.debug(f"Confidence target set to: {target}")
 
         # Initiate the response objects
@@ -476,7 +473,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         return similarity, base, duplicate
 
-    def serve_prompt(self) -> EnginePrompt:
+    def serve_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
         This function selects a random prompt from the dataset to be
@@ -486,18 +483,12 @@ class PromptInjectionValidator(BaseNeuron):
             None
 
         Returns:
-            prompt: An instance of EnginePrompt
+            prompt: An instance of dict containing the prompt data
         """
 
         entry = mock_data.get_prompt()
 
-        prompt = EnginePrompt(
-            engine="Prompt Injection",
-            prompt=entry["text"],
-            data={"isPromptInjection": entry["isPromptInjection"]},
-        )
-
-        return prompt
+        return entry
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
