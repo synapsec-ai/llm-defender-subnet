@@ -1,4 +1,4 @@
-from llm_defender.core.validators.penalty.base import _check_prompt_response_mismatch, _check_confidence_validity,_check_confidence_history, check_penalty
+from llm_defender.core.validators.penalty.base import _check_prompt_response_mismatch, _check_confidence_validity,_check_response_history, check_penalty
 import unittest
 import pytest
 import bittensor as bt
@@ -29,14 +29,14 @@ class TestBasePenaltyFunctions():
         assert _check_confidence_validity(255,{'confidence': -0.1}) == 20.0
         print("Test successful.")
 
-    def test_check_confidence_history(self):
-        print("\nNOW TESTING: _check_confidence_history()\n")
+    def test_check_response_history(self):
+        print("\nNOW TESTING: _check_response_history()\n")
         print("Testing that 10.0 penalty outputted for avg distance between 0.0 and 0.05.")
         miner_responses = [
             {'response':{},'engine_scores': {'distance_score': 0.04}}, 
             {'response':{},'engine_scores': {'distance_score': 0.03}}
             ] * 50
-        assert _check_confidence_history(100, miner_responses) == 10.0
+        assert _check_response_history(100, miner_responses) == 10.0
         print("Test successful.")
 
         print("Testing that 0.0 penalty outputted for avg distance between 0.05 and 0.35.")
@@ -45,7 +45,7 @@ class TestBasePenaltyFunctions():
             {'response':{},'engine_scores': {'distance_score': 0.34}}, 
             {'response':{},'engine_scores': {'distance_score': 0.16}}
             ] * 50
-        assert _check_confidence_history(101,miner_responses) == 0.0
+        assert _check_response_history(101,miner_responses) == 0.0
         print("Test successful.")
 
         print("Testing that 2.0 penalty outputted for avg distance between 0.35 and 0.45.")
@@ -55,7 +55,7 @@ class TestBasePenaltyFunctions():
             {'response':{},'engine_scores': {'distance_score': 0.43}}, 
             {'response':{},'engine_scores': {'distance_score': 0.44}}
             ] * 50
-        assert _check_confidence_history(101, miner_responses) == 2.0
+        assert _check_response_history(101, miner_responses) == 2.0
         print("Test successful.")
 
         print("Testing that 5.0 penalty outputted for avg distance between 0.45 and 0.55.")
@@ -66,7 +66,7 @@ class TestBasePenaltyFunctions():
             {'response':{},'engine_scores': {'distance_score': 0.54}}, 
             {'response':{},'engine_scores': {'distance_score': 0.50}}
             ] * 50
-        assert _check_confidence_history(121, miner_responses) == 5.0
+        assert _check_response_history(121, miner_responses) == 5.0
         print("Test successful.")
 
         print("Testing that 10.0 penalty outputted for avg distance between 0.55 and 1.0.")
@@ -77,7 +77,7 @@ class TestBasePenaltyFunctions():
             {'response':{},'engine_scores': {'distance_score': 0.99}}, 
             {'response':{},'engine_scores': {'distance_score': 0.85}}
             ] * 50
-        assert _check_confidence_history(111, miner_responses) == 10.0
+        assert _check_response_history(111, miner_responses) == 10.0
         print("Test successful.")
 
     def test_check_penalty(self):
@@ -140,7 +140,7 @@ def main():
     test_base = TestBasePenaltyFunctions()
     test_base.test_check_prompt_response_mismatch()
     test_base.test_check_confidence_validity()
-    test_base.test_check_confidence_history()
+    test_base.test_check_response_history()
     test_base.test_check_penalty()
 
 if __name__ == '__main__':

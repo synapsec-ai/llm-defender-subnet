@@ -74,7 +74,7 @@ def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bo
     return penalty
 
 
-def _check_confidence_history(
+def _check_response_history(
     uid, miner_responses, penalty_name="Suspicious confidence history"
 ):
     """
@@ -90,7 +90,7 @@ def _check_confidence_history(
             and a float value between 0.0 and 1.0 as its associated value.
         penalty_name:
             A str instance displaying the name of the penalty being administered
-            by the _check_confidence_history() method. Default is 'Suspicious confidence history'.
+            by the _check_response_history() method. Default is 'Suspicious confidence history'.
             
             This argument generally should not be altered.
 
@@ -150,7 +150,7 @@ def check_penalty(uid, miner_responses, response, prompt):
 
         ---> _check_prompt_response_mismatch()
         ---> _check_confidence_validity()
-        ---> _check_confidence_history()
+        ---> _check_response_history()
 
     It also applies a penalty of 10.0 if invalid values are provided to the function, 
     and a penalty of 5.0 if there is an insufficient number of miner responses to process
@@ -188,6 +188,6 @@ def check_penalty(uid, miner_responses, response, prompt):
     penalty = 0.0
     penalty += _check_prompt_response_mismatch(uid, response, prompt)
     penalty += _check_confidence_validity(uid, response)
-    penalty += _check_confidence_history(uid, miner_responses)
+    penalty += _check_response_history(uid, miner_responses)
 
     return penalty
