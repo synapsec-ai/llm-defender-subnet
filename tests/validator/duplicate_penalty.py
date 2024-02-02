@@ -394,19 +394,6 @@ def test_find_identical_reply():
     )
     assert identical_penalty == 0.0
     print("Test successful.")
-
-    current_response = copy.deepcopy(response)
-    current_response['engines'] = response['engine_data']
-
-    er = [data for data in current_response['engines'] if data['name'] == 'engine:yara']
-    print("[data for data in current_response['engines'] if data['name'] == 'engine:yara']")
-    print(er)
-    miner_responses = generate_miner_responses(5,5)
-    mr = [entry for item in miner_responses for entry in item.get("engine_data",[])]
-    print("[entry for item in miner_responses for entry in item.get('engine_data',[])]")
-    print(mr)
-    print("any(er == entry for item in miner_responses for entry in item.get('engine_data',[]))")
-    print(any(er == entry for item in miner_responses for entry in item.get('engine_data',[])))
     
     print("Testing that 0.25 penalty is applied for the case where identical reply is found.")
     responses = generate_miner_responses(50,10)
