@@ -352,3 +352,12 @@ def validate_response_data(engine_response: dict) -> bool:
             return False
         
     return True
+
+def wandb_available():
+    try:
+        import wandb 
+        return True 
+    except ImportError:
+        return False 
+    return False
+

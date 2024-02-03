@@ -11,12 +11,15 @@ import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from llm_defender import __version__ as version
-
+from llm_defender.base.utils import wandb_available
 
 def main(validator: PromptInjectionValidator):
     """
     This function executes the main function for the validator.
     """
+
+    if wandb_available() and args.use_wandb:
+
 
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
