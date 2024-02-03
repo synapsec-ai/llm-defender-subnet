@@ -382,6 +382,10 @@ def test_find_identical_reply():
         rp = copy.deepcopy(response)
         miner_responses += [rp] * num_duplicate
         return miner_responses
+    
+    current_response = copy.deepcopy(response)
+    current_response['engines'] = current_response['engine_data']
+    current_response.pop('engine_data', None)
 
     print("\nNOW TESTING: _find_identical_reply()\n")
     print(
