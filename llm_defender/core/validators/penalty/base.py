@@ -75,7 +75,7 @@ def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bo
 
 
 def _check_response_history(
-    uid, miner_responses, penalty_name="Suspicious confidence history"
+    uid, miner_responses, penalty_name="Suspicious response history"
 ):
     """
     This method checks the history of a miner's outputted confidence values and determines
@@ -90,7 +90,7 @@ def _check_response_history(
             and a float value between 0.0 and 1.0 as its associated value.
         penalty_name:
             A str instance displaying the name of the penalty being administered
-            by the _check_response_history() method. Default is 'Suspicious confidence history'.
+            by the _check_response_history() method. Default is 'Suspicious response history'.
             
             This argument generally should not be altered.
 
@@ -111,17 +111,20 @@ def _check_response_history(
     count = 0
     penalty = 0.0
     for entry in miner_responses:
-        if (
-            "engine_scores" in entry
-            and isinstance(entry["response"], dict)
-            and "distance_score" in entry["engine_scores"]
-        ):
-            total_distance += entry["engine_scores"]["distance_score"]
+        if "scored_response" in entry.keys() and "raw_scores" in entry["scored_response"].keys() and "distance" in entry["scored_response"]["raw_scores"].keys():
+            bt.logging.trace(f'Going through: {entry}')
+            total_distance += entry["scored_response"]["raw_scores"]["distance"]
             count += 1
+        # Miner response is not valid, apply base penalty
+        else:
+            penalty += 10.0
+            bt.logging.debug(f'Applied base penalty due to invalid/stale miners.pickle entry: {entry}')
+            
+            return penalty
 
     average_distance = total_distance / count if count > 0 else 0
 
-    # penalize miners for exploitation
+    # penalize miners for suspiciously high distance score
     if 0.0 <= average_distance < 0.05:
         penalty += 10.0
     # this range denotes miners who perform way better than a purely random guess
@@ -138,7 +141,7 @@ def _check_response_history(
         penalty += 10.0
 
     bt.logging.trace(
-        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average confidence: '{average_distance}'"
+        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average distance: '{average_distance}'"
     )
 
     return penalty

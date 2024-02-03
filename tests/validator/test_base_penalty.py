@@ -3,6 +3,7 @@ import unittest
 import pytest
 import bittensor as bt
 
+
 class TestBasePenaltyFunctions():
 
     def test_check_prompt_response_mismatch(self):
@@ -33,49 +34,49 @@ class TestBasePenaltyFunctions():
         print("\nNOW TESTING: _check_response_history()\n")
         print("Testing that 10.0 penalty outputted for avg distance between 0.0 and 0.05.")
         miner_responses = [
-            {'response':{},'engine_scores': {'distance_score': 0.04}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.03}}
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.04}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.03}}}
             ] * 50
         assert _check_response_history(100, miner_responses) == 10.0
         print("Test successful.")
 
         print("Testing that 0.0 penalty outputted for avg distance between 0.05 and 0.35.")
         miner_responses = [
-            {'response':{},'engine_scores': {'distance_score': 0.06}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.34}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.16}}
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.06}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.34}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.16}}}
             ] * 50
         assert _check_response_history(101,miner_responses) == 0.0
         print("Test successful.")
 
         print("Testing that 2.0 penalty outputted for avg distance between 0.35 and 0.45.")
         miner_responses = [
-            {'response':{},'engine_scores': {'distance_score': 0.36}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.37}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.43}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.44}}
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.36}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.37}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.43}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.44}}}
             ] * 50
         assert _check_response_history(101, miner_responses) == 2.0
         print("Test successful.")
 
         print("Testing that 5.0 penalty outputted for avg distance between 0.45 and 0.55.")
         miner_responses = [
-            {'response':{},'engine_scores': {'distance_score': 0.46}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.47}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.53}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.54}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.50}}
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.46}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.47}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.53}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.54}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.50}}}
             ] * 50
         assert _check_response_history(121, miner_responses) == 5.0
         print("Test successful.")
 
         print("Testing that 10.0 penalty outputted for avg distance between 0.55 and 1.0.")
         miner_responses = [
-            {'response':{},'engine_scores': {'distance_score': 0.56}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.57}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.98}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.99}}, 
-            {'response':{},'engine_scores': {'distance_score': 0.85}}
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.56}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.57}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.98}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.99}}}, 
+            {'response':{},'scored_response': {'raw_scores': {'distance': 0.85}}}
             ] * 50
         assert _check_response_history(111, miner_responses) == 10.0
         print("Test successful.")
@@ -96,7 +97,7 @@ class TestBasePenaltyFunctions():
         ]
         for fuid in faulty_uids:
             print(f"Testing that 10.0 penalty outputted for invalid uid: {fuid}")
-            assert check_penalty(fuid,[{'response':{},'engine_scores': {'distance_score': 0.56}}] * 50,{'prompt': 'test'},'test') == 10.0
+            assert check_penalty(fuid,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.56}}}] * 50,{'prompt': 'test'},'test') == 10.0
             print("Test successful.")
 
         print("Testing that 10.0 penalty is applied for faulty miner_responses.")
@@ -104,35 +105,35 @@ class TestBasePenaltyFunctions():
         print("Test successful.")
 
         print("Testing that 10.0 penalty is applied for response not existing")
-        assert check_penalty(17,[{'response':{},'engine_scores': {'distance_score': 0.56}}] * 50,{},'test') == 10.0
+        assert check_penalty(17,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.56}}}] * 50,{},'test') == 10.0
         print("Test successful.")
 
         print("Testing that 5.0 penalty is applied for miner_responses not being long enough")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.04}}] * 49,{'prompt': 'test', 'confidence': 0.5},'test') == 5.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.04}}}] * 49,{'prompt': 'test', 'confidence': 0.5},'test') == 5.0
         print("Test successful.")
 
         print("Testing that no penalty applied for a perfect set of responses")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.15}}] * 50,{'prompt': 'test', 'confidence': 0.5},'test') == 0.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.15}}}] * 50,{'prompt': 'test', 'confidence': 0.5},'test') == 0.0
         print("Test successful.")
 
         print("Testing that penalty of 40.0 is applied for prompt-response mismatch and invalid confidence")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.15}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 40.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.15}}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 40.0
         print("Test successful.")
 
         print("Testing that penalty of 50.0 is applied for prompt-response mismatch, invalid confidence and distance score avg of 0.01")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.01}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 50.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.01}}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 50.0
         print("Test successful.")
 
         print("Testing that penalty of 50.0 is applied for prompt-response mismatch, invalid confidence and distance score avg of 0.90.")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.90}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 50.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.90}}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 50.0
         print("Test successful.")
 
         print("Testing that penalty of 42.0 is applied for prompt-response mismatch, invalid confidence and distance score avg of 0.40")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.40}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 42.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.40}}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 42.0
         print("Test successful.")
 
         print("Testing that penalty of 45.0 is applied for prompt-response mismatch, invalid confidence and distance score avg of 0.50.")
-        assert check_penalty(10,[{'response':{},'engine_scores': {'distance_score': 0.50}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 45.0
+        assert check_penalty(10,[{'response':{},'scored_response': {'raw_scores': {'distance': 0.50}}}] * 50,{'prompt': 'test', 'confidence': 1.5},'invalid prompt') == 45.0
         print("Test successful.")
 
 

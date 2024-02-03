@@ -246,6 +246,8 @@ def get_engine_response_object(
     final_speed_score: float = 0.0,
     distance_penalty: float = 0.0,
     speed_penalty: float = 0.0,
+    raw_distance_score: float = 0.0,
+    raw_speed_score: float = 0.0
 ) -> dict:
     """This method returns the score object. Calling the method
     without arguments returns default response used for invalid
@@ -257,6 +259,7 @@ def get_engine_response_object(
             "distance": final_distance_score,
             "speed": final_speed_score,
         },
+        "raw_scores": {"distance": raw_distance_score, "speed": raw_speed_score},
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
     }
 

@@ -420,6 +420,8 @@ class PromptInjectionValidator(BaseNeuron):
         score_logger = {
             "hotkey": hotkey,
             "prompt": prompt,
+            "target": target,
+            "synapse_uuid": response["synapse_uuid"],
             "score_weights": score_weights,
             "penalties": {"distance": distance_penalty, "speed": speed_penalty},
             "raw_scores": {"distance": distance_score, "speed": speed_score},
@@ -438,6 +440,8 @@ class PromptInjectionValidator(BaseNeuron):
             final_speed_score=final_speed_score,
             distance_penalty=distance_penalty,
             speed_penalty=speed_penalty,
+            raw_distance_score=distance_score,
+            raw_speed_score=speed_score
         )
 
     def apply_penalty(self, response, hotkey, prompt) -> tuple:
