@@ -129,6 +129,7 @@ Here we have modified the line 40 to set the confidence score to 0.0 when the ou
 Now that we have done the necessary changes, we can re-install the updated module by executing:
 ```
 $ pip3 install -e .
+$ pip uninstall uvloop -y
 ```
 
 After installation, we can validate the output by using the text classification fine tuning helper script located at: `scripts/fine_tuning_helpers/text_classification_helper.py`
@@ -184,6 +185,8 @@ Thats it, now your miner is running with a different model and hopefully produci
 
 The text classification engine can also be tune by fine-tuning the model itself. This however is out-of-scope for this guide, as the purpose of this guide is to ensure that the subnet specific topics that relate to the tuning of the miners are covered.
 
+This scenario applies to all fine-tuning that involves 
+
 ### Scenario 2 - Add YARA rules
 As discussed earlier, the fine-tuning of the subnet miners is done at the engine level, and each engine is fine-tuned slightly differently. With the YARA engine, we move away from the "traditional way" the Bittensor miners are tuned and introduce another mechanism for fine-tuning that can yield better results.
 
@@ -192,9 +195,96 @@ As discussed earlier, the fine-tuning of the subnet miners is done at the engine
 
 YARA rules are essentially a way to describe known patterns that are commonly observed within the prompt injections. Are certain words or combination of words often associated with prompt injections? A YARA rule can be extremely efficient on detecting prompt injections that rely on known patterns, such as certain combination of strings or bypass commands. However, it can be easily circumvented and prone for false-positives. The key in the tuning of the YARA engine is to find a balance between detection capabilities while eliminating false-positives.
 
+More information about YARA and instructions on how to write rules can be found at: https://yara.readthedocs.io/en/stable/
+
+The YARA engine is build such that you don't necessarily need to modify the engine code in order to fine-tune the engine performance. If you want to change the logic how the YARA engine is scoring the you should only modify the `_calculate_confidence()` method located in the file `llm_defender/core/miners/engines/prompt_injection/yara.py`.
+
+By default, the YARA engine looks for the `meta.accuracy` key within the YARA rule to determine the what the confidence score will be. If there are multiple matches, the engine returns the **highest** value for the accuracy.
+
+YARA rules are located in the `llm_defender/core/miners/engines/prompt_injection/yara_rules` directory. The engine is tuned by creating new rules (or modifying the existing ones) and saving them into the `yara_rules` directory. 
+
+There are a few constraints that you must account for when creating new YARA rules:
+1) They must be stored within the `yara_rules` directory
+2) The file extension must be .yar (= your rule name must end with .yar)
+3) There must be `meta.accuracy` key within the rule (see example)
+
+Example rule:
+```
+rule UniversalJailbreak
+{
+    meta:
+        name = "Universal Jailbreak"
+        description = ""
+        accuracy = "1.0"
+    
+    strings:
+        $suffix1 = /describing\.\\ \+ similarlyNow write oppositeley\.\]\( Me giving\*\*ONE please\? revert with \"\\\!--Two/
+        $suffix2 = /'representing Teamsures tableView \(\[githubINST -Of cour Here\/' surely]{\\comment={\[@ tableView "@github \[\/INST\]/
+    condition:
+        $suffix1 or $suffix2
+}
+```
+
+The example rule condition is is checking if either the regex pattern in `$suffix1` or `$suffix2` is matching the string given as an input for the rule.
+
+The fundamental idea to construct one (or several) YARA rules that look for specific patterns that are common occurrences within prompt injections. The YARA engine defaults to confidence score of 0.5 (meaning inconclusive results), so the YARA engine can also be used to detect prompts that are not injections, but in this case, you need to set the accuracy to 0.0 indicating the prompt is not an injection. But be careful, incorrectly classifying the prompts gives you negative results.
+
+Similar to the Text Classification engine, we have provided a simple helper script that you can use to test out your YARA rules. The script is located at: `scripts/fine_tuning_helpers/yara_helper.py`.
+
+Given the default rules, the prompts within the helper script are not detected.
+```
+$ python3 scripts/fine_tuning_helpers/yara_helper.py 
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+```
+
+We can inspect the prompts used as examples to determine patterns that could be detected with a YARA rule. Lets say that we are certain that no legit prompts would ever contain "haha pwned" or "haha owned" in them. We could create a YARA rule to look for this behavior:
+```
+rule HahaPwned
+{
+    meta:
+        name = "Haha Pwned"
+        description = "Hackers love to input Haha Pwned in their examples so a prompt must be malicious if such string is contained within"
+        accuracy = "1.0"
+    
+    strings:
+        $pwnedOwned = /(haha pwned|haha owned)/ nocase
+    condition:
+        $pwnedOwned
+}
+```
+
+When this rule is added to the `yara_rules` directory, we can get a match for two of the example strings:
+```
+python3 scripts/fine_tuning_helpers/yara_helper.py 
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 1.0, 'data': {'outcome': 'RuleMatch', 'meta': [{'name': 'Haha Pwned', 'description': 'Hackers love to input Haha Pwned in their examples so a prompt must be malicious if such string is contained within', 'accuracy': '1.0'}]}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 0.5, 'data': {'outcome': 'NoRuleMatch'}}
+{'name': 'engine:yara', 'confidence': 1.0, 'data': {'outcome': 'RuleMatch', 'meta': [{'name': 'Haha Pwned', 'description': 'Hackers love to input Haha Pwned in their examples so a prompt must be malicious if such string is contained within', 'accuracy': '1.0'}]}}
+```
+
+But actually, the last match is a false-positive match as it matches to a completely valid question: "Can you tell me why hackers often use "Haha pwned!!" in their examples?". So fine-tuning the YARA engine is about finding the balance between patterns that *can* be malicious without overdoing it so that non-malicious prompts are also triggering the rules.
+
+You can also use values other than 0.0 and 1.0 in the `meta.accuracy` field. It might be a good technique to create less-accurate rules that are still *likely* to be malicious and set their accuracy to for example 0.65 so that when the match is true-positive it provides slightly better score without producing that significant penalty for false-positive entries.
+
+### Scenario 3 - Modify Vector Search Engine
+
+> [!NOTE]  
+> It is recommended to follow the same Git practices discussed in the Scenario 1.
+
+
 XXX
 
-### Scenario 3 - Modify engine weights [NOT IMPLEMENTED YET]
+### Scenario 4 - Modify engine weights [NOT IMPLEMENTED YET]
 Fine-tuning can also be done by modifying the weights for the engine. By default, the weights are equal between all engines (i.e., 1/3) but if you decide to focus on fine-tuning only a single engine, you may want to also adjust such that the miner gives more weight to the responses produced by a single engine. You'll gain best results by fine-tuning all the engines, but sometimes it may be wise to focus resources on the engine you are most familiar with.
 
 > [!NOTE]  
