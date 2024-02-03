@@ -18,9 +18,10 @@ def main(validator: PromptInjectionValidator):
     This function executes the main function for the validator.
     """
 
-    if wandb_available() and args.use_wandb:
-
-
+    if wandb_available() and validator.use_wandb:
+        import wandb
+        wandb.init(project=validator.wandb_project, entity=validator.wandb_entity)
+    
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
 
@@ -230,6 +231,12 @@ if __name__ == "__main__":
         type=int,
         default=64,
         help="Sets the value for the number of targets to query at once",
+    )
+
+    parser.add_argument(
+        '--use_wandb',
+        action='store_true',
+        help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
     )
 
     # Create a validator based on the Class definitions and initialize it

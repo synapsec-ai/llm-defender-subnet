@@ -108,6 +108,11 @@ class PromptInjectionMiner(BaseNeuron):
         
         self.validator_min_stake = args.validator_min_stake
 
+        self.use_wandb = args.use_wandb
+        if self.use_wandb:
+            self.wandb_project = args.wandb_project 
+            self.wandb_entity = args.wandb_entity
+
         self.chromadb_client = VectorEngine().initialize()
 
         self.model, self.tokenizer = TextClassificationEngine().initialize()

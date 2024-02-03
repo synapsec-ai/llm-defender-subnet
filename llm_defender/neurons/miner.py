@@ -17,6 +17,10 @@ def main(miner: PromptInjectionMiner):
     miner configuration, please adjust the initialization parameters.
     """
 
+    if wandb_available() and miner.use_wandb:
+        import wandb
+        wandb.init(project=miner.wandb_project, entity=miner.wandb_entity)
+
     # Link the miner to the Axon
     axon = bt.axon(wallet=miner.wallet, config=miner.neuron_config)
     bt.logging.info(f"Linked miner to Axon: {axon}")
@@ -144,6 +148,12 @@ if __name__ == "__main__":
         type=float,
         default=20000.0,
         help="Determine the minimum stake the validator should have to accept requests",
+    )
+
+    parser.add_argument(
+        '--use_wandb',
+        action='store_true',
+        help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
     )
 
     # Create a miner based on the Class definitions

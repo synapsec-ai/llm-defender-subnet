@@ -164,6 +164,12 @@ class PromptInjectionValidator(BaseNeuron):
                 self.max_targets = args.max_targets
             else:
                 self.max_targets = 256
+
+            self.use_wandb = args.use_wandb
+            if self.use_wandb:
+                self.wandb_project = args.wandb_project 
+                self.wandb_entity = args.wandb_entity
+
         else:
             # Setup initial scoring weights
             self.init_default_scores()
