@@ -1,8 +1,10 @@
 """This module processes the incoming response from the miner"""
+
 from bittensor import logging
 from torch import Tensor
 from copy import deepcopy
 import llm_defender.base.utils as utils
+
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
@@ -24,20 +26,23 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
             A dict containing the scores associated with the engine
     """
 
-    if not utils.validate_numerical_value(engine_response["confidence"], float, 0.0, 1.0):
+    if not utils.validate_numerical_value(
+        engine_response["confidence"], float, 0.0, 1.0
+    ):
         return 1.0
 
     distance = abs(target - engine_response["confidence"])
 
     return distance
 
+
 def calculate_total_distance_score(distance_scores: list) -> float:
     """Calculates the final distance score given all responses
-    
+
     Arguments:
         distance_scores:
             A list of the distance scores
-    
+
     Returns:
         total_distance_score:
             A float containing the total distance score used for the
@@ -45,31 +50,45 @@ def calculate_total_distance_score(distance_scores: list) -> float:
     """
     if isinstance(distance_scores, bool) or not isinstance(distance_scores, list):
         return 0.0
-    
+
     if distance_scores == []:
         return 0.0
-    
+
     if len(distance_scores) > 1:
         total_distance_score = 1 - sum(distance_scores) / len(distance_scores)
     else:
         total_distance_score = 1 - distance_scores[0]
-    
+
     return total_distance_score
 
-def calculate_subscore_distance(response, target) -> list:
+
+def calculate_subscore_distance(response, target) -> float:
     """Calculates the distance subscore for the response"""
 
     # Validate the engine responses and calculate distance score
     distance_scores = []
-    for _,engine_response in enumerate(response["engines"]):
+
+    if isinstance(response, bool) or not isinstance(response, dict):
+        return None
+
+    if (
+        "engines" not in response.keys()
+        or isinstance(response["engines"], bool)
+        or not isinstance(response["engines"], list)
+        or response["engines"] == []
+    ):
+        return None
+
+    for _, engine_response in enumerate(response["engines"]):
         if not utils.validate_response_data(engine_response):
             return None
-        
+
         distance_scores.append(calculate_distance_score(target, engine_response))
 
     total_distance_score = calculate_total_distance_score(distance_scores)
 
     return total_distance_score
+
 
 def calculate_subscore_speed(timeout, response_time):
     """Calculates the speed subscore for the response"""
@@ -78,11 +97,11 @@ def calculate_subscore_speed(timeout, response_time):
         return None
     if isinstance(timeout, bool) or not isinstance(timeout, (float, int)):
         return None
-    
+
     # If response time is 0.0 or larger than timeout, the time is invalid
     if response_time > timeout or response_time <= 0.0 or timeout <= 0.0:
         return None
-    
+
     speed_score = 1.0 - (response_time / timeout)
 
     return speed_score
@@ -140,7 +159,9 @@ def validate_response(response) -> bool:
         return False
 
     if not 0.0 <= float(response["confidence"]) <= 1.0:
-        logging.trace(f"Confidence is out-of-bounds for response: {response['confidence']}")
+        logging.trace(
+            f"Confidence is out-of-bounds for response: {response['confidence']}"
+        )
         return False
 
     # The response has passed the validation
@@ -165,15 +186,20 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
     """
 
     # Ensure the alpha is correctly defined
-    if alpha >= 1.0 or not isinstance(alpha, float) or isinstance(alpha, bool):
+    if (
+        not isinstance(alpha, float)
+        or isinstance(alpha, bool)
+        or alpha >= 1.0
+        or alpha < 0.1
+    ):
         logging.error(f"Value for alpha is incorrect: {alpha}")
-        raise AttributeError(f"Alpha must be below 1.0. Value: {alpha}")
+        raise AttributeError(
+            f"Alpha must be less than 1.0 and greater than or equal to 0.1. Value: {alpha}"
+        )
 
     # Ensure the response score is correctly defined
-    if (
-        (0.0 > response_score > 1.0)
-        or not isinstance(response_score, float)
-        or isinstance(response_score, bool)
+    if not utils.validate_numerical_value(
+        value=response_score, value_type=float, min_value=0.0, max_value=1.0
     ):
         logging.error(f"Value for response_score is incorrect: {response_score}")
         raise AttributeError(
@@ -185,15 +211,20 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         logging.error(f"Value for UID is incorrect: {uid}")
         raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 
+    old_score = deepcopy(scores[uid])
+
     # Account for a rounding error by setting scores below threshold to 0.0
-    if scores[uid] < 0.0000001:
+    if scores[uid] < 0.000001:
         scores[uid] = 0.0
+
+    # And same for high values
+    if scores[uid] > 0.999999:
+        scores[uid] = 1.0
 
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:
-        return scores, scores[uid]
+        return scores, old_score
 
-    old_score = deepcopy(scores[uid])
     logging.trace(f"Assigning score of 0.0 for UID: {uid}. Current score: {old_score}")
     scores[uid] = alpha * scores[uid] + (1 - alpha) * response_score
     logging.trace(f"Assigned score of 0.0 for UID: {uid}. New score: {scores[uid]}")
@@ -207,6 +238,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         )
 
     return scores, old_score
+
 
 def get_engine_response_object(
     total_score: float = 0.0,
@@ -223,12 +255,13 @@ def get_engine_response_object(
         "scores": {
             "total": total_score,
             "distance": final_distance_score,
-            "speed": final_speed_score
+            "speed": final_speed_score,
         },
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
     }
 
     return res
+
 
 def get_response_object(
     uid: str, hotkey: str, target: float, prompt: str, synapse_uuid: str

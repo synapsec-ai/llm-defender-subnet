@@ -288,4 +288,8 @@ def validate_response_data(engine_response: dict) -> bool:
         if engine_response[key] is None or engine_response[key] == "" or engine_response[key] == [] or engine_response[key] == {} or isinstance(engine_response[key], bool):
             return False
         
+        if key == "confidence":
+            if not validate_numerical_value(value=engine_response[key], value_type=float, min_value=0.0, max_value=1.0):
+                return False
+        
     return True
