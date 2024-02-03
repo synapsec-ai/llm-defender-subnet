@@ -188,7 +188,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Determine target value for scoring
         target = query["label"]
-        
+
         bt.logging.debug(f"Confidence target set to: {target}")
 
         # Initiate the response objects
@@ -365,7 +365,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Calculate distance score
         distance_score = scoring.process.calculate_subscore_distance(response, target)
-        if not distance_score:
+        if distance_score is None:
             bt.logging.debug(
                 f"Received an invalid response: {response} from hotkey: {hotkey}"
             )
@@ -373,7 +373,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Calculate speed score
         speed_score = scoring.process.calculate_subscore_speed(self.timeout, response_time)
-        if not distance_score:
+        if speed_score is None:
             bt.logging.debug(
                 f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
             )

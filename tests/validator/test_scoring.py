@@ -5,6 +5,59 @@ from uuid import uuid4
 from llm_defender import __spec_version__ as subnet_version
 
 
+def test_total_distance_score_calculation():
+
+    # Valid inputs
+    distance_scores = [
+        [0.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+        [0.5, 0.5, 0.5],
+        [0.3, 0.6, 0.4],
+        [1.0],
+        [0.4]
+    ]
+    expected_result = [1.0, 0.0, 0.5, 0.57, 0.0, 0.6]
+
+    for i,entry in enumerate(distance_scores):
+        assert round(process.calculate_total_distance_score(distance_scores=entry), 2) == expected_result[i]
+    
+    # Invalid inputs
+    invalid_inputs = [
+        -1,
+        1,
+        0.0,
+        0.4,
+        1.0,
+        [],
+        {},
+        True,
+        False,
+        None,
+    ]
+
+    for _,entry in enumerate(invalid_inputs):
+        assert process.calculate_total_distance_score(distance_scores=entry) == 0.0
+
+def test_speed_subscore_calculation():
+
+    timeout = 12.0
+    # Valid inputs
+    response_speeds = [0.1, 0.22225, 1, 12, 12.0, 11.9, 4, 0.001]
+    expected_result = [0.99, 0.98, 0.92, 0.0, 0.0, 0.01, 0.67, 1.0]
+    for i,entry in enumerate(response_speeds):
+        assert round(process.calculate_subscore_speed(timeout=timeout, response_time=entry), 2) == expected_result[i]
+    
+    # Invalid inputs
+    response_speeds = [12.00001, True, False, [], {}, -1, -0.00001, 0.0, 0, None]
+    for i,entry in enumerate(response_speeds):
+        assert process.calculate_subscore_speed(timeout=timeout, response_time=entry) == None
+    
+    # Invalid inputs
+    timeouts = [True, False, [], {}, -1, -0.00001, 0.0, 0, None]
+    response_time = 0.5
+    for i,entry in enumerate(timeouts):
+        assert process.calculate_subscore_speed(timeout=entry, response_time=response_time) == None
+
 def test_distance_score_calculation():
 
     # Valid inputs

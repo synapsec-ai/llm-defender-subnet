@@ -31,7 +31,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
 
     return distance
 
-def calculate_total_distance_score(distance_scores):
+def calculate_total_distance_score(distance_scores: list) -> float:
     """Calculates the final distance score given all responses
     
     Arguments:
@@ -46,10 +46,13 @@ def calculate_total_distance_score(distance_scores):
     if isinstance(distance_scores, bool) or not isinstance(distance_scores, list):
         return 0.0
     
-    if len(distance_scores) > 0:
+    if distance_scores == []:
+        return 0.0
+    
+    if len(distance_scores) > 1:
         total_distance_score = 1 - sum(distance_scores) / len(distance_scores)
     else:
-        total_distance_score = 1 - distance_scores
+        total_distance_score = 1 - distance_scores[0]
     
     return total_distance_score
 
@@ -71,10 +74,15 @@ def calculate_subscore_distance(response, target) -> list:
 def calculate_subscore_speed(timeout, response_time):
     """Calculates the speed subscore for the response"""
 
-    # Calculate score for the speed of the response
-    if response_time > timeout:
+    if isinstance(response_time, bool) or not isinstance(response_time, (float, int)):
         return None
-
+    if isinstance(timeout, bool) or not isinstance(timeout, (float, int)):
+        return None
+    
+    # If response time is 0.0 or larger than timeout, the time is invalid
+    if response_time > timeout or response_time <= 0.0 or timeout <= 0.0:
+        return None
+    
     speed_score = 1.0 - (response_time / timeout)
 
     return speed_score
