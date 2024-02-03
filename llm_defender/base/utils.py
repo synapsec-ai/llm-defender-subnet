@@ -76,14 +76,11 @@ def validate_numerical_value(value, value_type, min_value, max_value):
             A bool depicting the outcome of the validation
     
     """
-
-    if not value:
-        return False
     
     if isinstance(value, bool) or not isinstance(value, value_type):
         return False
     
-    if min_value > value > max_value:
+    if (value < min_value) or (value > max_value):
         return False
     
     return True
@@ -288,7 +285,7 @@ def validate_response_data(engine_response: dict) -> bool:
     for _,key in enumerate(required_keys):
         if key not in engine_response.keys():
             return False
-        if engine_response[key] is None or isinstance(engine_response[key], bool):
+        if engine_response[key] is None or engine_response[key] == "" or engine_response[key] == [] or engine_response[key] == {} or isinstance(engine_response[key], bool):
             return False
         
     return True

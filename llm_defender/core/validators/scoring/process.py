@@ -25,7 +25,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
     """
 
     if not utils.validate_numerical_value(engine_response["confidence"], float, 0.0, 1.0):
-        return 0.0
+        return 1.0
 
     distance = abs(target - engine_response["confidence"])
 
