@@ -251,6 +251,18 @@ if __name__ == "__main__":
         help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
     )
 
+    parser.add_argument(
+        "--wandb_project",
+        type=str,
+        help='Specifies the wandb project. Please make sure to specify the --use_wandb flag if you plan on using wandb.'
+    )
+
+    parser.add_argument(
+        "--wandb_entity",
+        type=str,
+        help='Specifies the wandb entity (username/team name). Please make sure to specify the --use_wandb flag if you plan on using wandb.'
+    )
+
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = PromptInjectionValidator(parser=parser)
     if (
