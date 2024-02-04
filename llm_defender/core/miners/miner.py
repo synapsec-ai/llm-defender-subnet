@@ -18,7 +18,10 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
 from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
 from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
-from llm_defender.base.utils import validate_miner_blacklist
+from llm_defender.base.utils import validate_miner_blacklist, wandb_available
+
+if wandb_available():
+    import wandb
 
 class PromptInjectionMiner(BaseNeuron):
     """PromptInjectionMiner class for LLM Defender Subnet
@@ -109,7 +112,7 @@ class PromptInjectionMiner(BaseNeuron):
         self.validator_min_stake = args.validator_min_stake
 
         self.use_wandb = args.use_wandb
-        if self.use_wandb:
+        if args.use_wandb and wandb_available():
             self.wandb_project = args.wandb_project 
             self.wandb_entity = args.wandb_entity
 
@@ -330,7 +333,7 @@ class PromptInjectionMiner(BaseNeuron):
         yara_response = yara_engine.get_response().get_dict()
         output["engines"].append(yara_response)
         engine_confidences.append(yara_response["confidence"])
-
+        
         # Execute Text Classification engine
         text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
@@ -344,7 +347,6 @@ class PromptInjectionMiner(BaseNeuron):
         vector_response = vector_engine.get_response().get_dict()
         output["engines"].append(vector_response)
         engine_confidences.append(vector_response["confidence"])
-
 
         # Determine engine weights. These should corresponding to the
         # order of execution. You should modify these values as a part
@@ -373,6 +375,18 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.debug(f'Engine data: {output["engines"]}')
         bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}')
 
+        if self.use_wandb and wandb_available():
+            wandb_logs = [
+                {"Prompt": synapse.prompt},
+                {"Confidence":output["confidence"]},
+                {"YARA Output":yara_response},
+                {"Text Classification Output":text_classification_response},
+                {"Vector Search Output":vector_response},
+                {"Processed Synapse from UID":self.metagraph.hotkeys.index(synapse.dendrite.hotkey)}
+            ]
+            for wl in wandb_logs:
+                wandb.log(wl)    
+        
         return synapse
     
     def calculate_overall_confidence(self, confidences, weights):
@@ -413,7 +427,16 @@ class PromptInjectionMiner(BaseNeuron):
         # Calculate the overall confidence
         overall_score = min(1.0, max(0.0, weighted_sum))
         bt.logging.debug(f'Calculated weighted confidence: {weighted_sum}. Original confidence: {sum(confidences)/len(confidences)}')
-        
+
+        if wandb_available() and self.use_wandb:
+            wandb_logs = [
+                {"Calculated Weighted Confidence":weighted_sum},
+                {"Original Confidence":sum(confidences)/len(confidences)},
+                {"Overall Score":overall_score}
+            ]
+            for wl in wandb_logs:
+                wandb.log(wl)
+
         return overall_score
 
     def check_remote_blacklist(self):

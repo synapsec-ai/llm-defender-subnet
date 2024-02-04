@@ -176,6 +176,18 @@ def main(validator: PromptInjectionValidator):
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
+
+            if wandb_available() and validator.use_wandb:
+                wandb_logs = [
+                    {"Current Step":validator.step},
+                    {"Current Block":current_block},
+                    {"Last Updated Block":validator.last_updated_block},
+                    {"Scores":validator.scores},
+                    {"Processed UIDs":{list(list_of_uids)}}
+                ]
+                for wl in wandb_logs:
+                    wandb.log(wl)
+
             if current_block - validator.last_updated_block > 100:
                 # Periodically update the weights on the Bittensor blockchain.
                 try:

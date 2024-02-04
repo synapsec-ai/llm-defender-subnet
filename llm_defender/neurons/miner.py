@@ -9,6 +9,7 @@ import torch
 
 from llm_defender.core.miners.miner import PromptInjectionMiner
 from llm_defender import __version__ as version
+from llm_defender.base.utils import wandb_available
 
 def main(miner: PromptInjectionMiner):
     """
@@ -110,6 +111,23 @@ def main(miner: PromptInjectionMiner):
                 )
 
                 bt.logging.info(log)
+
+                if wandb_available() and miner.use_wandb:
+                    wandb_logs = [
+                        {'Version':version},
+                        {'Blacklist':miner.hotkey_blacklisted},
+                        {'Step':miner.step},
+                        {'Block':miner.metagraph.block.item()},
+                        {'Stake':miner.metagraph.S[miner.miner_uid]},
+                        {'Rank':miner.metagraph.R[miner.miner_uid]},
+                        {'Trust':miner.metagraph.T[miner.miner_uid]},
+                        {'Consensus':miner.metagraph.C[miner.miner_uid]},
+                        {'Incentive':miner.metagraph.I[miner.miner_uid]},
+                        {'Emission':miner.metagraph.E[miner.miner_uid]}
+                    ]
+                    for wl in wandb_logs:
+                        wandb.log(wl)
+
             miner.step += 1
             time.sleep(1)
 

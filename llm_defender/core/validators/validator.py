@@ -31,7 +31,9 @@ from llm_defender.core.validators import penalty
 import requests
 
 import llm_defender.core.validators.scoring as scoring
-
+from llm_defender.base.utils import wandb_available
+if wandb_available():
+    import wandb
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -293,12 +295,23 @@ class PromptInjectionValidator(BaseNeuron):
 
             bt.logging.debug(f"Processed response: {response_object}")
 
+            if wandb_available() and self.use_wandb:
+                wandb.log({"Processed Response:":response_object})
+
             response_data.append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
+
+        if wandb_available() and self.use_wandb:
+            wandb_logs = [
+                {"Recieved Valid Responses from UIDs:":responses_valid_uids},
+                {"Recieved Invalid Responses from UIDs:":responses_invalid_uids}
+            ]
+            for wl in wandb_logs:
+                wandb.log(wl)
 
         return response_data
 
