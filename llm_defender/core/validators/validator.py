@@ -389,7 +389,7 @@ class PromptInjectionValidator(BaseNeuron):
             return scoring.process.get_engine_response_object()
 
         # Set weights for scores
-        score_weights = {"distance": 0.8, "speed": 0.2}
+        score_weights = {"distance": 0.85, "speed": 0.15}
 
         # Get penalty multipliers
         distance_penalty, speed_penalty = self.get_response_penalties(
