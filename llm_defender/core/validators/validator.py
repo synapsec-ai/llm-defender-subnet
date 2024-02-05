@@ -167,7 +167,10 @@ class PromptInjectionValidator(BaseNeuron):
             else:
                 self.max_targets = 256
 
-            self.use_wandb = args.use_wandb
+            if args.use_wandb.lower == 'true':
+                self.use_wandb = True
+            else:
+                self.use_wandb = False
             if self.use_wandb:
                 self.wandb_project = args.wandb_project 
                 self.wandb_entity = args.wandb_entity
