@@ -377,15 +377,12 @@ class PromptInjectionMiner(BaseNeuron):
 
         if self.use_wandb and wandb_available():
             wandb_logs = [
-                {"Prompt": synapse.prompt},
-                {"Confidence":output["confidence"]},
-                {"YARA Output":yara_response},
-                {"Text Classification Output":text_classification_response},
-                {"Vector Search Output":vector_response},
-                {"Processed Synapse from UID":self.metagraph.hotkeys.index(synapse.dendrite.hotkey)}
-            ]
+                {"YARA Confidence":yara_response['confidence']},
+                {"Text Classification Confidence":text_classification_response['confidence']},
+                {"Vector Search Confidence":vector_response['confidence']}
+            ]            
             for wl in wandb_logs:
-                wandb.log(wl)    
+                wandb.log(wl, step=self.step)    
         
         return synapse
     
@@ -430,12 +427,12 @@ class PromptInjectionMiner(BaseNeuron):
 
         if wandb_available() and self.use_wandb:
             wandb_logs = [
-                {"Calculated Weighted Confidence":weighted_sum},
-                {"Original Confidence":sum(confidences)/len(confidences)},
-                {"Overall Score":overall_score}
+                {"Overall Confidence":overall_score},
+                {"Weighted Confidence":weighted_sum},
+                {"Original Confidence":sum(confidences)/len(confidences)}
             ]
             for wl in wandb_logs:
-                wandb.log(wl)
+                wandb.log(wl, step=self.step)
 
         return overall_score
 

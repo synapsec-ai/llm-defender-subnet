@@ -305,14 +305,6 @@ class PromptInjectionValidator(BaseNeuron):
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        if wandb_available() and self.use_wandb:
-            wandb_logs = [
-                {"Recieved Valid Responses from UIDs:":responses_valid_uids},
-                {"Recieved Invalid Responses from UIDs:":responses_invalid_uids}
-            ]
-            for wl in wandb_logs:
-                wandb.log(wl)
-
         return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):

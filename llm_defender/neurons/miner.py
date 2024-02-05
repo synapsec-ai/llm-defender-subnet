@@ -114,11 +114,6 @@ def main(miner: PromptInjectionMiner):
 
                 if wandb_available() and miner.use_wandb:
                     wandb_logs = [
-                        {'Version':version},
-                        {'Blacklist':miner.hotkey_blacklisted},
-                        {'Step':miner.step},
-                        {'Block':miner.metagraph.block.item()},
-                        {'Stake':miner.metagraph.S[miner.miner_uid]},
                         {'Rank':miner.metagraph.R[miner.miner_uid]},
                         {'Trust':miner.metagraph.T[miner.miner_uid]},
                         {'Consensus':miner.metagraph.C[miner.miner_uid]},
@@ -126,7 +121,7 @@ def main(miner: PromptInjectionMiner):
                         {'Emission':miner.metagraph.E[miner.miner_uid]}
                     ]
                     for wl in wandb_logs:
-                        wandb.log(wl)
+                        wandb.log(wl, step=miner.step)
 
             miner.step += 1
             time.sleep(1)
@@ -135,6 +130,7 @@ def main(miner: PromptInjectionMiner):
         except KeyboardInterrupt:
             axon.stop()
             bt.logging.success("Miner killed by keyboard interrupt.")
+            wandb.finish()
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception:
