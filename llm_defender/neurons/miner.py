@@ -21,6 +21,7 @@ def main(miner: PromptInjectionMiner):
     if wandb_available() and miner.use_wandb:
         import wandb
         wandb.init(project=miner.wandb_project, entity=miner.wandb_entity)
+        bt.logging.info(f"Initialized wandb with entity: {miner.wandb_entity} & project: {miner.wandb_project}.")
 
     # Link the miner to the Axon
     axon = bt.axon(wallet=miner.wallet, config=miner.neuron_config)
@@ -122,6 +123,7 @@ def main(miner: PromptInjectionMiner):
                     ]
                     for wl in wandb_logs:
                         wandb.log(wl, step=miner.step)
+                        bt.logging.info(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)

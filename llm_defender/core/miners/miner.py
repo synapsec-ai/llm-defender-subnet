@@ -383,6 +383,7 @@ class PromptInjectionMiner(BaseNeuron):
             ]            
             for wl in wandb_logs:
                 wandb.log(wl, step=self.step)    
+                bt.logging.info(f"Wandb logs added: {wandb_logs}")
         
         return synapse
     
@@ -433,6 +434,7 @@ class PromptInjectionMiner(BaseNeuron):
             ]
             for wl in wandb_logs:
                 wandb.log(wl, step=self.step)
+                bt.logging.info(f"Wandb logs added: {wandb_logs}")
 
         return overall_score
 
