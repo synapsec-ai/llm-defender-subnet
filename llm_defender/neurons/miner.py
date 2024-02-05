@@ -115,11 +115,11 @@ def main(miner: PromptInjectionMiner):
 
                 if wandb_available() and miner.use_wandb:
                     wandb_logs = [
-                        {'Rank':miner.metagraph.R[miner.miner_uid]},
-                        {'Trust':miner.metagraph.T[miner.miner_uid]},
-                        {'Consensus':miner.metagraph.C[miner.miner_uid]},
-                        {'Incentive':miner.metagraph.I[miner.miner_uid]},
-                        {'Emission':miner.metagraph.E[miner.miner_uid]}
+                        {'Rank':miner.metagraph.R[miner.miner_uid].item()},
+                        {'Trust':miner.metagraph.T[miner.miner_uid].item()},
+                        {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
+                        {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
+                        {'Emission':miner.metagraph.E[miner.miner_uid].item()}
                     ]
                     for wl in wandb_logs:
                         wandb.log(wl, step=miner.step)

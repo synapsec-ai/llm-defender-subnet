@@ -382,7 +382,8 @@ class PromptInjectionMiner(BaseNeuron):
             wandb_logs = [
                 {"YARA Confidence":yara_response['confidence']},
                 {"Text Classification Confidence":text_classification_response['confidence']},
-                {"Vector Search Confidence":vector_response['confidence']}
+                {"Vector Search Confidence":vector_response['confidence']},
+                {"Total Confidence":output['confidence']}
             ]            
             for wl in wandb_logs:
                 wandb.log(wl, step=self.step)    
@@ -428,16 +429,6 @@ class PromptInjectionMiner(BaseNeuron):
         # Calculate the overall confidence
         overall_score = min(1.0, max(0.0, weighted_sum))
         bt.logging.debug(f'Calculated weighted confidence: {weighted_sum}. Original confidence: {sum(confidences)/len(confidences)}')
-
-        if wandb_available() and self.use_wandb:
-            wandb_logs = [
-                {"Overall Confidence":overall_score},
-                {"Weighted Confidence":weighted_sum},
-                {"Original Confidence":sum(confidences)/len(confidences)}
-            ]
-            for wl in wandb_logs:
-                wandb.log(wl, step=self.step)
-                bt.logging.info(f"Wandb logs added: {wandb_logs}")
 
         return overall_score
 
