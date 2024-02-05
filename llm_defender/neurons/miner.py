@@ -123,7 +123,7 @@ def main(miner: PromptInjectionMiner):
                     ]
                     for wl in wandb_logs:
                         wandb.log(wl, step=miner.step)
-                        bt.logging.info(f"Wandb logs added: {wandb_logs}")
+                    bt.logging.info(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)
