@@ -111,7 +111,10 @@ class PromptInjectionMiner(BaseNeuron):
         
         self.validator_min_stake = args.validator_min_stake
 
-        self.use_wandb = args.use_wandb
+        if args.use_wandb.lower() == 'true':
+            self.use_wandb = True
+        else:
+            self.use_wandb = False
         if args.use_wandb and wandb_available():
             self.wandb_project = args.wandb_project 
             self.wandb_entity = args.wandb_entity
