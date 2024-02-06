@@ -435,32 +435,6 @@ def test_find_identical_reply():
     assert identical_penalty == 0.0
     print("Test successful.")
 
-    print("TESTING generate_miner_response\n")
-    miner_responses = generate_miner_responses(2, 2)
-    for k in miner_responses:
-        print(k)
-        print()
-
-    print("\ncurrent_response\n")
-    print(current_response)
-
-    print('\nTESTING: engine_response, aka:\n[data for data in response["engines"] if data["name"] == engine]')
-    engine_response = [data for data in current_response["engines"] if data["name"] == 'engine:text_classification']
-    print(engine_response)
-
-    print("\nTESTING: [entry for item in miner_responses for entry in item.get('engine_data',[])]\n")
-    mr_entries = [entry for item in miner_responses for entry in item.get('engine_data',[])]
-    for k in mr_entries:
-        print(k)
-        print()
-
-    print("\nTESTING: any(engine_response == entry for item in miner_responses for entry in item.get('engine_data',[]))\n")
-    any_iterable = any(engine_response==entry for item in miner_responses for entry in item.get("engine_data",[]))
-    print(any_iterable)
-
-    print("\nTESTING: (True if engine_response in mr_entries else False)\n")
-    print(True if engine_response[0] in mr_entries else False)
-
     print(
         "Testing that 0.25 penalty is applied for the case where identical reply is found."
     )
@@ -593,9 +567,8 @@ def test_check_penalty():
 
 def main():
     test_calculate_duplicate_percentage()
-    test_check_penalty()
     test_find_identical_reply()
-
+    test_check_penalty()
 
 if __name__ == "__main__":
     main()
