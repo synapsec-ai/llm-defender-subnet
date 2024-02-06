@@ -161,6 +161,7 @@ cython_debug/
 
 .vscode
 
+# Subnet specifics ignores
 .local
-
 llm-defender*.config.js
+.bittensor
