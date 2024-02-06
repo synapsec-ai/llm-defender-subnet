@@ -1,5 +1,6 @@
 """
-asdf
+This miner script executes the main loop for the miner and keeps the
+miner active in the bittensor network.
 """
 import time
 from argparse import ArgumentParser
