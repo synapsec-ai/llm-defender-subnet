@@ -84,7 +84,9 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
             # Get the query to send to the valid Axons
-            query = validator.serve_prompt().get_dict()
+            query = validator.serve_prompt()
+
+            bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
             synapse_uuid = str(uuid4())
@@ -92,9 +94,9 @@ def main(validator: PromptInjectionValidator):
                 uids_to_query,
                 LLMDefenderProtocol(
                     prompt=query["prompt"],
-                    engine=query["engine"],
+                    engine=None,
                     roles=["internal"],
-                    analyzer=["Prompt Injection"],
+                    analyzer=[query["analyzer"]],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
                 ),

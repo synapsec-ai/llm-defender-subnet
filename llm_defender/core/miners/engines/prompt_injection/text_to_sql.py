@@ -21,9 +21,75 @@ class TextToSqlEngine(BaseEngine):
     modeled as SQL queries by using static analysis of the resulting SQL
     query.
 
+    Attributes:
+        prompt:
+            An instance of str displaying the prompt to analyze for SQL 
+            query-formatted prompt injection attacks.
+        name (from the BaseEngine located at llm_defender/base/engine.py):
+            An instance of str displaying the name of the engine. This 
+            attribute originally belongs to the BaseEngine class inehrited 
+            by the TextToSqlEngine class.
+        cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
+            The cache directory allocated for the engine. 
+        keywords:
+            An instance of dict displaying the SQL keywords (str) as keys, and the
+            corresponding confidences (float) as the values associated with each
+            key. 
+        output:
+            An instance of dict that must have the flag 'outcome'. The 'outcome' 
+            value will be one of two strings--'converted' or 'notConverted'. If the
+            'outcome' flag has the 'converted' value, the output dict will also contain
+            the 'data' flag containing the output result data.
+            
+            Please reference the _populate_data() method for more details on how this
+            output is generated.
+        confidence:
+            A float instance displaying the confidence score that a given prompt is a
+            SQL query-based prompt injection attack. This value ranges from 0.0 to 1.0.
+
+            Please reference the calculate_confidence() method for more details on how
+            this value is generated.
+        
+    Methods:
+        __init__():
+            Defines the name, prompt, and keywords attributes.
+        _calculate_confidence():
+            Calculates a confidence score that self.prompt is a prompt-injection 
+            string that has been formatted as an SQL query. 
+            
+            This value ranges from 0.0 to 1.0, with 0.5 being returned by default.
+        _populate_data():
+            Processes the results from the GPT2 model, and if valid, it formats and stores 
+            the result data. The 'outcome' is set to either 'converted' or 'notConverted' 
+            based on the presence of valid results.
+        prepare():
+            Checks and creates a cache directory if it doesn't exist, then calls 
+            initialize() to set up the model and tokenizer.
+        initialize():
+            Loads the GPT-2 model and tokenizer from a pre-trained source.
+        execute():
+            Encodes self.prompt, generates GPT2 model output, decodes the output,
+            populates the output attribute with self._populate_data(), and calculates 
+            the confidence score with _calculate_confidence().
+        _clean():
+            This method returns a clean list of the prompt given as an argument for the class.
     """
 
     def __init__(self, prompt: str = None, name: str = "engine:text-to-sql"):
+        """
+        Initializes the TextToSqlEngine with attributes prompt, keywords and name.
+
+        Arguments:
+            prompt:
+                An instance of str displaying the prompt to analyze for SQL 
+                query-formatted prompt injection attacks.
+            name:
+                An instance of str displaying the name of the engine. Default is 
+                'engine:text-to-sql'
+
+        Returns:
+            None
+        """   
         super().__init__(name=name)
 
         self.prompt = prompt
@@ -49,6 +115,14 @@ class TextToSqlEngine(BaseEngine):
 
         In order to properly fine-tune the engine, you should also
         fine-tune the scoring algorithm.
+
+        Arguments:
+            None
+
+        Returns:
+            The highest confidence value found by matching keywords.
+            If none is found, the output defaults to a confidence score
+            of 0.5.
         """
 
         if self.output["outcome"] == "converted":
@@ -59,6 +133,20 @@ class TextToSqlEngine(BaseEngine):
         return 0.5
 
     def _populate_data(self, results):
+        """
+        Processes the results from the GPT2 model, and if valid, it formats and stores 
+        the result data. 
+
+        Arguments:
+            results:
+                The results from the GPT2 model.
+
+        Returns:
+            A dict instance with required flag 'outcome', set to either 'converted' 
+            or 'notConverted' based on the presence of valid results. If the 'outcome' 
+            flag has the associated value as 'converted', then the output will also 
+            contain the flag 'data' with the converted results.
+        """
         if results:
             return {
                 "outcome": "converted",
@@ -67,6 +155,19 @@ class TextToSqlEngine(BaseEngine):
         return {"outcome": "notConverted"}
 
     def prepare(self):
+        """
+        Prepares the TextToSqlEngine for analysis.
+
+        Arguments:
+            None
+
+        Returns:
+            True, if no errors are raised.
+
+        Raises:
+            OSError:
+                The OSError is raised if a cache directory cannot be created.
+        """
         # Check cache directory
         if not path.exists(self.cache_dir):
             try:
@@ -79,6 +180,23 @@ class TextToSqlEngine(BaseEngine):
         return True
 
     def initialize(self):
+        """
+        Initializes the GPT2 model & GPT2 tokenizer (GPT2LMHeadModel.from_pretrained()) 
+        from a pre-trained source.
+
+        Arguments:
+            None
+            
+        Returns:
+            model:
+                The output of GPT2LMHeadModel.from_pretrained()
+            tokenizer:
+                The output of GPT2Tokenizer.from_pretrained()
+
+        Raises:
+            Exception:
+                Raised if an error occurs while initializing the models.
+        """
         try:
             model = GPT2LMHeadModel.from_pretrained(
                 "rakeshkiriyath/gpt2Medium_text_to_sql"
@@ -92,6 +210,20 @@ class TextToSqlEngine(BaseEngine):
         return model, tokenizer
 
     def execute(self, model, tokenizer):
+        """
+        Encodes self.prompt, generates GPT2 model output, decodes the output,
+        populates the output attribute with self._populate_data(), and populates 
+        the confidence attribute with the _calculate_confidence() method.
+
+        Arguments:
+            model:
+                The output of GPT2LMHeadModel.from_pretrained()
+            tokenizer:
+                The output of GPT2Tokenizer.from_pretrained()
+
+        Returns:
+            True
+        """
         input_tensor = tokenizer.encode(self.prompt, return_tensors="pt")
 
         output = model.generate(
@@ -115,6 +247,12 @@ class TextToSqlEngine(BaseEngine):
         """
         This method returns a clean list of the prompt given as an
         argument for the class.
+
+        Arguments:
+            None
+
+        Returns:
+            A list instance which displays all individual words in lower-case.
         """
 
         # Remove non-alphanumeric characters and extra whitespaces
