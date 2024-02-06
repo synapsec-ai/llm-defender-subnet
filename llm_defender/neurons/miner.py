@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--use_wandb',
-        type=str,
+        action='store_true',
         help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
     )
 
