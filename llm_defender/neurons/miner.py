@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import traceback
 import bittensor as bt
 import torch
-
+import time 
 from llm_defender.core.miners.miner import PromptInjectionMiner
 from llm_defender import __version__ as version
 from llm_defender.base.utils import wandb_available
@@ -121,9 +121,10 @@ def main(miner: PromptInjectionMiner):
                         {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
                         {'Emission':miner.metagraph.E[miner.miner_uid].item()}
                     ]
+                    log_timestamp = int(time.time())
                     for wl in wandb_logs:
-                        wandb.log(wl, step=miner.step)
-                    bt.logging.info(f"Wandb logs added: {wandb_logs}")
+                        wandb.log(wl, step=log_timestamp)
+                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)
@@ -168,8 +169,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--use_wandb',
+        default='False',
         type=str,
-        default='True',
         help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
     )
 

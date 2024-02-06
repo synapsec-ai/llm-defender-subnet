@@ -13,6 +13,7 @@ from typing import Tuple
 import sys
 import requests
 import bittensor as bt
+import time
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
@@ -384,10 +385,11 @@ class PromptInjectionMiner(BaseNeuron):
                 {"Text Classification Confidence":text_classification_response['confidence']},
                 {"Vector Search Confidence":vector_response['confidence']},
                 {"Total Confidence":output['confidence']}
-            ]            
+            ]   
+            log_timestamp = int(time.time())
             for wl in wandb_logs:
-                wandb.log(wl, step=self.step)    
-            bt.logging.info(f"Wandb logs added: {wandb_logs}")
+                wandb.log(wl, step=log_timestamp)    
+            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
         
         return synapse
     

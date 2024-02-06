@@ -18,6 +18,7 @@ from datetime import datetime
 from os import path, rename
 from pathlib import Path
 import torch
+import time
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
@@ -205,6 +206,11 @@ class PromptInjectionValidator(BaseNeuron):
             target = 0.0
         bt.logging.debug(f"Confidence target set to: {target}")
 
+        log_timestamp = int(time.time())
+        if wandb_available() and self.use_wandb:
+            wandb.log({'Target':target}, step = log_timestamp)
+            bt.logging.trace(f"Adding wandb logs for target: {target}")
+
         # Initiate the response objects
         response_data = []
         responses_invalid_uids = []
@@ -299,7 +305,22 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.debug(f"Processed response: {response_object}")
 
             if wandb_available() and self.use_wandb:
-                wandb.log({"Processed Response:":response_object})
+                wandb_logs = [                    
+                    {f"UID {processed_uids[i]} Confidence":miner_response['confidence']},
+                    {f"UID {processed_uids[i]} Weight Score":float(self.scores[processed_uids[i]])},
+                    {f"UID {processed_uids[i]} Change in Weight Score":float(self.scores[processed_uids[i]]) - float(old_score)},
+                    {f"UID {processed_uids[i]} Total Score":scored_response['scores']['total']},
+                    {f"UID {processed_uids[i]} Distance Score":scored_response['scores']['distance']},
+                    {f"UID {processed_uids[i]} Speed Score":scored_response['scores']['speed']},
+                    {f"UID {processed_uids[i]} Distance Penalty":scored_response['penalties']['distance']},
+                    {f"UID {processed_uids[i]} Speed Penalty":scored_response['penalties']['speed']},
+                    {f"UID {processed_uids[i]} Text Classification Confidence":text_class['confidence']},
+                    {f"UID {processed_uids[i]} Vector Search Confidence":vector_search['confidence']},
+                    {f"UID {processed_uids[i]} YARA Confidence":yara['confidence']}
+                ]
+                for wl in wandb_logs:
+                    wandb.log(wl, step = log_timestamp)
+                bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
 
             response_data.append(response_object)
 
