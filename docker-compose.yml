@@ -5,12 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile   
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid 38 --subtensor.network test --wallet.path /var/run/llm-defender-subnet/.bittensor/wallets --wallet.name validator --wallet.hotkey default --logging.debug"
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --logging.debug"
     volumes:
       - .:/var/run/llm-defender-subnet
     networks:
-      backend:
-        ipv4_address: 10.0.1.10
+      llm-defender-subnet-network2:
+        ipv4_address: ${VALIDATOR_IP}
 
   miner:
     image: llm-defender-subnet
@@ -19,11 +19,15 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/var/run/llm-defender-subnet
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid 38 --subtensor.network test --wallet.path /var/run/llm-defender-subnet/.bittensor/wallets --wallet.name validator --wallet.hotkey default --logging.debug --axon.port 20000 --validator_min_stake 0 --axon.external_ip 10.0.1.12"
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --logging.debug --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP}"
     networks:
-      backend:
-        ipv4_address: 10.0.1.12
+      llm-defender-subnet-network2:
+        ipv4_address: ${MINER_IP}
 
 networks:
-  backend:
-    external: true
+  llm-defender-subnet-network2:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.11.0.0/16
+         gateway: 10.11.0.1
