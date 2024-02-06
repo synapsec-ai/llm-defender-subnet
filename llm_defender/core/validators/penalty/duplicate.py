@@ -125,11 +125,10 @@ def _find_identical_reply(
     if not engine_response:
         return penalty
     if len(engine_response) > 0:
-        if any(
-            engine_response == entry
-            for item in miner_responses
-            for entry in item.get("engine_data", [])
-        ):
+        engine_data_iterable = [entry 
+                                for item in miner_responses 
+                                for entry in item.get('engine_data',[])]
+        if engine_response[0] in engine_data_iterable:
             penalty += 0.25
 
         bt.logging.trace(
