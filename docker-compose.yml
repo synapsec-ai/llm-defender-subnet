@@ -9,7 +9,7 @@ services:
     volumes:
       - .:/var/run/llm-defender-subnet
     networks:
-      llm-defender-subnet-network2:
+      llm-defender-subnet-network-development:
         ipv4_address: ${VALIDATOR_IP}
 
   miner:
@@ -21,13 +21,13 @@ services:
       - .:/var/run/llm-defender-subnet
     command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --logging.debug --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP}"
     networks:
-      llm-defender-subnet-network2:
+      llm-defender-subnet-network-development:
         ipv4_address: ${MINER_IP}
 
 networks:
-  llm-defender-subnet-network2:
+  llm-defender-subnet-network-development:
     driver: bridge
     ipam:
      config:
-       - subnet: 10.11.0.0/16
-         gateway: 10.11.0.1
+       - subnet: ${DOCKER_NETWORK_SUBNET}
+         gateway: ${DOCKER_NETWORK_GATEWAY}
