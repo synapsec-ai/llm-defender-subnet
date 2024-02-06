@@ -1,0 +1,29 @@
+version: '3'
+services:
+  validator:
+    image: llm-defender-subnet
+    build:
+      context: .
+      dockerfile: Dockerfile   
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid 38 --subtensor.network test --wallet.path /var/run/llm-defender-subnet/.bittensor/wallets --wallet.name validator --wallet.hotkey default --logging.debug"
+    volumes:
+      - .:/var/run/llm-defender-subnet
+    networks:
+      backend:
+        ipv4_address: 10.0.1.10
+
+  miner:
+    image: llm-defender-subnet
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/run/llm-defender-subnet
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid 38 --subtensor.network test --wallet.path /var/run/llm-defender-subnet/.bittensor/wallets --wallet.name validator --wallet.hotkey default --logging.debug --axon.port 20000 --validator_min_stake 0 --axon.external_ip 10.0.1.12"
+    networks:
+      backend:
+        ipv4_address: 10.0.1.12
+
+networks:
+  backend:
+    external: true
