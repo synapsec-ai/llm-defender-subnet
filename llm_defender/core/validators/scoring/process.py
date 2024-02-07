@@ -107,7 +107,7 @@ def calculate_subscore_speed(timeout, response_time):
     return speed_score
 
 
-def validate_response(response) -> bool:
+def validate_response(hotkey, response) -> bool:
     """This method validates the individual response to ensure it has
     been format correctly
 
@@ -136,13 +136,14 @@ def validate_response(response) -> bool:
         "engines",
         "synapse_uuid",
         "subnet_version",
+        "signature"
     ]
     if not all(key in response for key in mandatory_keys):
         logging.trace(
             f"One or more mandatory keys: {mandatory_keys} missing from response: {response}"
         )
         return False
-
+    
     # Check that the values are not empty
     for key in mandatory_keys:
         if response[key] is None:
@@ -150,6 +151,13 @@ def validate_response(response) -> bool:
                 f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
             )
             return False
+    
+    # Check signature
+    if not utils.validate_signature(hotkey=hotkey, data=response["synapse_uuid"], signature=response["signature"]):
+        logging.debug(f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {response["synapse_uuid"]}, signature: {response["signature"]}')
+        return False
+    else:
+        logging.debug(f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {response["synapse_uuid"]}, signature: {response["signature"]}')
 
     # Check the validity of the confidence score
     if isinstance(response["confidence"], bool) or not isinstance(
@@ -275,6 +283,7 @@ def get_response_object(
         "UID": uid,
         "hotkey": hotkey,
         "target": target,
+        "signature": None,
         "original_prompt": prompt,
         "synapse_uuid": synapse_uuid,
         "response": {},

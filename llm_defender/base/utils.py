@@ -4,6 +4,7 @@ features and their engines.
 """
 import gc
 import multiprocessing
+import bittensor as bt
 
 class EngineResponse:
     """
@@ -293,3 +294,38 @@ def validate_response_data(engine_response: dict) -> bool:
                 return False
         
     return True
+
+def validate_signature(hotkey: str, data: str, signature: str) -> bool:
+    """Validates that the given hotkey has been used to generate the
+    signature for data
+    
+    Arguments:
+        hotkey:
+            SS58_address of the hotkey used to sign the data
+        data:
+            Data signed
+        signature:
+            Signature of the signed data
+    
+    Returns:
+        verdict:
+            A bool depicting the validity of the signature
+    """
+
+    return bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
+
+def sign_data(wallet, data) -> str:
+    """Signs the given data with the wallet hotkey
+    
+    Arguments:
+        wallet:
+            The wallet used to sign the Data
+        data:
+            Data to be signed
+    
+    Returns:
+        signature:
+            Signature of the key signing for the data
+    """
+
+    return wallet.hotkey.sign(data.encode()).hex()
