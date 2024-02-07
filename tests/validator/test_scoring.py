@@ -184,7 +184,7 @@ def test_response_object():
         hotkey="bar",
         target=1.0,
         prompt="foobar",
-        synapse_uuid="barfoo"
+        synapse_uuid="barfoo",
     )
 
     assert response_object["UID"] == "foo"
@@ -192,6 +192,7 @@ def test_response_object():
     assert response_object["target"] == 1.0
     assert response_object["original_prompt"] == "foobar"
     assert response_object["synapse_uuid"] == "barfoo"
+    assert response_object["signature"] == None
 
     assert response_object["engine_data"] == []
     assert response_object["response"] == {}

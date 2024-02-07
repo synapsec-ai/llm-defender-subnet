@@ -18,7 +18,7 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
 from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
 from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
-from llm_defender.base.utils import validate_miner_blacklist
+from llm_defender.base.utils import validate_miner_blacklist, sign_data, validate_signature
 
 class PromptInjectionMiner(BaseNeuron):
     """PromptInjectionMiner class for LLM Defender Subnet
@@ -277,6 +277,11 @@ class PromptInjectionMiner(BaseNeuron):
             stake:
                 A float instance of how much TAO is staked.
         """
+
+        # Prioritize whitelisted validators
+        if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
+            return 10000000.0
+
         # Otherwise prioritize validators based on their stake
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         stake = float(self.metagraph.S[uid])
@@ -305,15 +310,23 @@ class PromptInjectionMiner(BaseNeuron):
                 The synapse should be the LLMDefenderProtocol class 
                 (from llm_defender/base/protocol.py)
         """
-        if synapse.subnet_version:
-            bt.logging.debug(
-                f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
-            )   
-            if synapse.subnet_version > self.subnet_version:
-                bt.logging.warning(
-                    f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
-                )
 
+        # Print version information and perform version checks
+        bt.logging.debug(
+            f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
+        )   
+        if synapse.subnet_version > self.subnet_version:
+            bt.logging.warning(
+                f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
+            )
+
+        # Synapse signature verification
+        if not validate_signature(hotkey=synapse.dendrite.hotkey, data=synapse.synapse_uuid, signature=synapse.synapse_signature):
+            bt.logging.debug(f'Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}')
+            return synapse
+        else:
+            bt.logging.debug(f'Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}')
+        
         # Responses are stored in a list
         output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
 
@@ -349,19 +362,13 @@ class PromptInjectionMiner(BaseNeuron):
         # Calculate confidence score
         output["confidence"] = self.calculate_overall_confidence(engine_confidences, engine_weights)
 
-        # Add subnet version to the output
-        if self.subnet_version:
-            output["subnet_version"] = self.subnet_version
-        else:
-            output["subnet_version"] = None
+        # Add subnet version and UUID to the output
+        output["subnet_version"] = self.subnet_version
+        output["synapse_uuid"] = synapse.synapse_uuid
 
-        # Add synapse UUID to the output
-        bt.logging.debug(f'Synapse: {synapse}')
-        if synapse.synapse_uuid:
-            output["synapse_uuid"] = synapse.synapse_uuid
-        else:
-            output["synapse_uuid"] = None
-
+        # Generate signature for the response
+        output["signature"] = sign_data(self.wallet, output["synapse_uuid"])
+        
         synapse.output = output
 
         bt.logging.debug(f'Processed prompt: {output["prompt"]}')

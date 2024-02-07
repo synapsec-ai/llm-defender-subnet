@@ -207,7 +207,7 @@ class PromptInjectionValidator(BaseNeuron):
             )
 
             # Set the score for invalid responses to 0.0
-            if not scoring.process.validate_response(response.output):
+            if not scoring.process.validate_response(hotkey, response.output):
                 self.scores, old_score = scoring.process.assign_score_for_uid(
                     self.scores, processed_uids[i], self.neuron_config.alpha, 0.0
                 )
@@ -232,6 +232,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
                     "synapse_uuid": response.output["synapse_uuid"],
+                    "signature": response.output["signature"]
                 }
 
                 text_class = [

@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from uuid import uuid4
 import torch
 import bittensor as bt
+import llm_defender.base.utils as utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from llm_defender import __version__ as version
@@ -94,11 +95,10 @@ def main(validator: PromptInjectionValidator):
                 uids_to_query,
                 LLMDefenderProtocol(
                     prompt=query["prompt"],
-                    engine=None,
-                    roles=["internal"],
-                    analyzer=[query["analyzer"]],
+                    analyzer=query["analyzer"],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
+                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=synapse_uuid),
                 ),
                 timeout=validator.timeout,
                 deserialize=True,
