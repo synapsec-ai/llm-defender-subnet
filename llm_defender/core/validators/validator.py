@@ -312,9 +312,9 @@ class PromptInjectionValidator(BaseNeuron):
                         {f"UID {processed_uids[i]} Speed Score":scored_response['scores']['speed']},
                         {f"UID {processed_uids[i]} Distance Penalty":scored_response['penalties']['distance']},
                         {f"UID {processed_uids[i]} Speed Penalty":scored_response['penalties']['speed']},
-                        {f"UID {processed_uids[i]} Text Classification Confidence":text_class['confidence']},
-                        {f"UID {processed_uids[i]} Vector Search Confidence":vector_search['confidence']},
-                        {f"UID {processed_uids[i]} YARA Confidence":yara['confidence']}
+                        {f"UID {processed_uids[i]} Text Classification Confidence":text_class[0]['confidence']},
+                        {f"UID {processed_uids[i]} Vector Search Confidence":vector_search[0]['confidence']},
+                        {f"UID {processed_uids[i]} YARA Confidence":yara[0]['confidence']}
                     ]
                     for wl in wandb_logs:
                         wandb.log(wl, step = log_timestamp)
