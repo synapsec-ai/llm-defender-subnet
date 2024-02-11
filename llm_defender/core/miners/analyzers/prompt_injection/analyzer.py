@@ -8,7 +8,30 @@ from llm_defender.core.miners.analyzers.prompt_injection.vector_search import Ve
 from llm_defender.base.utils import sign_data
 
 class PromptInjectionAnalyzer:
-    """This class is responsible for handling the analysis for prompt injection"""
+    """This class is responsible for handling the analysis for prompt injection
+    
+    The PromptInjectionAnalyzer class contains all of the code for a Miner neuron
+    to generate a confidence score for a Prompt Injection Attack.
+
+    Attributes:
+        chromadb_client:
+            Stores the 'clint' output from VectorEngine.initialize() This is from:
+            llm_defender/core/miners/engines/prompt_injection/vector_search.py
+        model:
+            Stores the 'model' output for an engine.
+        tokenizer:
+            Stores the 'tokenized' output for an engine.
+        yara_rules:
+            Stores the 'rules' output of YaraEngine.initialize() This is only when using
+            the YaraEngine, located at:
+
+            llm_defender/core/miners/engines/prompt_injection/yara.py
+
+    Methods:
+        execute:
+            Executes the engines within the analyzer
+    
+    """
 
     def __init__(self, wallet: bt.wallet, subnet_version: int):
         # Parameters
