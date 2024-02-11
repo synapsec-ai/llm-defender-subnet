@@ -4,6 +4,8 @@ import copy
 from uuid import uuid4
 from llm_defender import __spec_version__ as subnet_version
 from torch import Tensor, zeros
+from llm_defender.base import utils
+import bittensor as bt
 
 def test_subscore_distance_calculation():
     valid_response_base = {
@@ -386,12 +388,16 @@ def test_response_validator():
         "subnet_version": subnet_version,
     }
 
+    # Add signature
+    wallet = bt.wallet(name="test_coldkey", hotkey="test_hotkey").create_if_non_existent(coldkey_use_password=False, hotkey_use_password=False)
+    valid_response["signature"] = utils.sign_data(wallet=wallet, data=valid_response["synapse_uuid"])
+
     # Tests for valid responses
-    assert process.validate_response(valid_response) is True
+    assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
 
     for confidence in [0.0, 0.1, 0.5, 0, 1, 1.0, 0.8, 0.999, 0.00001]:
         valid_response["confidence"] = confidence
-        assert process.validate_response(valid_response) is True
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
 
     # Test for invalid confidence scores
     invalid_response = copy.deepcopy(valid_response)
@@ -410,5 +416,5 @@ def test_response_validator():
         [0.5, 0.4],
     ]:
         invalid_response["confidence"] = val
-        assert process.validate_response(invalid_response) is False
-        assert process.validate_response(val) is False
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=invalid_response) is False
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=val) is False

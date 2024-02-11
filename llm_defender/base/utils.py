@@ -311,10 +311,20 @@ def validate_signature(hotkey: str, data: str, signature: str) -> bool:
         verdict:
             A bool depicting the validity of the signature
     """
+    try:
+        outcome = bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
+        return outcome
+    except AttributeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except TypeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except ValueError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
 
-    return bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
-
-def sign_data(wallet, data) -> str:
+def sign_data(wallet: bt.wallet, data: str) -> str:
     """Signs the given data with the wallet hotkey
     
     Arguments:
@@ -327,5 +337,12 @@ def sign_data(wallet, data) -> str:
         signature:
             Signature of the key signing for the data
     """
-
-    return wallet.hotkey.sign(data.encode()).hex()
+    try:
+        signature = wallet.hotkey.sign(data.encode()).hex()
+        return signature
+    except TypeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise TypeError from e
+    except AttributeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise AttributeError from e
