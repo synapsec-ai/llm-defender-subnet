@@ -26,7 +26,6 @@ class LLMDefenderMiner(BaseNeuron):
     """LLMDefenderMiner class for LLM Defender Subnet
 
     The LLMDefenderMiner class contains all of the code for a Miner neuron
-    to generate a confidence score for a Prompt Injection Attack.
 
     Attributes:
         neuron_config:
@@ -35,18 +34,6 @@ class LLMDefenderMiner(BaseNeuron):
         miner_set_weights:
             A boolean attribute that determines whether the miner sets weights.
             This is set based on the command-line argument args.miner_set_weights.
-        chromadb_client:
-            Stores the 'clint' output from VectorEngine.initialize() This is from:
-            llm_defender/core/miners/engines/prompt_injection/vector_search.py
-        model:
-            Stores the 'model' output for an engine.
-        tokenizer:
-            Stores the 'tokenized' output for an engine.
-        yara_rules:
-            Stores the 'rules' output of YaraEngine.initialize() This is only when using
-            the YaraEngine, located at:
-
-            llm_defender/core/miners/engines/prompt_injection/yara.py
         wallet:
             Represents an instance of bittensor.wallet returned from the setup() method.
         subtensor:
