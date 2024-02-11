@@ -1,4 +1,4 @@
-from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
+from llm_defender.core.miners.analyzers.prompt_injection.yara import YaraEngine
 
 engine = YaraEngine()
 engine.prepare()

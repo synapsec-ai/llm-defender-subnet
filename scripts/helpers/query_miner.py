@@ -4,7 +4,7 @@ import argparse
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 import uuid
-import json
+from llm_defender.base import utils
 from llm_defender import __spec_version__ as subnet_version
 
 
@@ -17,16 +17,16 @@ def main(args, parser):
 
     axon_to_query = metagraph.axons[args.uid]
     bt.logging.info(f"Axon to query: {axon_to_query}")
+    synapse_uuid = str(uuid.uuid4())
 
     responses = dendrite.query(
         axon_to_query,
         LLMDefenderProtocol(
             prompt=args.prompt,
-            engine="Prompt Injection",
-            roles=["internal"],
-            analyzer=["Prompt Injection"],
+            analyzer="Prompt Injection",
             subnet_version=subnet_version,
-            synapse_uuid=str(uuid.uuid4()),
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(wallet=wallet, data=synapse_uuid),
         ),
         timeout=12,
         deserialize=True,

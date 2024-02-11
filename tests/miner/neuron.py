@@ -87,7 +87,7 @@ class TestMiner:
             help="Determine the minimum stake the validator should have to accept requests",
         )
 
-        pytest_miner = miner.PromptInjectionMiner(parser=parser)
+        pytest_miner = miner.LLMDefenderMiner(parser=parser)
         
 
         yield pytest_miner
