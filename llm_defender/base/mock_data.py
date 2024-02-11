@@ -3,14 +3,32 @@ import random
 import os
 import bittensor as bt
 
-def serve_response(analyzer: str=None, category: str=None, prompt: str=None, label: int=None):
-    """Serves the response in a standardized format"""
+def serve_response(analyzer: str=None, category: str=None, prompt: str=None, label: int=None, weight: float=None):
+    """Serves the response in a standardized format
+
+    Arguments:
+        analyzer:
+            Determines which analyzer to execute
+        category:
+            Category for the prompt
+        prompt:
+            Prompt to be analyzed
+        label:
+            Expected outcome for the analysis (1 = malicious, 0 = non-malicious)
+        weight:
+            Weight for the category to be used as a part of the score calculation
+
+    Returns:
+        res:
+            A dictionary consisting of the arguments given as an input to the function
+    """
     
     res = {
         "analyzer": analyzer,
         "category": category,
         "prompt": prompt,
-        "label": label
+        "label": label,
+        "weight": weight
     }
 
     return res
@@ -59,7 +77,7 @@ def _get_injection_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 1)
+    return serve_response("Prompt Injection", "Dataset", prompt, 1, 1.0)
 
 
 def _get_safe_prompt_from_file():
@@ -76,7 +94,7 @@ def _get_safe_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 0)
+    return serve_response("Prompt Injection", "Dataset", prompt, 0, 1.0)
 
 def _get_injection_prompt_from_template():
     template_file_name = "templates.bin.gz"
@@ -102,4 +120,4 @@ def _get_injection_prompt_from_template():
     # Replace [inject-string] with the injection content in the template line
     prompt = template_line.replace("[inject-string]", injection_line)
 
-    return serve_response("Prompt Injection", "Universal", prompt, 1)
+    return serve_response("Prompt Injection", "Universal", prompt, 1, 1.0)

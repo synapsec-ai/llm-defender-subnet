@@ -8,6 +8,7 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+
 from argparse import ArgumentParser
 from typing import Tuple
 import sys
@@ -15,82 +16,83 @@ import requests
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
-from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
-from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
-from llm_defender.base.utils import validate_miner_blacklist, sign_data, validate_signature
+from llm_defender.base.utils import validate_miner_blacklist, validate_signature
+from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
+    PromptInjectionAnalyzer,
+)
 
-class PromptInjectionMiner(BaseNeuron):
-    """PromptInjectionMiner class for LLM Defender Subnet
 
-    The PromptInjectionMiner class contains all of the code for a Miner neuron 
+class LLMDefenderMiner(BaseNeuron):
+    """LLMDefenderMiner class for LLM Defender Subnet
+
+    The LLMDefenderMiner class contains all of the code for a Miner neuron
     to generate a confidence score for a Prompt Injection Attack.
 
     Attributes:
-        neuron_config: 
-            This attribute holds the configuration settings for the neuron: 
+        neuron_config:
+            This attribute holds the configuration settings for the neuron:
             bt.subtensor, bt.wallet, bt.logging & bt.axon
-        miner_set_weights: 
-            A boolean attribute that determines whether the miner sets weights. 
+        miner_set_weights:
+            A boolean attribute that determines whether the miner sets weights.
             This is set based on the command-line argument args.miner_set_weights.
-        chromadb_client: 
-            Stores the 'clint' output from VectorEngine.initialize() This is from: 
+        chromadb_client:
+            Stores the 'clint' output from VectorEngine.initialize() This is from:
             llm_defender/core/miners/engines/prompt_injection/vector_search.py
-        model: 
+        model:
             Stores the 'model' output for an engine.
-        tokenizer: 
+        tokenizer:
             Stores the 'tokenized' output for an engine.
-        yara_rules: 
-            Stores the 'rules' output of YaraEngine.initialize() This is only when using 
+        yara_rules:
+            Stores the 'rules' output of YaraEngine.initialize() This is only when using
             the YaraEngine, located at:
 
             llm_defender/core/miners/engines/prompt_injection/yara.py
-        wallet: 
+        wallet:
             Represents an instance of bittensor.wallet returned from the setup() method.
-        subtensor: 
+        subtensor:
             An instance of bittensor.subtensor returned from the setup() method.
-        metagraph: 
+        metagraph:
             An instance of bittensor.metagraph returned from the setup() method.
-        miner_uid: 
-            An int instance representing the unique identifier of the miner in the network returned 
+        miner_uid:
+            An int instance representing the unique identifier of the miner in the network returned
             from the setup() method.
-        hotkey_blacklisted: 
-            A boolean flag indicating whether the miner's hotkey is blacklisted. It is initially 
+        hotkey_blacklisted:
+            A boolean flag indicating whether the miner's hotkey is blacklisted. It is initially
             set to False and may be updated by the check_remote_blacklist() method.
-        
+
     Methods:
         setup():
             This function initializes the neuron by registering the configuration.
         blacklist():
-            This method blacklist requests that are not originating from valid 
-            validators--insufficient hotkeys, entities which are not validators & 
-            entities with insufficient stake 
+            This method blacklist requests that are not originating from valid
+            validators--insufficient hotkeys, entities which are not validators &
+            entities with insufficient stake
         priority():
-            This function defines the priority based on which the validators are 
-            selected. Higher priority value means the input from the validator is 
+            This function defines the priority based on which the validators are
+            selected. Higher priority value means the input from the validator is
             processed faster.
         forward():
-            The function is executed once the data from the validator has been 
-            deserialized, which means we can utilize the data to control the behavior 
+            The function is executed once the data from the validator has been
+            deserialized, which means we can utilize the data to control the behavior
             of this function.
         calculate_overall_confidence():
-            This function calculates the overall confidence score for a prompt 
+            This function calculates the overall confidence score for a prompt
             injection attack.
         check_remote_blacklist():
-            This function retrieves the remote blacklist (from the url: 
+            This function retrieves the remote blacklist (from the url:
             https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api)
     """
 
     def __init__(self, parser: ArgumentParser):
         """
-        Initializes the PromptInjectionMiner class with attributes neuron_config,
+        Initializes the LLMDefenderMiner class with attributes neuron_config,
         miner_set_weights, chromadb_client, model, tokenizer, yara_rules, wallet,
         subtensor, metagraph, miner_uid & hotkey_blacklisted.
 
         Arguments:
             parser:
                 An ArgumentParser instance.
-        
+
         Returns:
             None
         """
@@ -105,17 +107,19 @@ class PromptInjectionMiner(BaseNeuron):
             self.miner_set_weights = False
         else:
             self.miner_set_weights = True
-        
+
         self.validator_min_stake = args.validator_min_stake
-
-        self.chromadb_client = VectorEngine().initialize()
-
-        self.model, self.tokenizer = TextClassificationEngine().initialize()
-        self.yara_rules = YaraEngine().initialize()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
         self.hotkey_blacklisted = False
+
+        # Initialize the analyzers
+        self.analyzers = {
+            "Prompt Injection": PromptInjectionAnalyzer(
+                wallet=self.wallet, subnet_version=self.subnet_version
+            )
+        }
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:
         """This function setups the neuron.
@@ -172,27 +176,27 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
-    
+
     def check_whitelist(self, hotkey):
         """
         Checks if a given validator hotkey has been whitelisted.
-        
+
         Arguments:
             hotkey:
                 A str instance depicting a hotkey.
-                
+
         Returns:
             True:
                 True is returned if the hotkey is whitelisted.
             False:
-                False is returned if the hotkey is not whitelisted.    
+                False is returned if the hotkey is not whitelisted.
         """
 
         if isinstance(hotkey, bool) or not isinstance(hotkey, str):
             return False
-        
+
         whitelisted_hotkeys = [
-            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX", # sn14 dev team test validator
+            "5G4gJgvAJCRS6ReaH9QxTCvXAuc4ho5fuobR7CMcHs4PRbbX",  # sn14 dev team test validator
         ]
 
         if hotkey in whitelisted_hotkeys:
@@ -212,23 +216,21 @@ class PromptInjectionMiner(BaseNeuron):
 
         As it currently stands, we want to blacklist requests that are
         not originating from valid validators. This includes:
-        - unregistered hotkeys 
-        - entities which are not validators 
-        - entities with insufficient stake 
+        - unregistered hotkeys
+        - entities which are not validators
+        - entities with insufficient stake
 
-        Returns: 
-            [True, ""] for blacklisted requests where the reason for 
+        Returns:
+            [True, ""] for blacklisted requests where the reason for
             blacklisting is contained in the quotes.
-            [False, ""] for non-blacklisted requests, where the quotes 
-            contain a formatted string (f"Hotkey {synapse.dendrite.hotkey} 
+            [False, ""] for non-blacklisted requests, where the quotes
+            contain a formatted string (f"Hotkey {synapse.dendrite.hotkey}
             has insufficient stake: {stake}",)
         """
 
         # Check whitelisted hotkeys (queries should always be allowed)
         if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
-            bt.logging.info(
-                f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey})"
-            )
+            bt.logging.info(f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey})")
             return (False, f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey}")
 
         # Blacklist entities that have not registered their hotkey
@@ -247,7 +249,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         # Blacklist entities that have insufficient stake
         stake = float(self.metagraph.S[uid])
-        if stake <= self.validator_min_stake:
+        if stake < self.validator_min_stake:
             bt.logging.info(
                 f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
             )
@@ -270,7 +272,7 @@ class PromptInjectionMiner(BaseNeuron):
 
         Inputs:
             synapse:
-                The synapse should be the LLMDefenderProtocol class 
+                The synapse should be the LLMDefenderProtocol class
                 (from llm_defender/base/protocol.py)
 
         Returns:
@@ -296,145 +298,78 @@ class PromptInjectionMiner(BaseNeuron):
         """
         The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
-        data to control the behavior of this function. All confidence 
-        score outputs, alongside other relevant output metadata--subnet_version, 
+        data to control the behavior of this function. All confidence
+        score outputs, alongside other relevant output metadata--subnet_version,
         synapse_uuid--are appended to synapse.output.
 
         Inputs:
             synapse:
-                The synapse should be the LLMDefenderProtocol class 
+                The synapse should be the LLMDefenderProtocol class
                 (from llm_defender/base/protocol.py)
 
         Returns:
             synapse:
-                The synapse should be the LLMDefenderProtocol class 
+                The synapse should be the LLMDefenderProtocol class
                 (from llm_defender/base/protocol.py)
         """
 
         # Print version information and perform version checks
         bt.logging.debug(
             f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
-        )   
+        )
         if synapse.subnet_version > self.subnet_version:
             bt.logging.warning(
                 f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
             )
 
         # Synapse signature verification
-        if not validate_signature(hotkey=synapse.dendrite.hotkey, data=synapse.synapse_uuid, signature=synapse.synapse_signature):
-            bt.logging.debug(f'Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}')
+        if not validate_signature(
+            hotkey=synapse.dendrite.hotkey,
+            data=synapse.synapse_uuid,
+            signature=synapse.synapse_signature,
+        ):
+            bt.logging.debug(
+                f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}"
+            )
             return synapse
         else:
-            bt.logging.debug(f'Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}')
-        
-        # Responses are stored in a list
-        output = {"confidence": 0.5, "prompt": synapse.prompt, "engines": []}
+            bt.logging.debug(
+                f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}"
+            )
 
-        engine_confidences = []
+        # Execute the correct analyzer
+        if synapse.analyzer == "Prompt Injection":
+            bt.logging.debug(f'Executing the {synapse.analyzer} analyzer')
+            output = self.analyzers["Prompt Injection"].execute(synapse=synapse)
+        else:
+            bt.logging.error(f'Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}')
+            return synapse
 
-        # Execute YARA engine
-        yara_engine = YaraEngine(prompt=synapse.prompt)
-        yara_engine.execute(rules=self.yara_rules)
-        yara_response = yara_engine.get_response().get_dict()
-        output["engines"].append(yara_response)
-        engine_confidences.append(yara_response["confidence"])
-
-        # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        text_classification_response = text_classification_engine.get_response().get_dict()
-        output["engines"].append(text_classification_response)
-        engine_confidences.append(text_classification_response["confidence"])
-
-        # Execute Vector Search engine
-        vector_engine = VectorEngine(prompt=synapse.prompt)
-        vector_engine.execute(client=self.chromadb_client)
-        vector_response = vector_engine.get_response().get_dict()
-        output["engines"].append(vector_response)
-        engine_confidences.append(vector_response["confidence"])
-
-
-        # Determine engine weights. These should corresponding to the
-        # order of execution. You should modify these values as a part
-        # of the fine-tuning process. Defaults to equal weight to all engines.
-        engine_weights = [1/len(engine_confidences) for _ in engine_confidences]
-
-        # Calculate confidence score
-        output["confidence"] = self.calculate_overall_confidence(engine_confidences, engine_weights)
-
-        # Add subnet version and UUID to the output
-        output["subnet_version"] = self.subnet_version
-        output["synapse_uuid"] = synapse.synapse_uuid
-
-        # Generate signature for the response
-        output["signature"] = sign_data(self.wallet, output["synapse_uuid"])
-        
-        synapse.output = output
-
-        bt.logging.debug(f'Processed prompt: {output["prompt"]}')
-        bt.logging.debug(f'Engine data: {output["engines"]}')
-        bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}')
+        bt.logging.debug(f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}')
+        bt.logging.debug(f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}')
+        bt.logging.success(
+            f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+        )
 
         return synapse
-    
-    def calculate_overall_confidence(self, confidences, weights):
-        """
-        Function to calculate the overall confidence
-        
-        Arguments:
-            confidences:
-                A list containing confidence values (between 0.0 and 1.0)
-            weights:
-                A list containing the weights for each associated confidence value 
-                (the sum of all weights should approximate 1.0 with a tolerance of 0.01)
-
-        Returns:
-            overall_score:
-                A float instance of the overall confidence score given confidences
-                & weights
-
-        Raises:
-            ValueError:
-                The ValueError is raised if
-                    - The number of confidences & weights do not match
-                    - The confidences are not between 0.0 and 1.0
-                    - The sum of the weights does not approximate 1.0 (with a tolerance of 0.01)
-        """
-        if len(confidences) != len(weights):
-            raise ValueError("Number of confidences and weights should match")
-        
-        if any(confidence < 0.0 or confidence > 1.0 for confidence in confidences):
-            raise ValueError("Confidences should be between 0.0 and 1.0")
-        
-        if not (0.99 <= sum(weights) <= 1.01):
-            raise ValueError("Sum of weights should be approximately 1.0")
-
-        # Calculate the weighted average of confidences
-        weighted_sum = sum(confidence * weight for confidence, weight in zip(confidences, weights))
-        
-        # Calculate the overall confidence
-        overall_score = min(1.0, max(0.0, weighted_sum))
-        bt.logging.debug(f'Calculated weighted confidence: {weighted_sum}. Original confidence: {sum(confidences)/len(confidences)}')
-        
-        return overall_score
 
     def check_remote_blacklist(self):
         """
-        Retrieves the remote blacklist & updates the hotkey_blacklisted 
+        Retrieves the remote blacklist & updates the hotkey_blacklisted
         attribute.
-        
+
         Arguments:
             None
-        
+
         Returns:
             None
 
         Raises:
             requests.exceptions.JSONDecodeError:
-                requests.exceptions.JSONDecodeError is raised if the response 
+                requests.exceptions.JSONDecodeError is raised if the response
                 could not be read from the blacklist API.
             requests.exceptions.ConnectionError:
-                requests.exceptions.ConnectionError is raised if the function is 
+                requests.exceptions.ConnectionError is raised if the function is
                 unable to connect to the blacklist API.
         """
 
@@ -452,12 +387,13 @@ class PromptInjectionMiner(BaseNeuron):
                     is_blacklisted = False
                     for blacklist_entry in miner_blacklist:
                         if blacklist_entry["hotkey"] == self.wallet.hotkey.ss58_address:
-                            bt.logging.warning(f'Your hotkey has been blacklisted. Reason: {blacklist_entry["reason"]}')
+                            bt.logging.warning(
+                                f'Your hotkey has been blacklisted. Reason: {blacklist_entry["reason"]}'
+                            )
                             is_blacklisted = True
-                    
+
                     self.hotkey_blacklisted = is_blacklisted
-                        
-                    
+
                 bt.logging.trace(
                     f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
                 )

@@ -2,9 +2,9 @@
 This script prepares the engines before miner is executed.
 """
 import sys
-from llm_defender.core.miners.engines.prompt_injection.yara import YaraEngine
-from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
-from llm_defender.core.miners.engines.prompt_injection.vector_search import VectorEngine
+from llm_defender.core.miners.analyzers.prompt_injection.yara import YaraEngine
+from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
+from llm_defender.core.miners.analyzers.prompt_injection.vector_search import VectorEngine
 
 def prepare_engines():
     """Prepare the engines"""

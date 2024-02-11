@@ -1,4 +1,4 @@
-from llm_defender.core.miners.engines.prompt_injection.text_classification import TextClassificationEngine
+from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
 
 engine = TextClassificationEngine()
 engine.prepare()
