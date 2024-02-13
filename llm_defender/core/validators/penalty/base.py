@@ -125,19 +125,19 @@ def _check_response_history(
     average_distance = total_distance / count if count > 0 else 0
 
     # penalize miners for suspiciously high distance score
-    if 0.0 <= average_distance < 0.05:
+    if 0.95 < average_distance <= 1.0:
         penalty += 10.0
     # this range denotes miners who perform way better than a purely random guess
-    elif 0.05 <= average_distance < 0.35:
+    elif 0.65 < average_distance <= 0.95:
         penalty += 0.0
     # this range denotes miners who perform better than a purely random guess
-    elif 0.35 <= average_distance < 0.45:
+    elif 0.55 < average_distance <= 0.65:
         penalty += 2.0
     # miners in this range are performing at roughly the same efficiency as random 
     elif 0.45 <= average_distance <= 0.55:
         penalty += 5.0
     # miners in this range are performing worse than random
-    elif 0.55 < average_distance <= 1.0:
+    elif 0.0 < average_distance < 0.45:
         penalty += 10.0
 
     bt.logging.trace(
