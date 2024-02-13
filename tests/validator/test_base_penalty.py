@@ -74,6 +74,90 @@ class TestBasePenaltyFunctions():
         assert round(calculate_total_distance_score(distance_scores=distance_scores),2) == 0.25
         print("Test successful.")
 
+        print("Testing that calculate_subscore_distance outputs total_distance_score 0.0 when confidence scores = [1.0,1.0,1.0] and target = 0.0, and also when confidence scores = [0.0,0.0,0.0] and target score = 1.0")
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":1.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":1.0,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":1.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.0
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.0,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":0.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.0
+        print("Test successful.")
+
+        print("Testing that calculate_subscore_distance outputs total_distance_score 1.0 when confidence scores = [1.0,1.0,1.0] and target score = 1.0, and also when confidence scores = [0.0,0.0,0.0] and target score = 0.0")
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":1.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":1.0,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":1.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 1.0
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.0,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":0.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 1.0
+        print("Test successful.")
+
+        print("Testing that calculate_subscore_distance outputs total_distance_score 0.25 when confidence scores = [0.5,0.75,1.0] and target score = 0.0, and also when confidence scores = [0.0,0.25,0.5] and target score = 1.0.")
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.5,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.75,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":1.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.25
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.25,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":0.5,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.25
+        print("Test successful.")
+
+        print("Testing that calculate_subscore_distance outputs total_distance_score 0.75 when confidence scores = [0.0,0.25,0.5] and target score = 0.0, and also when confidence scores = [0.5,0.75,1.0] and target score = 1.0")
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.5,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.75,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":1.0,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.75
+        response = {
+            "engines":[
+                {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
+                {"name":"engine:text_classification","confidence":0.25,"data":{"outcome":"INJECTION"}},
+                {"name":"engine:yara","confidence":0.5,"data":{"outcome":"NoRuleMatch"}}
+            ]
+        }
+        target = 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.75
+        print("Test successful.")
+
         print("\nNOW TESTING: _check_response_history()\n")
 
         print("Testing that 10.0 penalty outputted for avg distance between 0.95 and 1.0.")
