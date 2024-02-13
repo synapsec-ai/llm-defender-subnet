@@ -34,7 +34,7 @@ class TestBasePenaltyFunctions():
     def test_check_response_history(self):
         print("\nNOW TESTING: distance score calculation\n")
 
-        print("Testing that calculate_distance_score outputs distance score 1.0 when confidence = 0.0 and target = 1.0, and when confidence = 1.0 and target = 1.0")
+        print("Testing that calculate_distance_score outputs distance score 1.0 when confidence = 0.0 and target = 1.0, and when confidence = 1.0 and target = 0.0")
         engine_response = {"name":"engine:text_classification","confidence": 0.0,"data":{}}
         assert calculate_distance_score(target=1.0, engine_response=engine_response) == 1.0
         engine_response = {"name":"engine:text_classification","confidence": 1.0,"data":{}}
@@ -53,6 +53,7 @@ class TestBasePenaltyFunctions():
         assert round(calculate_distance_score(target=1.0, engine_response=engine_response),2) == 0.2
         engine_response = {"name":"engine:text_classification","confidence": 0.2,"data":{}}
         assert round(calculate_distance_score(target=0.0, engine_response=engine_response),2) == 0.2
+        print("Test successful.")
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 1.0 when distance_scores = [0.0,0.0,0.0]")
         distance_scores = [0.0,0.0,0.0]
