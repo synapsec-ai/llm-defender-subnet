@@ -50,9 +50,9 @@ class TestBasePenaltyFunctions():
 
         print("Testing that calculate_distance_score outputs distance score 0.2 when confidence = 0.8 and target = 1.0, and also when confidence = 0.2 and target = 0.0")
         engine_response = {"name":"engine:text_classification","confidence": 0.8,"data":{}}
-        assert calculate_distance_score(target=1.0, engine_response=engine_response) == 0.2
+        assert round(calculate_distance_score(target=1.0, engine_response=engine_response),2) == 0.2
         engine_response = {"name":"engine:text_classification","confidence": 0.2,"data":{}}
-        assert calculate_distance_score(target=0.0, engine_response=engine_response) == 0.2
+        assert round(calculate_distance_score(target=0.0, engine_response=engine_response),2) == 0.2
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 1.0 when distance_scores = [0.0,0.0,0.0]")
         distance_scores = [0.0,0.0,0.0]
@@ -64,14 +64,14 @@ class TestBasePenaltyFunctions():
         assert calculate_total_distance_score(distance_scores=distance_scores) == 0.0
         print("Test successful.")
 
-        print("Testing that calculate_total_distance_score outputs total_distance_score 0.2 when distance_scores = [0.1,0.2,0.3]")
+        print("Testing that calculate_total_distance_score outputs total_distance_score 0.8 when distance_scores = [0.1,0.2,0.3]")
         distance_scores = [0.1,0.2,0.3]
-        assert calculate_total_distance_score(distance_scores=distance_scores) == 0.2
+        assert round(calculate_total_distance_score(distance_scores=distance_scores),2) == 0.8
         print("Test successful.")
 
-        print("Testing that calculate_total_distance_score outputs total_distance_score 0.75 when distance_scores = [0.5,0.75,1.0]")
+        print("Testing that calculate_total_distance_score outputs total_distance_score 0.25 when distance_scores = [0.5,0.75,1.0]")
         distance_scores = [0.5,0.75,1.0]
-        assert calculate_total_distance_score(distance_scores=distance_scores) == 0.0
+        assert round(calculate_total_distance_score(distance_scores=distance_scores),2) == 0.25
         print("Test successful.")
 
         print("\nNOW TESTING: _check_response_history()\n")
