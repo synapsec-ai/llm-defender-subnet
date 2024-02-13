@@ -137,7 +137,7 @@ def _check_response_history(
     elif 0.45 <= average_distance <= 0.55:
         penalty += 5.0
     # miners in this range are performing worse than random
-    elif 0.0 < average_distance < 0.45:
+    elif 0.0 <= average_distance < 0.45:
         penalty += 10.0
 
     bt.logging.trace(
