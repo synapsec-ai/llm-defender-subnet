@@ -5,6 +5,48 @@ features and their engines.
 import gc
 import multiprocessing
 
+def wandb_available():
+    """
+    Checks if wandb is available to import. Used as a check for when wandb 
+    logging is implemented in other parts of the logic.
+
+    Arguments:
+
+    Returns:
+        True if wandb is available.
+        False if wandb is not available.
+    """
+    try:
+        import wandb 
+        return True 
+    except ImportError:
+        return False 
+    return False
+
+# Import wandb if available for the custom_wandb_metric() function below
+if wandb_available():
+    import wandb
+
+def custom_wandb_metric(data,step=None):
+    """
+    Allows for custom wandb logging of metrics (in engines, etc.).
+
+    Arguments:
+        data:
+            This must be a dict instance, where the key will be the 
+            title of the graph in wandb, and the associated value will
+            be the y-axis value of the graph.
+        step:
+            If specified, this will be the x-axis of the graph.
+
+    Returns:
+        None
+    """
+    if wandb_available():
+        if step != None:
+            wandb.log(data,step=step)
+        else:
+            wandb.log(data)
 
 class EnginePrompt:
     """
@@ -352,12 +394,3 @@ def validate_response_data(engine_response: dict) -> bool:
             return False
         
     return True
-
-def wandb_available():
-    try:
-        import wandb 
-        return True 
-    except ImportError:
-        return False 
-    return False
-
