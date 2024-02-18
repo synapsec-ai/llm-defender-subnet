@@ -12,14 +12,15 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from llm_defender import __version__ as version
 from llm_defender.base.utils import wandb_available
+if wandb_available():
+    import wandb
 
 def main(validator: PromptInjectionValidator):
     """
     This function executes the main function for the validator.
     """
 
-    if wandb_available() and validator.use_wandb:
-        import wandb
+    if validator.wandb_available and validator.use_wandb:
         wandb.init(project=validator.wandb_project, entity=validator.wandb_entity)
     
     # Step 7: The Main Validation Loop

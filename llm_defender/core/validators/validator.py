@@ -168,11 +168,13 @@ class PromptInjectionValidator(BaseNeuron):
             else:
                 self.max_targets = 256
 
+            self.wandb_available = wandb_available()
+
             if args.use_wandb == 'True':
                 self.use_wandb = True
             else:
                 self.use_wandb = False
-            if self.use_wandb and wandb_available():
+            if self.use_wandb and self.wandb_available:
                 self.wandb_project = args.wandb_project 
                 self.wandb_entity = args.wandb_entity
 
@@ -207,7 +209,7 @@ class PromptInjectionValidator(BaseNeuron):
         bt.logging.debug(f"Confidence target set to: {target}")
 
         log_timestamp = int(time.time())
-        if wandb_available() and self.use_wandb:
+        if self.wandb_available and self.use_wandb:
             wandb.log({'Target':target}, step = log_timestamp)
             bt.logging.trace(f"Adding wandb logs for target: {target}")
 
@@ -302,7 +304,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
                 }
 
-                if wandb_available() and self.use_wandb:
+                if self.wandb_available and self.use_wandb:
                     wandb_logs = [                    
                         {f"UID {processed_uids[i]} Confidence":response_object['response']['confidence']},
                         {f"UID {processed_uids[i]} Weight Score":float(self.scores[processed_uids[i]])},

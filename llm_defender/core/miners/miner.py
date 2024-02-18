@@ -112,11 +112,14 @@ class PromptInjectionMiner(BaseNeuron):
         
         self.validator_min_stake = args.validator_min_stake
 
+        self.wandb_available = wandb_available()        
+
         if args.use_wandb == 'True':
             self.use_wandb = True
         else:
             self.use_wandb = False
-        if self.use_wandb and wandb_available():
+
+        if self.use_wandb and self.wandb_available:
             self.wandb_project = args.wandb_project 
             self.wandb_entity = args.wandb_entity
 
@@ -379,7 +382,7 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.debug(f'Engine data: {output["engines"]}')
         bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}')
 
-        if self.use_wandb and wandb_available():
+        if self.use_wandb and self.wandb_available:
             wandb_logs = [
                 {"YARA Confidence":yara_response['confidence']},
                 {"Text Classification Confidence":text_classification_response['confidence']},

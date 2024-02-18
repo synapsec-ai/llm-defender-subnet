@@ -4,6 +4,7 @@ features and their engines.
 """
 import gc
 import multiprocessing
+import bittensor as bt
 
 def wandb_available():
     """
@@ -21,13 +22,11 @@ def wandb_available():
         return True 
     except ImportError:
         return False 
-    return False
-
-# Import wandb if available for the custom_wandb_metric() function below
+    
 if wandb_available():
     import wandb
 
-def custom_wandb_metric(data,step=None):
+def custom_wandb_metric(data,**kwargs):
     """
     Allows for custom wandb logging of metrics (in engines, etc.).
 
@@ -36,17 +35,16 @@ def custom_wandb_metric(data,step=None):
             This must be a dict instance, where the key will be the 
             title of the graph in wandb, and the associated value will
             be the y-axis value of the graph.
+        **kwargs:
+            Applies to wandb.log()
         step:
             If specified, this will be the x-axis of the graph.
 
     Returns:
         None
     """
-    if wandb_available():
-        if step != None:
-            wandb.log(data,step=step)
-        else:
-            wandb.log(data)
+    wandb.log(data,**kwargs)
+    bt.logging.trace(f"Custom wandb log added for data: {data}")
 
 class EnginePrompt:
     """

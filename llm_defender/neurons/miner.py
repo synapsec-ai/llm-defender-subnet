@@ -10,6 +10,8 @@ import time
 from llm_defender.core.miners.miner import PromptInjectionMiner
 from llm_defender import __version__ as version
 from llm_defender.base.utils import wandb_available
+if wandb_available():
+    import wandb
 
 def main(miner: PromptInjectionMiner):
     """
@@ -18,8 +20,7 @@ def main(miner: PromptInjectionMiner):
     miner configuration, please adjust the initialization parameters.
     """
 
-    if wandb_available() and miner.use_wandb:
-        import wandb
+    if miner.wandb_available and miner.use_wandb:
         wandb.init(project=miner.wandb_project, entity=miner.wandb_entity)
         bt.logging.info(f"Initialized wandb with entity: {miner.wandb_entity} & project: {miner.wandb_project}.")
 
@@ -113,7 +114,7 @@ def main(miner: PromptInjectionMiner):
 
                 bt.logging.info(log)
 
-                if wandb_available() and miner.use_wandb:
+                if miner.wandb_available and miner.use_wandb:
                     wandb_logs = [
                         {'Rank':miner.metagraph.R[miner.miner_uid].item()},
                         {'Trust':miner.metagraph.T[miner.miner_uid].item()},
