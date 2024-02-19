@@ -383,17 +383,20 @@ class PromptInjectionMiner(BaseNeuron):
         bt.logging.success(f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}')
 
         if self.use_wandb and self.wandb_available:
-            wandb_logs = [
-                {"YARA Confidence":yara_response['confidence']},
-                {"Text Classification Confidence":text_classification_response['confidence']},
-                {"Vector Search Confidence":vector_response['confidence']},
-                {"Total Confidence":output['confidence']}
-            ]   
-            log_timestamp = int(time.time())
-            for wl in wandb_logs:
-                wandb.log(wl, step=log_timestamp)    
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
-        
+            try:
+                wandb_logs = [
+                    {"YARA Confidence":yara_response['confidence']},
+                    {"Text Classification Confidence":text_classification_response['confidence']},
+                    {"Vector Search Confidence":vector_response['confidence']},
+                    {"Total Confidence":output['confidence']}
+                ]   
+                log_timestamp = int(time.time())
+                for wl in wandb_logs:
+                    wandb.log(wl, step=log_timestamp)    
+                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            except:
+                bt.logging.trace("Wandb logging failed for engine confidences.")
+            
         return synapse
     
     def calculate_overall_confidence(self, confidences, weights):

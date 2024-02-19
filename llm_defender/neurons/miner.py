@@ -115,17 +115,20 @@ def main(miner: PromptInjectionMiner):
                 bt.logging.info(log)
 
                 if miner.wandb_available and miner.use_wandb:
-                    wandb_logs = [
-                        {'Rank':miner.metagraph.R[miner.miner_uid].item()},
-                        {'Trust':miner.metagraph.T[miner.miner_uid].item()},
-                        {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
-                        {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
-                        {'Emission':miner.metagraph.E[miner.miner_uid].item()}
-                    ]
-                    log_timestamp = int(time.time())
-                    for wl in wandb_logs:
-                        wandb.log(wl, step=log_timestamp)
-                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                    try:
+                        wandb_logs = [
+                            {'Rank':miner.metagraph.R[miner.miner_uid].item()},
+                            {'Trust':miner.metagraph.T[miner.miner_uid].item()},
+                            {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
+                            {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
+                            {'Emission':miner.metagraph.E[miner.miner_uid].item()}
+                        ]
+                        log_timestamp = int(time.time())
+                        for wl in wandb_logs:
+                            wandb.log(wl, step=log_timestamp)
+                        bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                    except:
+                        bt.logging.trace("Wandb logging for miner stats failed.")
 
             miner.step += 1
             time.sleep(1)

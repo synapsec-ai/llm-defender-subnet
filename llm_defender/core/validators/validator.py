@@ -305,23 +305,25 @@ class PromptInjectionValidator(BaseNeuron):
                 }
 
                 if self.wandb_available and self.use_wandb:
-                    wandb_logs = [                    
-                        {f"UID {processed_uids[i]} Confidence":response_object['response']['confidence']},
-                        {f"UID {processed_uids[i]} Weight Score":float(self.scores[processed_uids[i]])},
-                        {f"UID {processed_uids[i]} Change in Weight Score":float(self.scores[processed_uids[i]]) - float(old_score)},
-                        {f"UID {processed_uids[i]} Total Score":scored_response['scores']['total']},
-                        {f"UID {processed_uids[i]} Distance Score":scored_response['scores']['distance']},
-                        {f"UID {processed_uids[i]} Speed Score":scored_response['scores']['speed']},
-                        {f"UID {processed_uids[i]} Distance Penalty":scored_response['penalties']['distance']},
-                        {f"UID {processed_uids[i]} Speed Penalty":scored_response['penalties']['speed']},
-                        {f"UID {processed_uids[i]} Text Classification Confidence":text_class[0]['confidence']},
-                        {f"UID {processed_uids[i]} Vector Search Confidence":vector_search[0]['confidence']},
-                        {f"UID {processed_uids[i]} YARA Confidence":yara[0]['confidence']}
-                    ]
-                    for wl in wandb_logs:
-                        wandb.log(wl, step = log_timestamp)
-                    bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
-
+                    try:
+                        wandb_logs = [                    
+                            {f"UID {processed_uids[i]} Confidence":response_object['response']['confidence']},
+                            {f"UID {processed_uids[i]} Weight Score":float(self.scores[processed_uids[i]])},
+                            {f"UID {processed_uids[i]} Change in Weight Score":float(self.scores[processed_uids[i]]) - float(old_score)},
+                            {f"UID {processed_uids[i]} Total Score":scored_response['scores']['total']},
+                            {f"UID {processed_uids[i]} Distance Score":scored_response['scores']['distance']},
+                            {f"UID {processed_uids[i]} Speed Score":scored_response['scores']['speed']},
+                            {f"UID {processed_uids[i]} Distance Penalty":scored_response['penalties']['distance']},
+                            {f"UID {processed_uids[i]} Speed Penalty":scored_response['penalties']['speed']},
+                            {f"UID {processed_uids[i]} Text Classification Confidence":text_class[0]['confidence']},
+                            {f"UID {processed_uids[i]} Vector Search Confidence":vector_search[0]['confidence']},
+                            {f"UID {processed_uids[i]} YARA Confidence":yara[0]['confidence']}
+                        ]
+                        for wl in wandb_logs:
+                            wandb.log(wl, step = log_timestamp)
+                        bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
+                    except:
+                        bt.logging.trace(f"wandb logging failed for UID: {processed_uids[i]}")
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)
