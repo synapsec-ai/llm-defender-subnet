@@ -177,7 +177,7 @@ def validate_response(hotkey, response) -> bool:
     return True
 
 
-def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score: float):
+def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score: float, prompt_weight: float):
     """Assigns a score to an UID
 
     Arguments:
@@ -187,6 +187,8 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
             UID of the neuron to set the score for
         alpha:
             Scaling factor used for the degradation
+        prompt_weight:
+            Weight of the current prompt. 
 
     Returns:
         scores:
@@ -234,7 +236,9 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         return scores, old_score
 
     logging.trace(f"Assigning score of 0.0 for UID: {uid}. Current score: {old_score}")
-    scores[uid] = alpha * scores[uid] + (1 - alpha) * response_score
+    unweighted_new_score = alpha * scores[uid] + (1 - alpha) * response_score
+    diff = unweighted_new_score - scores[uid]
+    scores[uid] = scores[uid] + (prompt_weight * diff)
     logging.trace(f"Assigned score of 0.0 for UID: {uid}. New score: {scores[uid]}")
 
     if old_score == scores[uid]:
