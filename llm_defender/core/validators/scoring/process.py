@@ -207,6 +207,12 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
             f"Alpha must be less than 1.0 and greater than or equal to 0.1. Value: {alpha}"
         )
 
+    if not (0.0 <= prompt_weight <= 1.0):
+        logging.error(f"Value for prompt_weight is incorrect: {prompt_weight}")
+        raise AttributeError(
+            f"prompt_weight must be greater than or equal to 0.0 and less than or equal to 1.0. Value: {prompt_weight}"
+        )
+
     # Ensure the response score is correctly defined
     if not utils.validate_numerical_value(
         value=response_score, value_type=float, min_value=0.0, max_value=1.0
@@ -235,11 +241,12 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
     if response_score == 0.0 and scores[uid] == 0.0:
         return scores, old_score
 
-    logging.trace(f"Assigning score of 0.0 for UID: {uid}. Current score: {old_score}")
+    logging.trace(f"Assigning score for UID: {uid}. Current score: {old_score}")
     unweighted_new_score = alpha * scores[uid] + (1 - alpha) * response_score
+    logging.trace(f"Unweighted score for UID: {uid}. Unweighted score: {unweighted_new_score}")
     diff = unweighted_new_score - scores[uid]
     scores[uid] = scores[uid] + (prompt_weight * diff)
-    logging.trace(f"Assigned score of 0.0 for UID: {uid}. New score: {scores[uid]}")
+    logging.trace(f"Assigned weighted score for UID: {uid}. New score: {scores[uid]}")
 
     if old_score == scores[uid]:
         logging.error(

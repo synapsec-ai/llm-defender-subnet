@@ -80,26 +80,29 @@ def test_score_assignment():
     # Valid parameters
     alpha = 0.9
     scores = Tensor([0.6, 0.1, 0.2, 0.3])
-    uid = 0
     response_score = 0.5
+    prompt_weight = 0.75
 
     # Basic scenario
-    test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score)
-    
-    assert test_score.tolist() == Tensor([0.5900000333786011, 0.10000000149011612, 0.20000000298023224, 0.30000001192092896]).tolist()
-    assert test_old_score == 0.6
+    test_scores = []
+    for uid, _ in enumerate(scores.tolist()):
+        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_scores.append(test_score)
+        assert test_old_score == scores.tolist()[uid]
+
+    assert test_scores == Tensor([0.5925, 0.13, 0.2225, 0.315]).tolist()
 
     # Test alpha
     # Valid alpha
     test_alpha = [0.1, 0.2, 0.5, 0.9, 0.9999]
     for _,entry in enumerate(test_alpha):
-        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score)
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
     
     # Invalid alpha
     test_alpha = [0.09, 0.0, -0.1, -1, 1.0, 1.1, 1, 0, "foo", True, False, [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_alpha):
         with pytest.raises(AttributeError):
-            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score)
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
 
     # Response score
     # Valid response score
@@ -111,7 +114,7 @@ def test_score_assignment():
     test_response_score = [-0.1, -1, -0.001, 1.1, 1, 0, 5, True, False, None, "foo", [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_response_score):
         with pytest.raises(AttributeError):
-            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry)
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
 
     # UID
     # Valid UID
@@ -119,17 +122,17 @@ def test_score_assignment():
     response_score = 0.0
     test_uid = [0, 1, 10, 200, 255]
     for _,entry in enumerate(test_uid):
-        assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score)
+        assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
 
     # Invalid UID
     test_uid = [-0.1, -1, -0.001, 1.1, 256, True, False, None, "foo", [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_uid):
         with pytest.raises(AttributeError):
-            assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score)
+            assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
     
     # Verify that scores below 0.0000001 are set to 0.0
     scores[uid] = 0.00000005
-    test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score)
+    test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
     assert test_score[uid] == 0.0
     assert test_old_score == 0.00000005
 
@@ -139,7 +142,7 @@ def test_score_assignment():
     uid = 0
     response_score = 0.0
     while(True):
-        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score)
+        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         if test_score[uid] == 0.0:
             break
 
@@ -149,7 +152,7 @@ def test_score_assignment():
     uid = 0
     response_score = 1.0
     while(True):
-        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score)
+        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         if test_score[uid] == 1.0:
             break
 
