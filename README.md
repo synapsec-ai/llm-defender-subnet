@@ -4,7 +4,7 @@ This repository contains the source code for the LLM Defender subnet running on 
 ## Summary
 There are different and constantly evolving ways to attack LLMs, and to efficiently protect against such attacks, it is necessary to layer up several defensive methods to prevent the attacks from affecting the LLM or the application relying on the model.
 
-The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **capabilities** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs. An engine can consist of a single analyzer or multiple subengines working towards a common goal.
+The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **analyzers** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs.
 
 The ultimate goal is to enable LLM developers to harness the decentralized intelligence provided by the subnet and combine it with their local defensive capabilities to truly embrace the concept of defense-in-depth.
 
