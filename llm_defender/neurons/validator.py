@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from uuid import uuid4
 import torch
 import bittensor as bt
+import llm_defender.base.utils as utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from llm_defender import __version__ as version
@@ -89,7 +90,9 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
             # Get the query to send to the valid Axons
-            query = validator.serve_prompt().get_dict()
+            query = validator.serve_prompt()
+
+            bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
             synapse_uuid = str(uuid4())
@@ -97,11 +100,10 @@ def main(validator: PromptInjectionValidator):
                 uids_to_query,
                 LLMDefenderProtocol(
                     prompt=query["prompt"],
-                    engine=query["engine"],
-                    roles=["internal"],
-                    analyzer=["Prompt Injection"],
+                    analyzer=query["analyzer"],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
+                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=synapse_uuid),
                 ),
                 timeout=validator.timeout,
                 deserialize=True,

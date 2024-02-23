@@ -1,5 +1,6 @@
 """
-asdf
+This miner script executes the main loop for the miner and keeps the
+miner active in the bittensor network.
 """
 import time
 from argparse import ArgumentParser
@@ -7,13 +8,14 @@ import traceback
 import bittensor as bt
 import torch
 import time 
-from llm_defender.core.miners.miner import PromptInjectionMiner
+
+from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
 from llm_defender.base.utils import wandb_available
 if wandb_available():
     import wandb
 
-def main(miner: PromptInjectionMiner):
+def main(miner: LLMDefenderMiner):
     """
     This function executes the main miner loop. The miner is configured
     upon the initialization of the miner. If you want to change the
@@ -191,6 +193,6 @@ if __name__ == "__main__":
     )
 
     # Create a miner based on the Class definitions
-    subnet_miner = PromptInjectionMiner(parser=parser)
+    subnet_miner = LLMDefenderMiner(parser=parser)
 
     main(subnet_miner)

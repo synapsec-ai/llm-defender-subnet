@@ -176,14 +176,11 @@ def validate_numerical_value(value, value_type, min_value, max_value):
             A bool depicting the outcome of the validation
     
     """
-
-    if not value:
-        return False
     
     if isinstance(value, bool) or not isinstance(value, value_type):
         return False
     
-    if min_value > value > max_value:
+    if (value < min_value) or (value > max_value):
         return False
     
     return True
@@ -388,7 +385,63 @@ def validate_response_data(engine_response: dict) -> bool:
     for _,key in enumerate(required_keys):
         if key not in engine_response.keys():
             return False
-        if engine_response[key] is None or isinstance(engine_response[key], bool):
+        if engine_response[key] is None or engine_response[key] == "" or engine_response[key] == [] or engine_response[key] == {} or isinstance(engine_response[key], bool):
             return False
         
+        if key == "confidence":
+            if not validate_numerical_value(value=engine_response[key], value_type=float, min_value=0.0, max_value=1.0):
+                return False
+        
     return True
+
+def validate_signature(hotkey: str, data: str, signature: str) -> bool:
+    """Validates that the given hotkey has been used to generate the
+    signature for data
+    
+    Arguments:
+        hotkey:
+            SS58_address of the hotkey used to sign the data
+        data:
+            Data signed
+        signature:
+            Signature of the signed data
+    
+    Returns:
+        verdict:
+            A bool depicting the validity of the signature
+    """
+    try:
+        outcome = bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
+        return outcome
+    except AttributeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except TypeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except ValueError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+
+def sign_data(wallet: bt.wallet, data: str) -> str:
+    """Signs the given data with the wallet hotkey
+    
+    Arguments:
+        wallet:
+            The wallet used to sign the Data
+        data:
+            Data to be signed
+    
+    Returns:
+        signature:
+            Signature of the key signing for the data
+    """
+    try:
+        signature = wallet.hotkey.sign(data.encode()).hex()
+        return signature
+    except TypeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise TypeError from e
+    except AttributeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise AttributeError from e

@@ -90,6 +90,8 @@ $ bash scripts/run_auto_updater.sh \
 
 Replace the values for pm2_instance_names with the correct instance names from the earlier run commands. If you're running your miner/validator/auto-updater from branch other than main, you need to be in that particular branch when you create the PM2 instances. If you are only running a validator or you dont want to prepare the miners, set the `--prepare_miners` to False.
 
+If you want to change the limit for the validator stake blacklist, you can adjust it with `--validator_min_stake` parameter (for example, `--validator_min_stake 0` to disable the minimum stake requirement)
+
 The `run_neuron.sh` script creates \<instance_name>.config.js files containing the PM2 ecosystem configuration.
 
 > [!WARNING]  

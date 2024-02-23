@@ -22,7 +22,6 @@ import time
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
-    EnginePrompt,
     timeout_decorator,
     validate_miner_blacklist,
     validate_numerical_value,
@@ -201,17 +200,14 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        # Determine target value for scoring
-        if query["data"]["isPromptInjection"] is True:
-            target = 1.0
-        else:
-            target = 0.0
-        bt.logging.debug(f"Confidence target set to: {target}")
-
         log_timestamp = int(time.time())
         if self.wandb_available and self.use_wandb:
             wandb.log({'Target':target}, step = log_timestamp)
             bt.logging.trace(f"Adding wandb logs for target: {target}")
+
+        target = query["label"]
+
+        bt.logging.debug(f"Confidence target set to: {target}")
 
         # Initiate the response objects
         response_data = []
@@ -229,7 +225,7 @@ class PromptInjectionValidator(BaseNeuron):
             )
 
             # Set the score for invalid responses to 0.0
-            if not scoring.process.validate_response(response.output):
+            if not scoring.process.validate_response(hotkey, response.output):
                 self.scores, old_score = scoring.process.assign_score_for_uid(
                     self.scores, processed_uids[i], self.neuron_config.alpha, 0.0
                 )
@@ -254,6 +250,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
                     "synapse_uuid": response.output["synapse_uuid"],
+                    "signature": response.output["signature"]
                 }
 
                 text_class = [
@@ -407,7 +404,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Calculate distance score
         distance_score = scoring.process.calculate_subscore_distance(response, target)
-        if not distance_score:
+        if distance_score is None:
             bt.logging.debug(
                 f"Received an invalid response: {response} from hotkey: {hotkey}"
             )
@@ -415,7 +412,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Calculate speed score
         speed_score = scoring.process.calculate_subscore_speed(self.timeout, response_time)
-        if not distance_score:
+        if speed_score is None:
             bt.logging.debug(
                 f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
             )
@@ -431,7 +428,7 @@ class PromptInjectionValidator(BaseNeuron):
             return scoring.process.get_engine_response_object()
 
         # Set weights for scores
-        score_weights = {"distance": 0.8, "speed": 0.2}
+        score_weights = {"distance": 0.85, "speed": 0.15}
 
         # Get penalty multipliers
         distance_penalty, speed_penalty = self.get_response_penalties(
@@ -462,6 +459,8 @@ class PromptInjectionValidator(BaseNeuron):
         score_logger = {
             "hotkey": hotkey,
             "prompt": prompt,
+            "target": target,
+            "synapse_uuid": response["synapse_uuid"],
             "score_weights": score_weights,
             "penalties": {"distance": distance_penalty, "speed": speed_penalty},
             "raw_scores": {"distance": distance_score, "speed": speed_score},
@@ -480,6 +479,8 @@ class PromptInjectionValidator(BaseNeuron):
             final_speed_score=final_speed_score,
             distance_penalty=distance_penalty,
             speed_penalty=speed_penalty,
+            raw_distance_score=distance_score,
+            raw_speed_score=speed_score
         )
 
     def apply_penalty(self, response, hotkey, prompt) -> tuple:
@@ -515,7 +516,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         return similarity, base, duplicate
 
-    def serve_prompt(self) -> EnginePrompt:
+    def serve_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
         This function selects a random prompt from the dataset to be
@@ -525,18 +526,12 @@ class PromptInjectionValidator(BaseNeuron):
             None
 
         Returns:
-            prompt: An instance of EnginePrompt
+            prompt: An instance of dict containing the prompt data
         """
 
         entry = mock_data.get_prompt()
 
-        prompt = EnginePrompt(
-            engine="Prompt Injection",
-            prompt=entry["text"],
-            data={"isPromptInjection": entry["isPromptInjection"]},
-        )
-
-        return prompt
+        return entry
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
