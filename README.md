@@ -148,55 +148,29 @@ Fine-tuning and development have been described in their respective guides:
 
 # SN14 patching policy
 
-> [!NOTE]
-> These policies will be valid as of the release v0.3.0
-
 In order to ensure the subnet users can prepare in advance we have defined a formal patching policy for the subnet components.
 
 The subnet uses **semantic versioning** in which the version number consists of three parts (Major.Minor.Patch) and an optional pre-release tag (-beta, -alpha). Depending on the type of release, there are a few things that the subnet users should be aware of.
 
 - Major Releases (**X**.0.0)
-    - There will always be breaking changes and updates are mandatory for all subnet users.
-    - After the update is released, the *weights_version* hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
+    - There can be breaking changes and updates are mandatory for all subnet users.
+    - After the update is released, the `weights_version` hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
     - Major releases are communicated in the SN14 Discord Channel at least 1 week in advance
-    - The major release will always be done on Wednesday at 15:00 UTC+0
+    - The major release will always be done on Wednesday roughly at 15:00 UTC+0
+    - Registration may be disabled for up to 24 hours
 
 - Minor releases (0.**X**.0)
-    - There can be breaking changes and if there are, the update will be announced in the SN14 Discord Channel at least 48 hours in advance
-    - If there are breaking changes, the *weights_version* hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
-    - If there are no breaking changes, the *weights_version* hyperparameter will be adjusted 24 hours after the launch.
-    - Minor releases are released on weekdays at 15:00 UTC+0.
+    - There can be breaking changes.
+    - In case there are breaking changes, the update will be announced in the SN14 Discord Channel at least 48 hours in advance. Otherwise a minimum of 24 hour notice is given.
+    - If there are breaking changes, the `weights_version` hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
+    - If there are no breaking changes, the `weights_version` hyperparameter will be adjusted 24 hours after the launch.
+    - Minor releases are released on weekdays roughly at 15:00 UTC+0.
     - Minor releases are mandatory for all subnet users
+    - Registration may be disabled for up to 24 hours
 
 - Patch releases (0.0.**X**)
     - Patch releases do not contain breaking changes and updates will not be mandatory unless there is a need to hotfix either scoring or penalty algorithms
-    
-
-## Version 1.0 feature objectives
-The following is a list of high-level objectives for version 1.0 of the entire project (some of these are not directly related to the subnet code)
-- The following analyzers
-  - Prompt injection (already implemented)
-  - Prompt-response (fraud, jailbreaking, etc.)
-  - Content filtering (topic banning, prompt anonymization, secrets detection, etc.)
-  - Language/Code
-- 4+ engines per analyzer
-- Demo application
-- Prompt API (for synthetic prompts)
-- Subnet API (for third-party developers)
-- Async support for the subnet protocol
-- Miner profiles and the possibility to specialize in select analyzers (if possible to implement)
-- Wandb (or some other local database for analyzing the miner/validator performance)
-- Tests for fundamental validator/miner and engine features
-- Proper datasets for model creation
-- Full reference documentation for development/fine-tuning 
-- Sample implementation of a dedicated validator
-- Improved scoring and gating algorithms
-- ~~Automated miner/validator updating in run.sh script~~ (done)
-- Out-of-the-box support in the miner script for customized engines
-- \+ possibly many other features depending on the needs of the community
-
-The current target is to release version 1.0 either in late Q1/2024 or early Q2/2024.
-
+    - Patch releases without changes to scoring or penalty algorithms are pushed to production without a prior notice and the update the update is optional
 
 ## How to integrate into the subnet?
 One of the long-term development targets we have is to provide a subnet that all Bittensor users can rely on when securing their subnets, applications and other solutions built on top of the Bittensor platform. 
