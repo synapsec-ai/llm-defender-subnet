@@ -477,22 +477,31 @@ class PromptInjectionValidator(BaseNeuron):
             f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
         )
         return similarity, base, duplicate
+    
+    def get_api_prompt(self) -> dict:
+    
 
     def serve_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
-        This function selects a random prompt from the dataset to be
-        served for the miners connected to the subnet.
+        This function queries a prompt from the API, and if the API
+        fails for some reason itselects a random prompt from the dataset 
+        to be served for the miners connected to the subnet.
 
         Args:
             None
 
         Returns:
-            prompt: An instance of dict containing the prompt data
+            entry:
+                A dict instance 
         """
 
-        entry = mock_data.get_prompt()
-
+        try: 
+            # Attempt to get prompt from prompt API
+            entry = self.get_api_prompt()
+        except:
+            # Get the old dataset if the API cannot be called for some reason
+            entry = mock_data.get_prompt()
         return entry
 
     def check_hotkeys(self):

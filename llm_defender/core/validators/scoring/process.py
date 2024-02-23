@@ -207,7 +207,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
             f"Alpha must be less than 1.0 and greater than or equal to 0.1. Value: {alpha}"
         )
 
-    if not (0.0 <= prompt_weight <= 1.0):
+    if not isinstance(prompt_weight, (int,float)) or isinstance(prompt_weight, bool) or not (0.0 < prompt_weight <= 1.0):
         logging.error(f"Value for prompt_weight is incorrect: {prompt_weight}")
         raise AttributeError(
             f"prompt_weight must be greater than or equal to 0.0 and less than or equal to 1.0. Value: {prompt_weight}"

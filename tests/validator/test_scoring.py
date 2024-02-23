@@ -6,6 +6,7 @@ from llm_defender import __spec_version__ as subnet_version
 from torch import Tensor, zeros
 from llm_defender.base import utils
 import bittensor as bt
+import copy
 
 def test_subscore_distance_calculation():
     valid_response_base = {
@@ -80,17 +81,46 @@ def test_score_assignment():
     # Valid parameters
     alpha = 0.9
     scores = Tensor([0.6, 0.1, 0.2, 0.3])
+    ref_scores = copy.deepcopy(scores)
     response_score = 0.5
     prompt_weight = 0.75
 
     # Basic scenario
     test_scores = []
     for uid, _ in enumerate(scores.tolist()):
-        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
-        test_scores.append(test_score)
-        assert test_old_score == scores.tolist()[uid]
+        test_score,test_old_score,_ = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_scores.append(round(test_score.tolist()[uid],4))
+        assert test_old_score == ref_scores.tolist()[uid]
 
-    assert test_scores == Tensor([0.5925, 0.13, 0.2225, 0.315]).tolist()
+    assert test_scores == [round(k,4) for k in Tensor([0.5925, 0.1300, 0.2225, 0.3150]).tolist()]
+
+    # More tests to confirm scoring system works correctly 
+    scores = Tensor([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+    response_scores = [1.0, 0.0, 0.6, 0.4, 1.0, 0.0, 0.6, 0.4]
+    prompt_weights = [1.0, 1.0, 1.0, 1.0, 0.5, 0.5, 0.5, 0.5]
+    new_scores = [0.55, 0.45, 0.51, 0.49, 0.525, 0.475, 0.505, 0.495]
+    uids = [0,1,2,3,4,5]
+
+    for rs, pw, ns, uid in zip(response_scores,prompt_weights,new_scores, uids):
+        test_score,old_score,_ = process.assign_score_for_uid(scores = scores, uid=uid, alpha=alpha, response_score=rs,prompt_weight=pw)
+        assert old_score == 0.5
+        assert round(test_score.tolist()[uid],3) == ns
+
+    # Test prompt weights 
+    # Valid prompt weights 
+    uid = 0
+    scores = Tensor([1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,])
+    response_score = 0.5
+    test_prompt_weights = [0.000001, 0.1, 0.3, 0.5, 0.7, 0.9, 0.9999999, 1.0]
+    for uid,entry in enumerate(test_prompt_weights):
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
+
+
+    # Invalid prompt weights
+    test_prompt_weights = [-0.1, -0.00001, 1.1, 1.000001, 3, 5, -3, -5, -100, 100, True, False, 'foo', [], {}, [0.5], {'prompt_weight': 0.5}]
+    for uid,entry in enumerate(test_prompt_weights):
+        with pytest.raises(AttributeError):
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
 
     # Test alpha
     # Valid alpha
@@ -108,7 +138,7 @@ def test_score_assignment():
     # Valid response score
     test_response_score = [0.0, 0.1, 0.2, 0.5, 0.9, 1.0]
     for _,entry in enumerate(test_response_score):
-        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry)
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
 
     # Invalid response score
     test_response_score = [-0.1, -1, -0.001, 1.1, 1, 0, 5, True, False, None, "foo", [], {}, [0.1], {"foo": "bar"}]
@@ -141,8 +171,10 @@ def test_score_assignment():
     scores = Tensor([0.5])
     uid = 0
     response_score = 0.0
+    prompt_weight = 1.0
     while(True):
         test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        print(test_score[uid])
         if test_score[uid] == 0.0:
             break
 
@@ -151,12 +183,11 @@ def test_score_assignment():
     scores = Tensor([0.5])
     uid = 0
     response_score = 1.0
+    prompt_weight = 1.0
     while(True):
         test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         if test_score[uid] == 1.0:
             break
-
-
 
 def test_engine_response_object():
 
@@ -243,7 +274,6 @@ def test_total_distance_score_calculation():
     for _, entry in enumerate(invalid_inputs):
         assert process.calculate_total_distance_score(distance_scores=entry) == 0.0
 
-
 def test_speed_subscore_calculation():
 
     timeout = 12.0
@@ -275,7 +305,6 @@ def test_speed_subscore_calculation():
             process.calculate_subscore_speed(timeout=entry, response_time=response_time)
             == None
         )
-
 
 def test_distance_score_calculation():
 
@@ -355,7 +384,6 @@ def test_distance_score_calculation():
         == 1.0
     )
 
-
 def test_response_validator():
     """This method tests the response validation function"""
     # pylint: disable=W0212
@@ -421,3 +449,24 @@ def test_response_validator():
         invalid_response["confidence"] = val
         assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=invalid_response) is False
         assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=val) is False
+
+def main():
+    print("test_subscore_distance_calculation")
+    test_subscore_distance_calculation()
+    print("test_engine_response_object")
+    test_engine_response_object()
+    print("test_response_object")
+    test_response_object()
+    print("test_total_distance_score_calculation")
+    test_total_distance_score_calculation()
+    print("test_speed_subscore_calculation")
+    test_speed_subscore_calculation()
+    print("test_distance_score_calculation")
+    test_distance_score_calculation()
+    print("test_response_validator")
+    test_response_validator()
+    print("test_score_assignment")
+    test_score_assignment()
+
+if __name__ == '__main__':
+    main()

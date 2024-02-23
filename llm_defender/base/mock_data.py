@@ -77,7 +77,7 @@ def _get_injection_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 1, 1.0)
+    return serve_response("Prompt Injection", "Dataset", prompt, 1, 0.1)
 
 
 def _get_safe_prompt_from_file():
@@ -94,7 +94,7 @@ def _get_safe_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 0, 1.0)
+    return serve_response("Prompt Injection", "Dataset", prompt, 0, 0.1)
 
 def _get_injection_prompt_from_template():
     template_file_name = "templates.bin.gz"
@@ -120,4 +120,4 @@ def _get_injection_prompt_from_template():
     # Replace [inject-string] with the injection content in the template line
     prompt = template_line.replace("[inject-string]", injection_line)
 
-    return serve_response("Prompt Injection", "Universal", prompt, 1, 1.0)
+    return serve_response("Prompt Injection", "Universal", prompt, 1, 0.1)
