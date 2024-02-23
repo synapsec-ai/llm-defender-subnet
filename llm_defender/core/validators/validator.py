@@ -209,7 +209,7 @@ class PromptInjectionValidator(BaseNeuron):
             # Set the score for invalid responses to 0.0
             if not scoring.process.validate_response(hotkey, response.output):
                 self.scores, old_score = scoring.process.assign_score_for_uid(
-                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0
+                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0, query['weight']
                 )
                 responses_invalid_uids.append(processed_uids[i])
 
@@ -226,6 +226,7 @@ class PromptInjectionValidator(BaseNeuron):
                     processed_uids[i],
                     self.neuron_config.alpha,
                     scored_response["scores"]["total"],
+                    query['weight']
                 )
 
                 miner_response = {
