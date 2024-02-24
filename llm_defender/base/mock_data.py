@@ -2,6 +2,7 @@ import gzip
 import random
 import os
 import bittensor as bt
+from llm_defender.base.utils import validate_prompt
 
 def serve_response(analyzer: str=None, category: str=None, prompt: str=None, label: int=None, weight: float=None):
     """Serves the response in a standardized format
@@ -30,8 +31,11 @@ def serve_response(analyzer: str=None, category: str=None, prompt: str=None, lab
         "label": label,
         "weight": weight
     }
-
-    return res
+    if validate_prompt(res):
+        return res
+    else:
+        bt.logging.info(f"Detected invalid prompt: {res}")
+        raise ValueError(f"Detected invalid prompt: {res}")
 
 def get_prompt():
     # Generate random probabilities for three functions

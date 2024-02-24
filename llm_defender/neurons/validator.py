@@ -85,12 +85,12 @@ def main(validator: PromptInjectionValidator):
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
             # Get the query to send to the valid Axons
-            query = validator.serve_prompt()
+            synapse_uuid = str(uuid4())
+            query = validator.serve_prompt(synapse_uuid)
 
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
-            synapse_uuid = str(uuid4())
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
