@@ -18,7 +18,6 @@ from datetime import datetime
 from os import path, rename
 from pathlib import Path
 import torch
-import time
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
@@ -62,6 +61,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
+        self.prompt = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -532,9 +532,10 @@ class PromptInjectionValidator(BaseNeuron):
             prompt: An instance of dict containing the prompt data
         """
 
-        entry = mock_data.get_prompt()
+        if self.target_group == 0:
+            self.prompt = mock_data.get_prompt()
 
-        return entry
+        return self.prompt
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""

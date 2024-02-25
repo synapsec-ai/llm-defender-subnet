@@ -72,6 +72,10 @@ def main(validator: PromptInjectionValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
+            # Get the query to send to the valid Axons
+            query = validator.serve_prompt()
+            bt.logging.debug(f"Serving query: {query}")
+
             # Get list of UIDs to query
             (
                 uids_to_query,
@@ -81,11 +85,6 @@ def main(validator: PromptInjectionValidator):
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
-
-            # Get the query to send to the valid Axons
-            query = validator.serve_prompt()
-
-            bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
             synapse_uuid = str(uuid4())
@@ -224,7 +223,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--max-targets",
+        "--max_targets",
         type=int,
         default=64,
         help="Sets the value for the number of targets to query at once",
