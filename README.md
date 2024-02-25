@@ -55,7 +55,6 @@ $ bash scripts/run_neuron.sh \
 --wallet.name YourColdkeyGoesHere \
 --wallet.hotkey YourHotkeyGoesHere \
 --axon.port 15000 \
---miner_set_weights True
 ```
 You can optionally provide --miner_set_weights True|False, --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
@@ -75,7 +74,7 @@ $ bash scripts/run_neuron.sh \
 ```
 You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
-If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False. The parameter defaults to True.
+If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False. The parameter defaults to False.
 
 Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
 ```
