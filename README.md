@@ -99,6 +99,22 @@ The `run_neuron.sh` script creates \<instance_name>.config.js files containing t
 
 ## Wandb
 If you want to enable wandb support for either the validator or the miner, you need to perform additional steps as outlined below:
+- Register for wandb and acquire license suitable for your user-case
+- Create a new project and copy the API key for the project
+- Copy the `.env.sample` to `.env` and fill in the parameters or setup environmental variables accordingly
+```
+$ cp .env.sample .env
+```
+Value for `WANDB_KEY` should be the project API key, value for `WANDB_PROJECT` should be the project name and `WANDB_ENTITY` should be your username. Additionally, `WANDB_ENABLE` must be set to `1` to enable wandb. Setting `WANDB_ENABLE` to `0` disables wandb even if other parameters are setup correctly.
+
+Example of a valid `.env` file:
+```
+WANDB_ENABLE=1
+WANDB_KEY=1234789abcdefghijklmopqrsu
+WANDB_PROJECT=projectname
+WANDB_ENTITY=username
+```
+
 
 ## Troubleshooting 101
 (1) How to run clean installation?
