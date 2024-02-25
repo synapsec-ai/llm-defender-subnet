@@ -22,7 +22,7 @@ __spec_version__ = (
 
 # Read wandb status
 wandb_enabled = environ.get("WANDB_ENABLE")
-if int(wandb_enabled) == 1:
+if wandb_enabled is not None and int(wandb_enabled) == 1:
     __wandb__ = True
 else:
     __wandb__ = False
