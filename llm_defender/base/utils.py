@@ -6,46 +6,6 @@ import gc
 import multiprocessing
 import bittensor as bt
 
-def wandb_available():
-    """
-    Checks if wandb is available to import. Used as a check for when wandb 
-    logging is implemented in other parts of the logic.
-
-    Arguments:
-
-    Returns:
-        True if wandb is available.
-        False if wandb is not available.
-    """
-    try:
-        import wandb 
-        return True 
-    except ImportError:
-        return False 
-    
-if wandb_available():
-    import wandb
-
-def custom_wandb_metric(data,**kwargs):
-    """
-    Allows for custom wandb logging of metrics (in engines, etc.).
-
-    Arguments:
-        data:
-            This must be a dict instance, where the key will be the 
-            title of the graph in wandb, and the associated value will
-            be the y-axis value of the graph.
-        **kwargs:
-            Applies to wandb.log()
-        step:
-            If specified, this will be the x-axis of the graph.
-
-    Returns:
-        None
-    """
-    wandb.log(data,**kwargs)
-    bt.logging.trace(f"Custom wandb log added for data: {data}")
-
 class EnginePrompt:
     """
     This class implements a consistent way of representing different

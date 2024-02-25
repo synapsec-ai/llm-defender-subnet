@@ -29,11 +29,12 @@ from llm_defender.base.utils import (
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
-
 import llm_defender.core.validators.scoring as scoring
-from llm_defender.base.utils import wandb_available
-if wandb_available():
-    import wandb
+
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -61,6 +62,13 @@ class PromptInjectionValidator(BaseNeuron):
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
+
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = WandbHandler()
+        else:
+            self.wandb_enabled = False
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -167,16 +175,6 @@ class PromptInjectionValidator(BaseNeuron):
             else:
                 self.max_targets = 256
 
-            self.wandb_available = wandb_available()
-
-            if args.use_wandb == 'True':
-                self.use_wandb = True
-            else:
-                self.use_wandb = False
-            if self.use_wandb and self.wandb_available:
-                self.wandb_project = args.wandb_project 
-                self.wandb_entity = args.wandb_entity
-
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -200,12 +198,15 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        log_timestamp = int(time.time())
-        if self.wandb_available and self.use_wandb:
-            wandb.log({'Target':target}, step = log_timestamp)
-            bt.logging.trace(f"Adding wandb logs for target: {target}")
-
         target = query["label"]
+        
+        if self.wandb_enabled:
+            # Update wandb timestamp for the current run
+            self.wandb_handler.set_timestamp()
+
+            # Log target to wandb
+            self.wandb_handler.log(data={'Target': target})
+            bt.logging.trace(f"Adding wandb logs for target: {target}")
 
         bt.logging.debug(f"Confidence target set to: {target}")
 
@@ -301,26 +302,28 @@ class PromptInjectionValidator(BaseNeuron):
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
                 }
 
-                if self.wandb_available and self.use_wandb:
-                    try:
-                        wandb_logs = [                    
-                            {f"UID {processed_uids[i]} Confidence":response_object['response']['confidence']},
-                            {f"UID {processed_uids[i]} Weight Score":float(self.scores[processed_uids[i]])},
-                            {f"UID {processed_uids[i]} Change in Weight Score":float(self.scores[processed_uids[i]]) - float(old_score)},
-                            {f"UID {processed_uids[i]} Total Score":scored_response['scores']['total']},
-                            {f"UID {processed_uids[i]} Distance Score":scored_response['scores']['distance']},
-                            {f"UID {processed_uids[i]} Speed Score":scored_response['scores']['speed']},
-                            {f"UID {processed_uids[i]} Distance Penalty":scored_response['penalties']['distance']},
-                            {f"UID {processed_uids[i]} Speed Penalty":scored_response['penalties']['speed']},
-                            {f"UID {processed_uids[i]} Text Classification Confidence":text_class[0]['confidence']},
-                            {f"UID {processed_uids[i]} Vector Search Confidence":vector_search[0]['confidence']},
-                            {f"UID {processed_uids[i]} YARA Confidence":yara[0]['confidence']}
-                        ]
-                        for wl in wandb_logs:
-                            wandb.log(wl, step = log_timestamp)
-                        bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
-                    except:
-                        bt.logging.trace(f"wandb logging failed for UID: {processed_uids[i]}")
+                if self.wandb_enabled:
+                    wandb_logs = [                    
+                        {f"{response_object['UID']}:{response_object['hotkey']}_confidence":response_object['response']['confidence']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_total":response_object['scored_response']['scores']['total']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_distance":response_object['scored_response']['scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_speed":response_object['scored_response']['scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance":response_object['scored_response']['raw_scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed":response_object['scored_response']['raw_scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new":response_object['weight_scores']['new']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old":response_object['weight_scores']['old']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change":response_object['weight_scores']['change']},
+                    ]
+
+                    for entry in response_object["engine_data"]:
+                        wandb_logs.append(
+                            {f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence":entry['confidence']},
+                        )
+                    for wandb_log in wandb_logs:
+                        self.wandb_handler.log(wandb_log)
+                    
+                    bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
+            
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)

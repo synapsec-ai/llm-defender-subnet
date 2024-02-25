@@ -96,6 +96,8 @@ The `run_neuron.sh` script creates \<instance_name>.config.js files containing t
 
 > [!WARNING]  
 > The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
+## Wandb
+If you want to enable wandb support for either the validator or the miner, you need to perform additional steps as outlined below:
 
 ## Troubleshooting 101
 (1) How to run clean installation?

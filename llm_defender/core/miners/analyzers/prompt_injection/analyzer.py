@@ -5,10 +5,12 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers.prompt_injection.yara import YaraEngine
 from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
 from llm_defender.core.miners.analyzers.prompt_injection.vector_search import VectorEngine
-from llm_defender.base.utils import sign_data, wandb_available
+from llm_defender.base.utils import sign_data
 
-if wandb_available():
-    import wandb
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class PromptInjectionAnalyzer:
     """This class is responsible for handling the analysis for prompt injection
@@ -36,7 +38,7 @@ class PromptInjectionAnalyzer:
     
     """
 
-    def __init__(self, wallet: bt.wallet, subnet_version: int, args):
+    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler):
         # Parameters
         self.wallet = wallet
         self.subnet_version = subnet_version
@@ -46,17 +48,14 @@ class PromptInjectionAnalyzer:
         self.model, self.tokenizer = TextClassificationEngine().initialize()
         self.yara_rules = YaraEngine().initialize()
 
-        # Wandb
-        self.wandb_available = wandb_available()        
-
-        if args.use_wandb == 'True':
-            self.use_wandb = True
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = wandb_handler
         else:
-            self.use_wandb = False
+            self.wandb_enabled = False
+            self.wandb_handler = None
 
-        if self.use_wandb and self.wandb_available:
-            self.wandb_project = args.wandb_project 
-            self.wandb_entity = args.wandb_entity
     
     def execute(self, synapse: LLMDefenderProtocol) -> dict:
         # Responses are stored in a dict
@@ -96,20 +95,21 @@ class PromptInjectionAnalyzer:
         output["signature"] = sign_data(self.wallet, output["synapse_uuid"])
 
         # Wandb logging
-        if self.use_wandb and self.wandb_available:
-            try:
-                wandb_logs = [
-                    {"YARA Confidence":yara_response['confidence']},
-                    {"Text Classification Confidence":text_classification_response['confidence']},
-                    {"Vector Search Confidence":vector_response['confidence']},
-                    {"Total Confidence":output['confidence']}
-                ]   
-                log_timestamp = int(time.time())
-                for wl in wandb_logs:
-                    wandb.log(wl, step=log_timestamp)    
-                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
-            except:
-                bt.logging.trace("Wandb logging failed for engine confidences.")
+        if self.wandb_enabled:
+            self.wandb_handler.set_timestamp()
+
+            wandb_logs = [
+                {"YARA Confidence":yara_response['confidence']},
+                {"Text Classification Confidence":text_classification_response['confidence']},
+                {"Vector Search Confidence":vector_response['confidence']},
+                {"Total Confidence":output['confidence']}
+            ]   
+
+            for wandb_log in wandb_logs:
+                self.wandb_handler.log(data=wandb_log)
+            
+            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            bt.logging.trace("Wandb logging failed for engine confidences.")
         
         synapse.output = output
 

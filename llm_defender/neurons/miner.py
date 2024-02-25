@@ -11,9 +11,6 @@ import time
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
-from llm_defender.base.utils import wandb_available
-if wandb_available():
-    import wandb
 
 def main(miner: LLMDefenderMiner):
     """
@@ -21,10 +18,6 @@ def main(miner: LLMDefenderMiner):
     upon the initialization of the miner. If you want to change the
     miner configuration, please adjust the initialization parameters.
     """
-
-    if miner.wandb_available and miner.use_wandb:
-        wandb.init(project=miner.wandb_project, entity=miner.wandb_entity)
-        bt.logging.info(f"Initialized wandb with entity: {miner.wandb_entity} & project: {miner.wandb_project}.")
 
     # Link the miner to the Axon
     axon = bt.axon(wallet=miner.wallet, config=miner.neuron_config)
@@ -116,21 +109,18 @@ def main(miner: LLMDefenderMiner):
 
                 bt.logging.info(log)
 
-                if miner.wandb_available and miner.use_wandb:
-                    try:
-                        wandb_logs = [
-                            {'Rank':miner.metagraph.R[miner.miner_uid].item()},
-                            {'Trust':miner.metagraph.T[miner.miner_uid].item()},
-                            {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
-                            {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
-                            {'Emission':miner.metagraph.E[miner.miner_uid].item()}
-                        ]
-                        log_timestamp = int(time.time())
-                        for wl in wandb_logs:
-                            wandb.log(wl, step=log_timestamp)
-                        bt.logging.trace(f"Wandb logs added: {wandb_logs}")
-                    except:
-                        bt.logging.trace("Wandb logging for miner stats failed.")
+                if miner.wandb_enabled:
+                    wandb_logs = [
+                        {'Rank':miner.metagraph.R[miner.miner_uid].item()},
+                        {'Trust':miner.metagraph.T[miner.miner_uid].item()},
+                        {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
+                        {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
+                        {'Emission':miner.metagraph.E[miner.miner_uid].item()}
+                    ]
+                    miner.wandb_handler.set_timestamp()
+                    for wandb_log in wandb_logs:
+                        miner.wandb_handler.log(data=wandb_log)
+                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)
@@ -139,7 +129,7 @@ def main(miner: LLMDefenderMiner):
         except KeyboardInterrupt:
             axon.stop()
             bt.logging.success("Miner killed by keyboard interrupt.")
-            wandb.finish()
+            miner.wandb_handler.wandb_run.finish()
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception:
@@ -171,25 +161,6 @@ if __name__ == "__main__":
         type=float,
         default=20000.0,
         help="Determine the minimum stake the validator should have to accept requests",
-    )
-
-    parser.add_argument(
-        '--use_wandb',
-        type=str,
-        default="False",
-        help='Toggles wandb support. If specified, wandb will be included when running miner/validator loops.'
-    )
-
-    parser.add_argument(
-        "--wandb_project",
-        type=str,
-        help='Specifies the wandb project. Please make sure to specify the --use_wandb flag if you plan on using wandb.'
-    )
-
-    parser.add_argument(
-        "--wandb_entity",
-        type=str,
-        help='Specifies the wandb entity (username/team name). Please make sure to specify the --use_wandb flag if you plan on using wandb.'
     )
 
     # Create a miner based on the Class definitions

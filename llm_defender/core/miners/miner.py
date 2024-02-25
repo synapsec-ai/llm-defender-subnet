@@ -21,6 +21,10 @@ from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
 
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class LLMDefenderMiner(BaseNeuron):
     """LLMDefenderMiner class for LLM Defender Subnet
@@ -101,10 +105,18 @@ class LLMDefenderMiner(BaseNeuron):
 
         self.hotkey_blacklisted = False
 
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = WandbHandler()
+        else:
+            self.wandb_enabled = False
+            self.wandb_handler = None
+        
         # Initialize the analyzers
         self.analyzers = {
             "Prompt Injection": PromptInjectionAnalyzer(
-                wallet=self.wallet, subnet_version=self.subnet_version, args=args
+                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler
             )
         }
 
