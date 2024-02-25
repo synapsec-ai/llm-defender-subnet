@@ -71,11 +71,13 @@ def calculate_subscore_distance(response, target) -> float:
     if isinstance(response, bool) or not isinstance(response, dict):
         return None
 
+    # If engine response is invalid, return None
     if (
         "engines" not in response.keys()
         or isinstance(response["engines"], bool)
         or not isinstance(response["engines"], list)
         or response["engines"] == []
+        or len(response["engines"]) != 3
     ):
         return None
 
