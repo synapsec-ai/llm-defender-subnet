@@ -162,7 +162,7 @@ def test_score_assignment():
     
     # Verify that scores below 0.0000001 are set to 0.0
     scores[uid] = 0.00000005
-    test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+    test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
     assert test_score[uid] == 0.0
     assert test_old_score == 0.00000005
 
@@ -173,7 +173,7 @@ def test_score_assignment():
     response_score = 0.0
     prompt_weight = 1.0
     while(True):
-        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         print(test_score[uid])
         if test_score[uid] == 0.0:
             break
@@ -185,7 +185,8 @@ def test_score_assignment():
     response_score = 1.0
     prompt_weight = 1.0
     while(True):
-        test_score,test_old_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        print(test_score[uid])
         if test_score[uid] == 1.0:
             break
 
