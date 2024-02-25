@@ -6,6 +6,65 @@ import gc
 import multiprocessing
 import bittensor as bt
 
+class EnginePrompt:
+    """
+    This class implements a consistent way of representing different
+    prompts to be analyzed by the subnet.
+
+    Attributes:
+        engine: 
+            An instance of str displaying the name of the engine.
+        prompt:
+            An instance of str displaying the prompt for the engine 
+            to analyze.
+        data:
+            An instance of dict displaying the data necessary for the 
+            engine to function.
+
+    Methods:
+        __init__()
+            Initializes the EnginePrompt class with attributes engine, 
+            prompt & data.
+        get_dict()
+            Returns a dict representation of the EnginePrompt class.
+    """
+
+    def __init__(self, engine: str, prompt: str, data: dict):
+        """
+        Initializes the engine, prompt & data attributes for the EnginePrompt
+        class.
+
+        Arguments:
+            engine: 
+                An instance of str displaying the name of the engine.
+            prompt:
+                An instance of str displaying the prompt for the engine 
+                to analyze.
+            data:
+                An instance of dict displaying the data necessary for the 
+                engine to function.
+        
+        Returns:
+            None
+        """
+        self.prompt = prompt
+        self.engine = engine
+        self.data = data
+
+    def get_dict(self) -> dict:
+        """
+        This function returns dict representation of the class
+
+        Arguments:
+            None
+
+        Returns:
+            dict:
+                A dict instance of the attributes of the EnginePrompt
+                class. Contains keys "engine", "prompt" and "data"
+        """
+        return {"engine": self.engine, "prompt": self.prompt, "data": self.data}
+
 class EngineResponse:
     """
     This class implements a consistent way of representing different

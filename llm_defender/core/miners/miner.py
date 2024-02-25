@@ -21,6 +21,10 @@ from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
 
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class LLMDefenderMiner(BaseNeuron):
     """LLMDefenderMiner class for LLM Defender Subnet
@@ -101,10 +105,18 @@ class LLMDefenderMiner(BaseNeuron):
 
         self.hotkey_blacklisted = False
 
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = WandbHandler()
+        else:
+            self.wandb_enabled = False
+            self.wandb_handler = None
+        
         # Initialize the analyzers
         self.analyzers = {
             "Prompt Injection": PromptInjectionAnalyzer(
-                wallet=self.wallet, subnet_version=self.subnet_version
+                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler
             )
         }
 
@@ -326,14 +338,20 @@ class LLMDefenderMiner(BaseNeuron):
 
         # Execute the correct analyzer
         if synapse.analyzer == "Prompt Injection":
-            bt.logging.debug(f'Executing the {synapse.analyzer} analyzer')
+            bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
             output = self.analyzers["Prompt Injection"].execute(synapse=synapse)
         else:
-            bt.logging.error(f'Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}')
+            bt.logging.error(
+                f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
+            )
             return synapse
 
-        bt.logging.debug(f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}')
-        bt.logging.debug(f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}')
+        bt.logging.debug(
+            f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}'
+        )
+        bt.logging.debug(
+            f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
+        )
         bt.logging.success(
             f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
         )

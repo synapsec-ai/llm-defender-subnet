@@ -18,6 +18,7 @@ from datetime import datetime
 from os import path, rename
 from pathlib import Path
 import torch
+import time
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
@@ -28,9 +29,12 @@ from llm_defender.base.utils import (
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
-
 import llm_defender.core.validators.scoring as scoring
 
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -58,6 +62,13 @@ class PromptInjectionValidator(BaseNeuron):
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
+
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = WandbHandler()
+        else:
+            self.wandb_enabled = False
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -163,6 +174,7 @@ class PromptInjectionValidator(BaseNeuron):
                 self.max_targets = args.max_targets
             else:
                 self.max_targets = 256
+
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -186,8 +198,15 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        # Determine target value for scoring
         target = query["label"]
+        
+        if self.wandb_enabled:
+            # Update wandb timestamp for the current run
+            self.wandb_handler.set_timestamp()
+
+            # Log target to wandb
+            self.wandb_handler.log(data={'Target': target})
+            bt.logging.trace(f"Adding wandb logs for target: {target}")
 
         bt.logging.debug(f"Confidence target set to: {target}")
 
@@ -283,6 +302,28 @@ class PromptInjectionValidator(BaseNeuron):
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
                 }
 
+                if self.wandb_enabled:
+                    wandb_logs = [                    
+                        {f"{response_object['UID']}:{response_object['hotkey']}_confidence":response_object['response']['confidence']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_total":response_object['scored_response']['scores']['total']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_distance":response_object['scored_response']['scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_speed":response_object['scored_response']['scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance":response_object['scored_response']['raw_scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed":response_object['scored_response']['raw_scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new":response_object['weight_scores']['new']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old":response_object['weight_scores']['old']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change":response_object['weight_scores']['change']},
+                    ]
+
+                    for entry in response_object["engine_data"]:
+                        wandb_logs.append(
+                            {f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence":entry['confidence']},
+                        )
+                    for wandb_log in wandb_logs:
+                        self.wandb_handler.log(wandb_log)
+                    
+                    bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
+            
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)

@@ -8,20 +8,18 @@ from argparse import ArgumentParser
 from uuid import uuid4
 import torch
 import bittensor as bt
-import llm_defender.base.utils as utils
+from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import PromptInjectionValidator
 from llm_defender import __version__ as version
-
 
 def main(validator: PromptInjectionValidator):
     """
     This function executes the main function for the validator.
     """
-
+    
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
-
     while True:
         try:
             # Periodically sync subtensor status and save the state file
@@ -174,6 +172,7 @@ def main(validator: PromptInjectionValidator):
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
+
             if current_block - validator.last_updated_block > 100:
                 # Periodically update the weights on the Bittensor blockchain.
                 try:

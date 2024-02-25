@@ -247,7 +247,6 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     return scores, old_score
 
-
 def get_engine_response_object(
     total_score: float = 0.0,
     final_distance_score: float = 0.0,
@@ -272,7 +271,6 @@ def get_engine_response_object(
     }
 
     return res
-
 
 def get_response_object(
     uid: str, hotkey: str, target: float, prompt: str, synapse_uuid: str
