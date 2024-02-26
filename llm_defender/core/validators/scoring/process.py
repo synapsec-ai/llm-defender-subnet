@@ -239,7 +239,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:
-        return scores, old_score
+        return scores, old_score, 0.0
 
     logging.trace(f"Assigning score for UID: {uid}. Current score: {old_score}")
     unweighted_new_score = alpha * scores[uid] + (1 - alpha) * response_score
