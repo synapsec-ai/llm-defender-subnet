@@ -740,6 +740,8 @@ def test_validate_prompt():
         print(prompt_dict)
         assert utils.validate_prompt(prompt_dict) == False
 
+    print("All tests for utils.validate_prompt() complete.")
+
 def main():
     test_validate_prompt()
 

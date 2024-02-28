@@ -452,21 +452,13 @@ def test_response_validator():
         assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=val) is False
 
 def main():
-    print("test_subscore_distance_calculation")
     test_subscore_distance_calculation()
-    print("test_engine_response_object")
     test_engine_response_object()
-    print("test_response_object")
     test_response_object()
-    print("test_total_distance_score_calculation")
     test_total_distance_score_calculation()
-    print("test_speed_subscore_calculation")
     test_speed_subscore_calculation()
-    print("test_distance_score_calculation")
     test_distance_score_calculation()
-    print("test_response_validator")
     test_response_validator()
-    print("test_score_assignment")
     test_score_assignment()
 
 if __name__ == '__main__':
