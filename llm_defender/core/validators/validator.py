@@ -482,7 +482,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         return similarity, base, duplicate
     
-    def get_api_prompt(self,synapse_uuid) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid) -> dict:
     
         """Retrieves a promopt from the prompt API"""
 
@@ -491,10 +491,10 @@ class PromptInjectionValidator(BaseNeuron):
         "routeKey": "$default",
         "rawPath": "/prompt-api",
         "headers": {
-        "X-Hotkey": self.wallet.hotkey.ss58_address,
-        "X-Signature": sign_data(wallet = self.wallet, data = synapse_uuid),
-        "X-Synapseid": synapse_uuid
-        },
+                    "X-Hotkey": hotkey,
+                    "X-Signature": signature,
+                    "X-Synapseid": synapse_uuid
+                },
         "body": {"Some Message": "Hello from Lambda!"}
         }
 
@@ -519,9 +519,9 @@ class PromptInjectionValidator(BaseNeuron):
                 )
 
         except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the API: {e}")
+            bt.logging.error(f"Unable to read the response from the prompt API: {e}")
         except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
+            bt.logging.error(f"Unable to connect to the prompt API: {e}")
 
     def get_local_prompt():
         try:
@@ -547,7 +547,9 @@ class PromptInjectionValidator(BaseNeuron):
         """
 
         # Attempt to get prompt from prompt API
-        entry = self.get_api_prompt(synapse_uuid)
+        entry = self.get_api_prompt(hotkey = self.wallet.hotkey.ss58_address, 
+                                    signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
+                                    synapse_uuid = synapse_uuid)
         if not validate_prompt(entry):
             entry = self.get_local_prompt()
         return entry
