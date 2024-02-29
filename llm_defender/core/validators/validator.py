@@ -551,6 +551,7 @@ class PromptInjectionValidator(BaseNeuron):
                                     signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
                                     synapse_uuid = synapse_uuid)
         if not validate_prompt(entry):
+            bt.logging.trace("Unable to retrieve prompt from prompt API. Querying from local prompt dataset instead.")
             entry = self.get_local_prompt()
         return entry
             
