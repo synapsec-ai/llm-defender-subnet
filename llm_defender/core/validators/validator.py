@@ -487,12 +487,18 @@ class PromptInjectionValidator(BaseNeuron):
         """Retrieves a promopt from the prompt API"""
 
         request_data = {
-            "hotkey":self.wallet.hotkey.ss58_address,
-            "synapse_uuid":synapse_uuid,
-            "signature":sign_data(wallet = self.wallet, data = synapse_uuid)
+        "version": "2.0",
+        "routeKey": "$default",
+        "rawPath": "/prompt-api",
+        "headers": {
+        "X-Hotkey": self.wallet.hotkey.ss58_address,
+        "X-Signature": sign_data(wallet = self.wallet, data = synapse_uuid),
+        "X-Synapseid": synapse_uuid
+        },
+        "body": {"Some Message": "Hello from Lambda!"}
         }
 
-        prompt_api_url = ""
+        prompt_api_url = "https://ny1nnvnwnh.execute-api.eu-west-1.amazonaws.com/Prod/prompt"
 
         try:
             # get prompt
