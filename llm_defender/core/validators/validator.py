@@ -523,7 +523,7 @@ class PromptInjectionValidator(BaseNeuron):
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the prompt API: {e}")
 
-    def get_local_prompt():
+    def get_local_prompt(self):
         try:
             # Get the old dataset if the API cannot be called for some reason
             entry = mock_data.get_prompt()
