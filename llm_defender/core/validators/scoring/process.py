@@ -303,6 +303,7 @@ def get_response_object(
             "new": 0.0,
             "old": 0.0,
             "change": 0.0,
+            "unweighted":0.0
         },
         "engine_data": [],
     }
