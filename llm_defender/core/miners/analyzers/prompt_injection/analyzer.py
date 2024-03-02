@@ -38,10 +38,12 @@ class PromptInjectionAnalyzer:
     
     """
 
-    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler):
+    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: int):
         # Parameters
         self.wallet = wallet
+        self.miner_hotkey = self.wallet.hotkey.ss58_address
         self.subnet_version = subnet_version
+        self.miner_uid = miner_uid
 
         # Configuration options for the analyzer
         self.chromadb_client = VectorEngine().initialize()
@@ -99,10 +101,10 @@ class PromptInjectionAnalyzer:
             self.wandb_handler.set_timestamp()
 
             wandb_logs = [
-                {"YARA Confidence":yara_response['confidence']},
-                {"Text Classification Confidence":text_classification_response['confidence']},
-                {"Vector Search Confidence":vector_response['confidence']},
-                {"Total Confidence":output['confidence']}
+                {f"{self.miner_uid}:{self.miner_hotkey}_YARA Confidence":yara_response['confidence']},
+                {f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence":text_classification_response['confidence']},
+                {f"{self.miner_uid}:{self.miner_hotkey}_Vector Search Confidence":vector_response['confidence']},
+                {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence":output['confidence']}
             ]   
 
             for wandb_log in wandb_logs:

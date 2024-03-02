@@ -111,11 +111,11 @@ def main(miner: LLMDefenderMiner):
 
                 if miner.wandb_enabled:
                     wandb_logs = [
-                        {'Rank':miner.metagraph.R[miner.miner_uid].item()},
-                        {'Trust':miner.metagraph.T[miner.miner_uid].item()},
-                        {'Consensus':miner.metagraph.C[miner.miner_uid].item()},
-                        {'Incentive':miner.metagraph.I[miner.miner_uid].item()},
-                        {'Emission':miner.metagraph.E[miner.miner_uid].item()}
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank':miner.metagraph.R[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust':miner.metagraph.T[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus':miner.metagraph.C[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive':miner.metagraph.I[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission':miner.metagraph.E[miner.miner_uid].item()}
                     ]
                     miner.wandb_handler.set_timestamp()
                     for wandb_log in wandb_logs:
