@@ -498,7 +498,7 @@ class PromptInjectionValidator(BaseNeuron):
         "body": {"Some Message": "Hello from Lambda!"}
         }
 
-        prompt_api_url = "https://ny1nnvnwnh.execute-api.eu-west-1.amazonaws.com/Prod/prompt"
+        prompt_api_url = "https://czio6d2xbh.execute-api.eu-west-1.amazonaws.com/prompt-api"
 
         try:
             # get prompt
