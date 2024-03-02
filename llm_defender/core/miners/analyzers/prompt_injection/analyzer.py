@@ -111,7 +111,6 @@ class PromptInjectionAnalyzer:
                 self.wandb_handler.log(data=wandb_log)
             
             bt.logging.trace(f"Wandb logs added: {wandb_logs}")
-            bt.logging.trace("Wandb logging failed for engine confidences.")
         
         synapse.output = output
 
