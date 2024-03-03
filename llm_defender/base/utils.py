@@ -346,3 +346,35 @@ def sign_data(wallet: bt.wallet, data: str) -> str:
     except AttributeError as e:
         bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
         raise AttributeError from e
+
+def validate_prompt(prompt_dict):
+
+    # define valid data types for each key to check later
+    key_types = {
+    'analyzer':str,
+    'category':str,
+    'prompt':str,
+    'label':int,
+    'weight':(int, float)
+    }
+    # run checks
+    if not isinstance(prompt_dict, dict):
+        return False
+    if len([pd for pd in prompt_dict]) != 5:
+        return False
+    for pd in prompt_dict:
+        if pd not in ['analyzer','category','prompt','label','weight']:
+            return False 
+        if not isinstance(prompt_dict[pd], key_types[pd]):
+            return False 
+        elif pd == 'label':
+            if isinstance(prompt_dict[pd], bool):
+                return False
+            if prompt_dict[pd] not in [0,1]:
+                return False
+        elif pd == 'weight':
+            if isinstance(prompt_dict[pd], bool):
+                return False 
+            if not (0.0 < prompt_dict[pd] <= 1.0):
+                return False
+    return True

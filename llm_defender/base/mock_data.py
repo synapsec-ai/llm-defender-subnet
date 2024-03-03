@@ -2,6 +2,7 @@ import gzip
 import random
 import os
 import bittensor as bt
+from llm_defender.base.utils import validate_prompt
 
 def serve_response(analyzer: str=None, category: str=None, prompt: str=None, label: int=None, weight: float=None):
     """Serves the response in a standardized format
@@ -30,8 +31,11 @@ def serve_response(analyzer: str=None, category: str=None, prompt: str=None, lab
         "label": label,
         "weight": weight
     }
-
-    return res
+    if validate_prompt(res):
+        return res
+    else:
+        bt.logging.info(f"Detected invalid prompt: {res}")
+        raise ValueError(f"Detected invalid prompt: {res}")
 
 def get_prompt():
     # Generate random probabilities for three functions
@@ -77,7 +81,7 @@ def _get_injection_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 1, 1.0)
+    return serve_response("Prompt Injection", "Dataset", prompt, 1, 0.1)
 
 
 def _get_safe_prompt_from_file():
@@ -94,7 +98,7 @@ def _get_safe_prompt_from_file():
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 0, 1.0)
+    return serve_response("Prompt Injection", "Dataset", prompt, 0, 0.1)
 
 def _get_injection_prompt_from_template():
     template_file_name = "templates.bin.gz"
@@ -120,4 +124,4 @@ def _get_injection_prompt_from_template():
     # Replace [inject-string] with the injection content in the template line
     prompt = template_line.replace("[inject-string]", injection_line)
 
-    return serve_response("Prompt Injection", "Universal", prompt, 1, 1.0)
+    return serve_response("Prompt Injection", "Universal", prompt, 1, 0.1)

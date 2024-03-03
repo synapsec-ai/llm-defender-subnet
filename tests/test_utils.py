@@ -145,3 +145,605 @@ def test_signatures_and_validation():
     for _,entry in enumerate([True, False, 1, [], {}, {"foo": "bar"}, [1,2], ["foo", "bar"]]):
         with pytest.raises(AttributeError):
                 utils.sign_data(data=entry, wallet=wallet)
+
+def test_validate_prompt():
+    # Test correct input 
+    prompt_dicts = [
+        {
+        'analyzer':'Prompt Injection',
+        'category':'Dataset',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':'Dataset',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':'Dataset',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.9
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0.00001
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0.5
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0.2
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0.75923249
+        },
+    ]
+    
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == True
+
+    # Test overall incorrect inputs 
+    prompt_dicts = [
+        {
+            'analyzer':'Prompt Injection',
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,
+            'unnecessary_key':'unnecessary_value'    
+        },
+        {
+            'analyzer':'Prompt Injection',
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0, 
+        },
+        None,
+        ['analyzer','category','prompt','label','weight'],
+        [],
+        {},
+        1.0,
+        True,
+        False,
+        'foo',
+        1,
+        0,
+        -1,
+        ('analyzer','category','prompt','label','weight')
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test incorrect input for analyzer key
+    prompt_dicts = [
+        {
+            'analyzer':True,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':False,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':[],
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':['Prompt Injection'],
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':None,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':1,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':1.1,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':-0.1,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':-1,
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':{'analyzer':'Prompt Injection'},
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':(),
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        },
+        {
+            'analyzer':['Prompt Injection','Prompt Injection'],
+            'category':'Dataset',
+            'prompt':'Test prompt.',
+            'label':0,
+            'weight':1.0,   
+        }
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test incorrect input for category key 
+    prompt_dicts = [
+        {
+        'analyzer':'Prompt Injection',
+        'category':None,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':True,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':False,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':1,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':0.1,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':100,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':-1,
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':[],
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':['Dataset'],
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':(),
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':{"category":"Dataset"},
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        },
+        {
+        'analyzer':'Prompt Injection',
+        'category':{},
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.0
+        }
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test incorrect input for prompt key 
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':True,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':False,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':None,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':(),
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':[],
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':{},
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':1,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':100,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':0,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':-1,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':0.1,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':100.1,
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':["Test prompt."],
+        'label':0,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':{"prompt":'Test prompt.'},
+        'label':0,
+        'weight':0.1
+        }
+    ]        
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test incorrect input for label key 
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':None,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':True,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':False,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0.1,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0.5,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':-1,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':100,
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':'foo',
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':(),
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':[],
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':[0],
+        'weight':0.1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':{"label":0},
+        'weight':0.1
+        }
+    ]       
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test incorrect input for weight key
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':-0.00001
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':1.00001
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':0
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':True
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':False
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':None
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':()
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':-100
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':100.3424324234
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':{}
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':[]
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':[0.5]
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':{"weight":1.0}
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':0,
+        'weight':[0.1,0.2,0.3]
+        }
+    ] 
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    print("All tests for utils.validate_prompt() complete.")
+
+def main():
+    test_validate_prompt()
+
+if __name__ == '__main__':
+    main()

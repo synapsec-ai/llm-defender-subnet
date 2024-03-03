@@ -24,6 +24,8 @@ from llm_defender.base.utils import (
     timeout_decorator,
     validate_miner_blacklist,
     validate_numerical_value,
+    validate_prompt,
+    sign_data
 )
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
@@ -227,8 +229,8 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Set the score for invalid responses to 0.0
             if not scoring.process.validate_response(hotkey, response.output):
-                self.scores, old_score = scoring.process.assign_score_for_uid(
-                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0
+                self.scores, old_score, unweighted_new_score = scoring.process.assign_score_for_uid(
+                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0, query['weight']
                 )
                 responses_invalid_uids.append(processed_uids[i])
 
@@ -240,11 +242,12 @@ class PromptInjectionValidator(BaseNeuron):
                     response.output, target, query["prompt"], response_time, hotkey
                 )
 
-                self.scores, old_score = scoring.process.assign_score_for_uid(
+                self.scores, old_score, unweighted_new_score = scoring.process.assign_score_for_uid(
                     self.scores,
                     processed_uids[i],
                     self.neuron_config.alpha,
                     scored_response["scores"]["total"],
+                    query['weight']
                 )
 
                 miner_response = {
@@ -300,6 +303,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "new": float(self.scores[processed_uids[i]]),
                     "old": float(old_score),
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
+                    "unweighted":unweighted_new_score
                 }
 
                 if self.wandb_enabled:
@@ -518,22 +522,80 @@ class PromptInjectionValidator(BaseNeuron):
             f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
         )
         return similarity, base, duplicate
+    
+    def get_api_prompt(self, hotkey, signature, synapse_uuid) -> dict:
+    
+        """Retrieves a promopt from the prompt API"""
 
-    def serve_prompt(self) -> dict:
+        request_data = {
+        "version": "2.0",
+        "routeKey": "$default",
+        "rawPath": "/prompt-api",
+        "headers": {
+                    "X-Hotkey": hotkey,
+                    "X-Signature": signature,
+                    "X-Synapseid": synapse_uuid
+                },
+        "body": {"Some Message": "Hello from Lambda!"}
+        }
+
+        prompt_api_url = "https://czio6d2xbh.execute-api.eu-west-1.amazonaws.com/prompt-api"
+
+        try:
+            # get prompt
+            res = requests.get(url=prompt_api_url, params=request_data, timeout=6)
+            # check for correct status code
+            if res.status_code == 200:
+                # get prompt entry from the API output 
+                prompt_entry = res.json()
+                # check to make sure prompt is valid 
+                bt.logging.trace(
+                    f"Loaded remote prompt to serve to miners: {prompt_entry}"
+                )
+                return prompt_entry
+
+            else:
+                bt.logging.warning(
+                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                )
+
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the prompt API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the prompt API: {e}")
+
+    def get_local_prompt(self):
+        try:
+            # Get the old dataset if the API cannot be called for some reason
+            entry = mock_data.get_prompt()
+            return entry
+        except:
+            raise RuntimeError("Unable to retrieve a prompt from the API and from local database.")
+
+    def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
-        This function selects a random prompt from the dataset to be
-        served for the miners connected to the subnet.
+        This function queries a prompt from the API, and if the API
+        fails for some reason itselects a random prompt from the dataset 
+        to be served for the miners connected to the subnet.
 
         Args:
             None
 
         Returns:
-            prompt: An instance of dict containing the prompt data
+            entry:
+                A dict instance 
         """
-
         if self.target_group == 0:
-            self.prompt = mock_data.get_prompt()
+            # Attempt to get prompt from prompt API
+            entry = self.get_api_prompt(hotkey = self.wallet.hotkey.ss58_address, 
+                                        signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
+                                        synapse_uuid = synapse_uuid)
+            if not validate_prompt(entry):
+                bt.logging.trace("Unable to retrieve prompt from prompt API. Querying from local prompt dataset instead.")
+                self.prompt = self.get_local_prompt()
+            else:
+              self.prompt = entry
 
         return self.prompt
 
