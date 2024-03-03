@@ -641,6 +641,8 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.error(f"Unable to read the response from the prompt API: {e}")
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the prompt API: {e}")
+        except Exception as e:
+            bt.logging.error(f'Generic error during request: {e}')
 
     def get_local_prompt(self, hotkey, synapse_uuid):
         try:
@@ -924,6 +926,8 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.error(f"Unable to read the response from the API: {e}")
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the blacklist API: {e}")
+        except Exception as e:
+            bt.logging.error(f'Generic error during request: {e}')
 
         return []
 

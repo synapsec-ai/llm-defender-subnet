@@ -41,11 +41,13 @@ def get_api_prompt(hotkey, signature, synapse_uuid) -> dict:
                 f"Miner blacklist API returned unexpected status code: {res.status_code}"
             )
     except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Request timed out: {e}")
+        print(f"Request timed out: {e}")
     except requests.exceptions.JSONDecodeError as e:
         print(f"Unable to read the response from the prompt API: {e}")
     except requests.exceptions.ConnectionError as e:
-        print(f"Unable to connect to the prompt API: {e}")	
+        print(f"Unable to connect to the prompt API: {e}")
+    except Exception as e:
+        print(f'Generic error during request: {e}')
 
 def get_api_params(wallet):
     hotkey = wallet.hotkey.ss58_address
