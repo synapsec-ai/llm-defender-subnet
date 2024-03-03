@@ -355,15 +355,18 @@ def validate_prompt(prompt_dict):
     'category':str,
     'prompt':str,
     'label':int,
-    'weight':(int, float)
+    'weight':(int, float),
+    'hotkey': str,
+    'synapse_uuid': str,
+    'created_at': str,
     }
     # run checks
     if not isinstance(prompt_dict, dict):
         return False
-    if len([pd for pd in prompt_dict]) != 5:
+    if len([pd for pd in prompt_dict]) != 8:
         return False
     for pd in prompt_dict:
-        if pd not in ['analyzer','category','prompt','label','weight']:
+        if pd not in ['analyzer','category','prompt','label','weight', 'created_at', 'synapse_uuid', 'hotkey']:
             return False 
         if not isinstance(prompt_dict[pd], key_types[pd]):
             return False 

@@ -303,7 +303,8 @@ class PromptInjectionValidator(BaseNeuron):
                     "new": float(self.scores[processed_uids[i]]),
                     "old": float(old_score),
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
-                    "unweighted":unweighted_new_score
+                    "unweighted": unweighted_new_score,
+                    "weight": query['weight']
                 }
 
                 if self.wandb_enabled:
