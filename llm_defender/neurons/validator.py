@@ -4,6 +4,7 @@ Validator docstring here
 import time
 import traceback
 import sys
+import secrets
 from argparse import ArgumentParser
 from uuid import uuid4
 import torch
@@ -89,6 +90,10 @@ def main(validator: PromptInjectionValidator):
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
+            nonce = secrets.token_hex(24)
+            timestamp = str(int(time.time()))
+            data_to_sign = f'{synapse_uuid}{nonce}{timestamp}'
+            
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
@@ -96,7 +101,9 @@ def main(validator: PromptInjectionValidator):
                     analyzer=query["analyzer"],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
-                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=synapse_uuid),
+                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=data_to_sign),
+                    synapse_nonce=nonce,
+                    synapse_timestamp=timestamp
                 ),
                 timeout=validator.timeout,
                 deserialize=True,

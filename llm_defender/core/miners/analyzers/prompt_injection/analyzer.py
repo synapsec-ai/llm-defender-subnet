@@ -1,5 +1,6 @@
 """Analyzer method for the prompt injection analyzer"""
 import time
+import secrets
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers.prompt_injection.yara import YaraEngine
@@ -92,9 +93,13 @@ class PromptInjectionAnalyzer:
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
         output["synapse_uuid"] = synapse.synapse_uuid
+        output["nonce"] = secrets.token_hex(24)
+        output["timestamp"] = str(int(time.time()))
+        
+        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = sign_data(self.wallet, output["synapse_uuid"])
+        output["signature"] = sign_data(self.wallet, data_to_sign)
 
         # Wandb logging
         if self.wandb_enabled:

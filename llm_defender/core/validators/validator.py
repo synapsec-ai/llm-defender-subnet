@@ -19,6 +19,8 @@ from datetime import datetime
 from os import path, rename
 from pathlib import Path
 import torch
+import secrets
+import time
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
@@ -266,6 +268,8 @@ class PromptInjectionValidator(BaseNeuron):
                     "confidence": response.output["confidence"],
                     "synapse_uuid": response.output["synapse_uuid"],
                     "signature": response.output["signature"],
+                    "nonce": response.output["nonce"],
+                    "timestamp": response.output["timestamp"],
                 }
 
                 text_class = [
@@ -607,13 +611,15 @@ class PromptInjectionValidator(BaseNeuron):
         )
         return similarity, base, duplicate
 
-    def get_api_prompt(self, hotkey, signature, synapse_uuid) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
             "X-Hotkey": hotkey,
             "X-Signature": signature,
-            "X-Synapseid": synapse_uuid,
+            "X-SynapseUUID": synapse_uuid,
+            "X-Timestamp": timestamp,
+            "X-Nonce": nonce
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
@@ -670,10 +676,15 @@ class PromptInjectionValidator(BaseNeuron):
         """
         if self.target_group == 0:
             # Attempt to get prompt from prompt API
+            nonce = str(secrets.token_hex(24))
+            timestamp = str(int(time.time()))
+
+            data = f'{synapse_uuid}{nonce}{timestamp}'
+
             entry = self.get_api_prompt(
                 hotkey=self.wallet.hotkey.ss58_address,
-                signature=sign_data(wallet=self.wallet, data=synapse_uuid),
-                synapse_uuid=synapse_uuid,
+                signature=sign_data(wallet=self.wallet, data=data),
+                synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce
             )
             if not validate_prompt(entry):
                 bt.logging.warning(

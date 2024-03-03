@@ -322,18 +322,19 @@ class LLMDefenderMiner(BaseNeuron):
             )
 
         # Synapse signature verification
+        data = f'{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.synapse_timestamp}'
         if not validate_signature(
             hotkey=synapse.dendrite.hotkey,
-            data=synapse.synapse_uuid,
+            data=data,
             signature=synapse.synapse_signature,
         ):
             bt.logging.debug(
-                f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}"
+                f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
             return synapse
         else:
             bt.logging.debug(
-                f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {synapse.synapse_uuid}, signature: {synapse.synapse_signature}"
+                f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
 
         # Execute the correct analyzer

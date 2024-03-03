@@ -139,6 +139,8 @@ def validate_response(hotkey, response) -> bool:
         "synapse_uuid",
         "subnet_version",
         "signature",
+        "nonce",
+        "timestamp",
     ]
     if not all(key in response for key in mandatory_keys):
         logging.trace(
@@ -155,16 +157,17 @@ def validate_response(hotkey, response) -> bool:
             return False
 
     # Check signature
+    data = f'{response["synapse_uuid"]}{response["nonce"]}{response["timestamp"]}'
     if not utils.validate_signature(
-        hotkey=hotkey, data=response["synapse_uuid"], signature=response["signature"]
+        hotkey=hotkey, data=data, signature=response["signature"]
     ):
         logging.debug(
-            f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {response["synapse_uuid"]}, signature: {response["signature"]}'
+            f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
         )
         return False
     else:
         logging.debug(
-            f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {response["synapse_uuid"]}, signature: {response["signature"]}'
+            f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
         )
 
     # Check the validity of the confidence score
@@ -310,7 +313,6 @@ def get_response_object(
         "UID": uid,
         "hotkey": hotkey,
         "target": target,
-        "signature": None,
         "original_prompt": prompt,
         "synapse_uuid": synapse_uuid,
         "response": {},

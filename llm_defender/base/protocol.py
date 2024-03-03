@@ -19,7 +19,19 @@ class LLMDefenderProtocol(bt.Synapse):
 
     synapse_uuid: str = pydantic.Field(
         ...,
-        description="Synapse UUID provides an unique identifies for the prompt send out by the validator",
+        description="Synapse UUID provides an unique identifier for the prompt send out by the validator",
+        allow_mutation=False
+    )
+
+    synapse_nonce: str = pydantic.Field(
+        ...,
+        description="Synapse nonce provides an unique identifier for the prompt send out by the validator",
+        allow_mutation=False
+    )
+
+    synapse_timestamp: str = pydantic.Field(
+        ...,
+        description="Synapse timestamp provides an unique identifier for the prompt send out by the validator",
         allow_mutation=False
     )
 
