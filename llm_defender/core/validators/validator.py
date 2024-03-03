@@ -8,6 +8,7 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+
 import copy
 import pickle
 import json
@@ -25,7 +26,7 @@ from llm_defender.base.utils import (
     validate_miner_blacklist,
     validate_numerical_value,
     validate_prompt,
-    sign_data
+    sign_data,
 )
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
@@ -34,8 +35,10 @@ import llm_defender.core.validators.scoring as scoring
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
+
 if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
+
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -201,13 +204,13 @@ class PromptInjectionValidator(BaseNeuron):
         """
 
         target = query["label"]
-        
+
         if self.wandb_enabled:
             # Update wandb timestamp for the current run
             self.wandb_handler.set_timestamp()
 
             # Log target to wandb
-            self.wandb_handler.log(data={'Target': target})
+            self.wandb_handler.log(data={"Target": target})
             bt.logging.trace(f"Adding wandb logs for target: {target}")
 
         bt.logging.debug(f"Confidence target set to: {target}")
@@ -229,8 +232,14 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Set the score for invalid responses to 0.0
             if not scoring.process.validate_response(hotkey, response.output):
-                self.scores, old_score, unweighted_new_score = scoring.process.assign_score_for_uid(
-                    self.scores, processed_uids[i], self.neuron_config.alpha, 0.0, query['weight']
+                self.scores, old_score, unweighted_new_score = (
+                    scoring.process.assign_score_for_uid(
+                        self.scores,
+                        processed_uids[i],
+                        self.neuron_config.alpha,
+                        0.0,
+                        query["weight"],
+                    )
                 )
                 responses_invalid_uids.append(processed_uids[i])
 
@@ -242,19 +251,21 @@ class PromptInjectionValidator(BaseNeuron):
                     response.output, target, query["prompt"], response_time, hotkey
                 )
 
-                self.scores, old_score, unweighted_new_score = scoring.process.assign_score_for_uid(
-                    self.scores,
-                    processed_uids[i],
-                    self.neuron_config.alpha,
-                    scored_response["scores"]["total"],
-                    query['weight']
+                self.scores, old_score, unweighted_new_score = (
+                    scoring.process.assign_score_for_uid(
+                        self.scores,
+                        processed_uids[i],
+                        self.neuron_config.alpha,
+                        scored_response["scores"]["total"],
+                        query["weight"],
+                    )
                 )
 
                 miner_response = {
                     "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
                     "synapse_uuid": response.output["synapse_uuid"],
-                    "signature": response.output["signature"]
+                    "signature": response.output["signature"],
                 }
 
                 text_class = [
@@ -304,31 +315,101 @@ class PromptInjectionValidator(BaseNeuron):
                     "old": float(old_score),
                     "change": float(self.scores[processed_uids[i]]) - float(old_score),
                     "unweighted": unweighted_new_score,
-                    "weight": query['weight']
+                    "weight": query["weight"],
                 }
 
                 if self.wandb_enabled:
-                    wandb_logs = [                    
-                        {f"{response_object['UID']}:{response_object['hotkey']}_confidence":response_object['response']['confidence']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_total":response_object['scored_response']['scores']['total']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_distance":response_object['scored_response']['scores']['distance']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_speed":response_object['scored_response']['scores']['speed']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance":response_object['scored_response']['raw_scores']['distance']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed":response_object['scored_response']['raw_scores']['speed']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new":response_object['weight_scores']['new']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old":response_object['weight_scores']['old']},
-                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change":response_object['weight_scores']['change']},
+                    wandb_logs = [
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_confidence": response_object[
+                                "response"
+                            ][
+                                "confidence"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
+                                "scored_response"
+                            ][
+                                "scores"
+                            ][
+                                "total"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
+                                "scored_response"
+                            ][
+                                "scores"
+                            ][
+                                "distance"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
+                                "scored_response"
+                            ][
+                                "scores"
+                            ][
+                                "speed"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
+                                "scored_response"
+                            ][
+                                "raw_scores"
+                            ][
+                                "distance"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
+                                "scored_response"
+                            ][
+                                "raw_scores"
+                            ][
+                                "speed"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
+                                "weight_scores"
+                            ][
+                                "new"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
+                                "weight_scores"
+                            ][
+                                "old"
+                            ]
+                        },
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
+                                "weight_scores"
+                            ][
+                                "change"
+                            ]
+                        },
                     ]
 
                     for entry in response_object["engine_data"]:
                         wandb_logs.append(
-                            {f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence":entry['confidence']},
+                            {
+                                f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence": entry[
+                                    "confidence"
+                                ]
+                            },
                         )
                     for wandb_log in wandb_logs:
                         self.wandb_handler.log(wandb_log)
-                    
-                    bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
-            
+
+                    bt.logging.trace(
+                        f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}"
+                    )
+
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)
@@ -419,7 +500,9 @@ class PromptInjectionValidator(BaseNeuron):
             distance_score = 0.0
 
         # Calculate speed score
-        speed_score = scoring.process.calculate_subscore_speed(self.timeout, response_time)
+        speed_score = scoring.process.calculate_subscore_speed(
+            self.timeout, response_time
+        )
         if speed_score is None:
             bt.logging.debug(
                 f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
@@ -488,7 +571,7 @@ class PromptInjectionValidator(BaseNeuron):
             distance_penalty=distance_penalty,
             speed_penalty=speed_penalty,
             raw_distance_score=distance_score,
-            raw_speed_score=speed_score
+            raw_speed_score=speed_score,
         )
 
     def apply_penalty(self, response, hotkey, prompt) -> tuple:
@@ -523,15 +606,14 @@ class PromptInjectionValidator(BaseNeuron):
             f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
         )
         return similarity, base, duplicate
-    
+
     def get_api_prompt(self, hotkey, signature, synapse_uuid) -> dict:
-    
         """Retrieves a prompt from the prompt API"""
 
         headers = {
             "X-Hotkey": hotkey,
             "X-Signature": signature,
-            "X-Synapseid": synapse_uuid
+            "X-Synapseid": synapse_uuid,
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
@@ -541,9 +623,9 @@ class PromptInjectionValidator(BaseNeuron):
             res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=6)
             # check for correct status code
             if res.status_code == 200:
-                # get prompt entry from the API output 
+                # get prompt entry from the API output
                 prompt_entry = res.json()
-                # check to make sure prompt is valid 
+                # check to make sure prompt is valid
                 bt.logging.trace(
                     f"Loaded remote prompt to serve to miners: {prompt_entry}"
                 )
@@ -565,13 +647,15 @@ class PromptInjectionValidator(BaseNeuron):
             entry = mock_data.get_prompt()
             return entry
         except Exception as e:
-            raise RuntimeError(f"Unable to retrieve a prompt from the API and from local database: {e}") from e
+            raise RuntimeError(
+                f"Unable to retrieve a prompt from the API and from local database: {e}"
+            ) from e
 
     def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
-        fails for some reason it selects a random prompt from the local dataset 
+        fails for some reason it selects a random prompt from the local dataset
         to be served for the miners connected to the subnet.
 
         Args:
@@ -579,18 +663,22 @@ class PromptInjectionValidator(BaseNeuron):
 
         Returns:
             entry:
-                A dict instance 
+                A dict instance
         """
         if self.target_group == 0:
             # Attempt to get prompt from prompt API
-            entry = self.get_api_prompt(hotkey = self.wallet.hotkey.ss58_address, 
-                                        signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
-                                        synapse_uuid = synapse_uuid)
+            entry = self.get_api_prompt(
+                hotkey=self.wallet.hotkey.ss58_address,
+                signature=sign_data(wallet=self.wallet, data=synapse_uuid),
+                synapse_uuid=synapse_uuid,
+            )
             if not validate_prompt(entry):
-                bt.logging.warning(f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead.")
+                bt.logging.warning(
+                    f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead."
+                )
                 self.prompt = self.get_local_prompt()
             else:
-              self.prompt = entry
+                self.prompt = entry
 
         return self.prompt
 
