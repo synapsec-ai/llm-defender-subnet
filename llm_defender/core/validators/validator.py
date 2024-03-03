@@ -525,21 +525,20 @@ class PromptInjectionValidator(BaseNeuron):
     
     def get_api_prompt(self, hotkey, signature, synapse_uuid) -> dict:
     
-        """Retrieves a promopt from the prompt API"""
+        """Retrieves a prompt from the prompt API"""
 
         request_data = {
-        "version": "2.0",
-        "routeKey": "$default",
-        "rawPath": "/prompt-api",
-        "headers": {
-                    "X-Hotkey": hotkey,
-                    "X-Signature": signature,
-                    "X-Synapseid": synapse_uuid
-                },
-        "body": {"Some Message": "Hello from Lambda!"}
+            "version": "2.0",
+            "routeKey": "$default",
+            "rawPath": "/prompt",
+            "headers": {
+                "X-Hotkey": hotkey,
+                "X-Signature": signature,
+                "X-Synapseid": synapse_uuid
+            }
         }
 
-        prompt_api_url = "https://czio6d2xbh.execute-api.eu-west-1.amazonaws.com/prompt-api"
+        prompt_api_url = "https://api.synapsec.ai/prod/prompt"
 
         try:
             # get prompt
@@ -556,7 +555,7 @@ class PromptInjectionValidator(BaseNeuron):
 
             else:
                 bt.logging.warning(
-                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                    f"Unable to get prompt from the Prompt API: HTTP/{res.status_code} - {res.json()}"
                 )
 
         except requests.exceptions.JSONDecodeError as e:
@@ -569,14 +568,14 @@ class PromptInjectionValidator(BaseNeuron):
             # Get the old dataset if the API cannot be called for some reason
             entry = mock_data.get_prompt()
             return entry
-        except:
-            raise RuntimeError("Unable to retrieve a prompt from the API and from local database.")
+        except Exception as e:
+            raise RuntimeError(f"Unable to retrieve a prompt from the API and from local database: {e}") from e
 
     def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
-        fails for some reason itselects a random prompt from the dataset 
+        fails for some reason it selects a random prompt from the local dataset 
         to be served for the miners connected to the subnet.
 
         Args:
