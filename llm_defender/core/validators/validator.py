@@ -538,7 +538,7 @@ class PromptInjectionValidator(BaseNeuron):
             }
         }
 
-        prompt_api_url = "https://api.synapsec.ai/prod/prompt"
+        prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
