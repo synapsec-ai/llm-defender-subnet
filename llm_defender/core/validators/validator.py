@@ -30,9 +30,12 @@ from llm_defender.base.utils import (
 from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
-
 import llm_defender.core.validators.scoring as scoring
 
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
+if wandb is True:
+    from llm_defender.base.wandb_handler import WandbHandler
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -60,6 +63,14 @@ class PromptInjectionValidator(BaseNeuron):
         self.target_group = None
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
+        self.prompt = None
+
+        # Enable wandb if it has been configured
+        if wandb is True:
+            self.wandb_enabled = True
+            self.wandb_handler = WandbHandler()
+        else:
+            self.wandb_enabled = False
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -165,6 +176,7 @@ class PromptInjectionValidator(BaseNeuron):
                 self.max_targets = args.max_targets
             else:
                 self.max_targets = 256
+
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -188,8 +200,15 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        # Determine target value for scoring
         target = query["label"]
+        
+        if self.wandb_enabled:
+            # Update wandb timestamp for the current run
+            self.wandb_handler.set_timestamp()
+
+            # Log target to wandb
+            self.wandb_handler.log(data={'Target': target})
+            bt.logging.trace(f"Adding wandb logs for target: {target}")
 
         bt.logging.debug(f"Confidence target set to: {target}")
 
@@ -287,6 +306,28 @@ class PromptInjectionValidator(BaseNeuron):
                     "unweighted":unweighted_new_score
                 }
 
+                if self.wandb_enabled:
+                    wandb_logs = [                    
+                        {f"{response_object['UID']}:{response_object['hotkey']}_confidence":response_object['response']['confidence']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_total":response_object['scored_response']['scores']['total']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_distance":response_object['scored_response']['scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_scores_speed":response_object['scored_response']['scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance":response_object['scored_response']['raw_scores']['distance']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed":response_object['scored_response']['raw_scores']['speed']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new":response_object['weight_scores']['new']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old":response_object['weight_scores']['old']},
+                        {f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change":response_object['weight_scores']['change']},
+                    ]
+
+                    for entry in response_object["engine_data"]:
+                        wandb_logs.append(
+                            {f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence":entry['confidence']},
+                        )
+                    for wandb_log in wandb_logs:
+                        self.wandb_handler.log(wandb_log)
+                    
+                    bt.logging.trace(f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}")
+            
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)
@@ -545,16 +586,19 @@ class PromptInjectionValidator(BaseNeuron):
             entry:
                 A dict instance 
         """
+        if self.target_group == 0:
+            # Attempt to get prompt from prompt API
+            entry = self.get_api_prompt(hotkey = self.wallet.hotkey.ss58_address, 
+                                        signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
+                                        synapse_uuid = synapse_uuid)
+            if not validate_prompt(entry):
+                bt.logging.trace("Unable to retrieve prompt from prompt API. Querying from local prompt dataset instead.")
+                self.prompt = self.get_local_prompt()
+            else:
+              self.prompt = entry
 
-        # Attempt to get prompt from prompt API
-        entry = self.get_api_prompt(hotkey = self.wallet.hotkey.ss58_address, 
-                                    signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
-                                    synapse_uuid = synapse_uuid)
-        if not validate_prompt(entry):
-            bt.logging.trace("Unable to retrieve prompt from prompt API. Querying from local prompt dataset instead.")
-            entry = self.get_local_prompt()
-        return entry
-            
+        return self.prompt
+
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:

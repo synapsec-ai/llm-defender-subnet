@@ -99,13 +99,43 @@ pull_repo_and_checkout_branch() {
 install_packages() {
     local cfg_version=$(grep -oP 'version\s*=\s*\K[^ ]+' setup.cfg)
     local installed_version=$(pip show llm-defender | grep -oP 'Version:\s*\K[^ ]+')
+    local profile="${args['profile']}"
 
-    if [[ "$cfg_version" == "$installed_version" ]]; then
-        echo "Subnet versions "$cfg_version" and "$installed_version" are matching: No installation is required."
-    else
-        echo "Installing package with pip"
-        pip install -e .
+    # Load dotenv configuration
+    DOTENV_FILE=".env"
+    if [ -f "$DOTENV_FILE" ]; then
+        # Load environment variables from .env file
+        export $(grep -v '^#' $DOTENV_FILE | xargs)
+        echo "Environment variables loaded from $DOTENV_FILE"
     fi
+
+    # if [[ "$cfg_version" == "$installed_version" ]]; then
+    #     echo "Subnet versions "$cfg_version" and "$installed_version" are matching: No installation is required."
+    # else
+    if [ "$WANDB_ENABLE" == "1" ]; then
+        if [ "$profile" == "miner" ]; then
+            echo "Installing python package with pip with miner and wandb extras"
+            pip install -e .[wandb,miner]
+        elif [ "$profile" == "validator" ]; then
+            echo "Installing python package with pip with validator and wandb extras"
+            pip install -e .[wandb,validator]
+        else
+            echo "Unable to determine profile. Exiting."
+            exit 1
+        fi
+    else
+        if [ "$profile" == "miner" ]; then
+            echo "Installing python package with pip with miner extras"
+            pip install -e .[miner]
+        elif [ "$profile" == "validator" ]; then
+            echo "Installing python package with pip with validator extras"
+            pip install -e .[validator]
+        else
+            echo "Unable to determine profile. Exiting."
+            exit 1
+        fi
+    fi
+    # fi
 
     # Uvloop re-implements asyncio module which breaks bittensor. It is
     # not needed by the default implementation of the
@@ -194,7 +224,6 @@ generate_pm2_launch_file() {
         args+=" --validator_min_stake $validator_min_stake"
     fi
 
-    
     cat <<EOF > ${name}.config.js
 module.exports = {
     apps: [

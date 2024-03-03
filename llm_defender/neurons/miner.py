@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import traceback
 import bittensor as bt
 import torch
+import time 
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
@@ -107,6 +108,20 @@ def main(miner: LLMDefenderMiner):
                 )
 
                 bt.logging.info(log)
+
+                if miner.wandb_enabled:
+                    wandb_logs = [
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank':miner.metagraph.R[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust':miner.metagraph.T[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus':miner.metagraph.C[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive':miner.metagraph.I[miner.miner_uid].item()},
+                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission':miner.metagraph.E[miner.miner_uid].item()}
+                    ]
+                    miner.wandb_handler.set_timestamp()
+                    for wandb_log in wandb_logs:
+                        miner.wandb_handler.log(data=wandb_log)
+                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+
             miner.step += 1
             time.sleep(1)
 
@@ -114,6 +129,7 @@ def main(miner: LLMDefenderMiner):
         except KeyboardInterrupt:
             axon.stop()
             bt.logging.success("Miner killed by keyboard interrupt.")
+            miner.wandb_handler.wandb_run.finish()
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception:
@@ -136,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--miner_set_weights",
         type=str,
-        default="True",
+        default="False",
         help="Determines if miner should set weights or not",
     )
 

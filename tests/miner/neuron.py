@@ -76,7 +76,7 @@ class TestMiner:
         parser.add_argument(
             "--miner_set_weights",
             type=str,
-            default="True",
+            default="False",
             help="Determines if miner should set weights or not",
         )
 

@@ -71,11 +71,13 @@ def calculate_subscore_distance(response, target) -> float:
     if isinstance(response, bool) or not isinstance(response, dict):
         return None
 
+    # If engine response is invalid, return None
     if (
         "engines" not in response.keys()
         or isinstance(response["engines"], bool)
         or not isinstance(response["engines"], list)
         or response["engines"] == []
+        or len(response["engines"]) != 3
     ):
         return None
 
@@ -258,7 +260,6 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     return scores, old_score, unweighted_new_score.item()
 
-
 def get_engine_response_object(
     total_score: float = 0.0,
     final_distance_score: float = 0.0,
@@ -283,7 +284,6 @@ def get_engine_response_object(
     }
 
     return res
-
 
 def get_response_object(
     uid: str, hotkey: str, target: float, prompt: str, synapse_uuid: str
