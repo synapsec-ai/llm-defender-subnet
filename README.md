@@ -164,7 +164,7 @@ Fine-tuning and development have been described in their respective guides:
 - [Developer Guide](./docs/developer-guide.md)
 - [Fine-tuning Guide](./docs/fine-tuning-guide.md)
 
-# SN14 patching policy
+# SN14 patching policy (DRAFT)
 
 In order to ensure the subnet users can prepare in advance we have defined a formal patching policy for the subnet components.
 
