@@ -40,7 +40,8 @@ def get_api_prompt(hotkey, signature, synapse_uuid) -> dict:
             print(
                 f"Miner blacklist API returned unexpected status code: {res.status_code}"
             )
-
+    except requests.exceptions.ReadTimeout as e:
+            bt.logging.error(f"Request timed out: {e}")
     except requests.exceptions.JSONDecodeError as e:
         print(f"Unable to read the response from the prompt API: {e}")
     except requests.exceptions.ConnectionError as e:

@@ -407,7 +407,8 @@ class LLMDefenderMiner(BaseNeuron):
                 bt.logging.warning(
                     f"Miner blacklist API returned unexpected status code: {res.status_code}"
                 )
-
+        except requests.exceptions.ReadTimeout as e:
+            bt.logging.error(f"Request timed out: {e}")
         except requests.exceptions.JSONDecodeError as e:
             bt.logging.error(f"Unable to read the response from the API: {e}")
         except requests.exceptions.ConnectionError as e:
