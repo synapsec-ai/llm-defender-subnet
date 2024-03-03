@@ -527,22 +527,17 @@ class PromptInjectionValidator(BaseNeuron):
     
         """Retrieves a prompt from the prompt API"""
 
-        request_data = {
-            "version": "2.0",
-            "routeKey": "$default",
-            "rawPath": "/prompt",
-            "headers": {
-                "X-Hotkey": hotkey,
-                "X-Signature": signature,
-                "X-Synapseid": synapse_uuid
-            }
+        headers = {
+            "X-Hotkey": hotkey,
+            "X-Signature": signature,
+            "X-Synapseid": synapse_uuid
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.get(url=prompt_api_url, params=request_data, timeout=6)
+            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=6)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output 
@@ -591,7 +586,7 @@ class PromptInjectionValidator(BaseNeuron):
                                         signature = sign_data(wallet = self.wallet, data = synapse_uuid), 
                                         synapse_uuid = synapse_uuid)
             if not validate_prompt(entry):
-                bt.logging.trace("Unable to retrieve prompt from prompt API. Querying from local prompt dataset instead.")
+                bt.logging.warning(f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead.")
                 self.prompt = self.get_local_prompt()
             else:
               self.prompt = entry
