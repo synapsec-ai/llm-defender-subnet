@@ -76,22 +76,48 @@ def run(args):
 
                 if args.no_miner:
                     if args.wandb:
-                        logger.info('Installing the new subnet version with validator and wandb extras')
-                        subprocess.run('pip install -e .[wandb,validator]', check=True, shell=True)
+                        logger.info(
+                            "Installing the new subnet version with validator and wandb extras"
+                        )
+                        subprocess.run(
+                            "pip install -e .[wandb,validator]", check=True, shell=True
+                        )
                     else:
-                        logger.info('Installing the new subnet version with validator extras')
-                        subprocess.run('pip install -e .[validator]', check=True, shell=True)
+                        logger.info(
+                            "Installing the new subnet version with validator extras"
+                        )
+                        subprocess.run(
+                            "pip install -e .[validator]", check=True, shell=True
+                        )
                 elif args.no_validator:
                     if args.wandb:
-                        logger.info('Installing the new subnet version with miner and wandb extras')
-                        subprocess.run('pip install -e .[wandb,miner] && pip uninstall -y uvloop', check=True, shell=True)
+                        logger.info(
+                            "Installing the new subnet version with miner and wandb extras"
+                        )
+                        subprocess.run(
+                            "pip install -e .[wandb,miner] && pip uninstall -y uvloop",
+                            check=True,
+                            shell=True,
+                        )
                     else:
-                        logger.info('Installing the new subnet version with miner extras')
-                        subprocess.run('pip install -e .[miner] && pip uninstall -y uvloop', check=True, shell=True)
+                        logger.info(
+                            "Installing the new subnet version with miner extras"
+                        )
+                        subprocess.run(
+                            "pip install -e .[miner] && pip uninstall -y uvloop",
+                            check=True,
+                            shell=True,
+                        )
                 else:
-                    logger.info('Installing the new subnet version with miner and validator extras')
-                    subprocess.run('pip install -e .[miner,validator] && pip uninstall -y uvloop', check=True, shell=True)
-                
+                    logger.info(
+                        "Installing the new subnet version with miner and validator extras"
+                    )
+                    subprocess.run(
+                        "pip install -e .[miner,validator] && pip uninstall -y uvloop",
+                        check=True,
+                        shell=True,
+                    )
+
                 # Restart pm2 instances
                 for instance_name in args.pm2_instance_names:
                     try:
@@ -106,7 +132,7 @@ def run(args):
                             shell=True,
                         )
                         logger.info("Restarted PM2 process: %s", instance_name)
-                    
+
                     except subprocess.CalledProcessError as e:
                         logger.error("Unable to restart PM2 instance: %s", e)
 
