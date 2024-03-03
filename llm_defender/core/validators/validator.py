@@ -641,10 +641,10 @@ class PromptInjectionValidator(BaseNeuron):
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the prompt API: {e}")
 
-    def get_local_prompt(self):
+    def get_local_prompt(self, hotkey, synapse_uuid):
         try:
             # Get the old dataset if the API cannot be called for some reason
-            entry = mock_data.get_prompt()
+            entry = mock_data.get_prompt(hotkey, synapse_uuid)
             return entry
         except Exception as e:
             raise RuntimeError(
@@ -676,7 +676,10 @@ class PromptInjectionValidator(BaseNeuron):
                 bt.logging.warning(
                     f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead."
                 )
-                self.prompt = self.get_local_prompt()
+                self.prompt = self.get_local_prompt(
+                    hotkey = self.wallet.hotkey.ss58_address, 
+                    synapse_uuid = synapse_uuid
+                )
             else:
                 self.prompt = entry
 
