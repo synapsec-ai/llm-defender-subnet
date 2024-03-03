@@ -2,15 +2,17 @@
 This miner script executes the main loop for the miner and keeps the
 miner active in the bittensor network.
 """
+
 import time
 from argparse import ArgumentParser
 import traceback
 import bittensor as bt
 import torch
-import time 
+import time
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
+
 
 def main(miner: LLMDefenderMiner):
     """
@@ -62,6 +64,9 @@ def main(miner: LLMDefenderMiner):
                     weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
                     weights[miner.miner_uid] = 1.0
 
+                    bt.logging.warning(
+                        "DEPRECATION NOTICE: Miners do not need to set weights in this subnet. The capability to do so will be removed in a future release"
+                    )
                     bt.logging.debug(
                         f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}, version_key={miner.subnet_version}"
                     )
@@ -72,7 +77,7 @@ def main(miner: LLMDefenderMiner):
                         uids=miner.metagraph.uids,  # Uids of the miners to set weights for.
                         weights=weights,  # Weights to set for the miners.
                         wait_for_inclusion=False,
-                        version_key=miner.subnet_version
+                        version_key=miner.subnet_version,
                     )
 
                     if result:
@@ -85,7 +90,7 @@ def main(miner: LLMDefenderMiner):
                 if miner.step % 300 == 0:
                     # Check if the miners hotkey is on the remote blacklist
                     miner.check_remote_blacklist()
-                
+
                 if miner.step % 600 == 0:
                     bt.logging.debug(
                         f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
@@ -111,11 +116,31 @@ def main(miner: LLMDefenderMiner):
 
                 if miner.wandb_enabled:
                     wandb_logs = [
-                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank':miner.metagraph.R[miner.miner_uid].item()},
-                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust':miner.metagraph.T[miner.miner_uid].item()},
-                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus':miner.metagraph.C[miner.miner_uid].item()},
-                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive':miner.metagraph.I[miner.miner_uid].item()},
-                        {f'{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission':miner.metagraph.E[miner.miner_uid].item()}
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank": miner.metagraph.R[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust": miner.metagraph.T[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus": miner.metagraph.C[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive": miner.metagraph.I[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission": miner.metagraph.E[
+                                miner.miner_uid
+                            ].item()
+                        },
                     ]
                     miner.wandb_handler.set_timestamp()
                     for wandb_log in wandb_logs:
