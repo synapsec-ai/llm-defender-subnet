@@ -4,7 +4,7 @@ This repository contains the source code for the LLM Defender subnet running on 
 ## Summary
 There are different and constantly evolving ways to attack LLMs, and to efficiently protect against such attacks, it is necessary to layer up several defensive methods to prevent the attacks from affecting the LLM or the application relying on the model.
 
-The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **capabilities** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs. An engine can consist of a single analyzer or multiple subengines working towards a common goal.
+The subnet is being built with the concept of defense-in-depth in mind. The subnet aims to provide several **analyzers** each consisting of multiple **engines** to create a modular and high-performing capability for detecting attacks against LLMs.
 
 The ultimate goal is to enable LLM developers to harness the decentralized intelligence provided by the subnet and combine it with their local defensive capabilities to truly embrace the concept of defense-in-depth.
 
@@ -55,7 +55,6 @@ $ bash scripts/run_neuron.sh \
 --wallet.name YourColdkeyGoesHere \
 --wallet.hotkey YourHotkeyGoesHere \
 --axon.port 15000 \
---miner_set_weights True
 ```
 You can optionally provide --miner_set_weights True|False, --subtensor.network, --subtensor.chain_endpoint, and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
@@ -75,7 +74,7 @@ $ bash scripts/run_neuron.sh \
 ```
 You can optionally provide --subtensor.network, --subtensor.chain_endpoint and --logging.debug arguments. If you provide the logging.* argument, make sure it is the last argument you provide.
 
-If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False. The parameter defaults to True.
+If you are running Miner and Validator with same hotkey, you need to set the `--miner_set_weights` to False. The parameter defaults to False.
 
 Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
 ```
@@ -96,6 +95,25 @@ The `run_neuron.sh` script creates \<instance_name>.config.js files containing t
 
 > [!WARNING]  
 > The miner and validator resources will evolve as the subnet features evolve. GPU is not currently needed but may be needed in the future. Our recommendation is to start up with the resource defined in [min_compute.yml](./min_compute.yml) and monitor the resource utilization and scale the resource up or down depending on the actual utilization.
+
+## Wandb
+If you want to enable wandb support for either the validator or the miner, you need to perform additional steps as outlined below:
+- Register for wandb and acquire license suitable for your user-case
+- Create a new project and copy the API key for the project
+- Copy the `.env.sample` to `.env` and fill in the parameters or setup environmental variables accordingly
+```
+$ cp .env.sample .env
+```
+Value for `WANDB_KEY` should be the project API key, value for `WANDB_PROJECT` should be the project name and `WANDB_ENTITY` should be your username. Additionally, `WANDB_ENABLE` must be set to `1` to enable wandb. Setting `WANDB_ENABLE` to `0` disables wandb even if other parameters are setup correctly.
+
+Example of a valid `.env` file:
+```
+WANDB_ENABLE=1
+WANDB_KEY=1234789abcdefghijklmopqrsu
+WANDB_PROJECT=projectname
+WANDB_ENTITY=username
+```
+
 
 ## Troubleshooting 101
 (1) How to run clean installation?
@@ -146,31 +164,31 @@ Fine-tuning and development have been described in their respective guides:
 - [Developer Guide](./docs/developer-guide.md)
 - [Fine-tuning Guide](./docs/fine-tuning-guide.md)
 
-## Version 1.0 feature objectives
-The following is a list of high-level objectives for version 1.0 of the entire project (some of these are not directly related to the subnet code)
-- The following analyzers
-  - Prompt injection (already implemented)
-  - Prompt-response (fraud, jailbreaking, etc.)
-  - Content filtering (topic banning, prompt anonymization, secrets detection, etc.)
-  - Language/Code
-- 4+ engines per analyzer
-- Demo application
-- Prompt API (for synthetic prompts)
-- Subnet API (for third-party developers)
-- Async support for the subnet protocol
-- Miner profiles and the possibility to specialize in select analyzers (if possible to implement)
-- Wandb (or some other local database for analyzing the miner/validator performance)
-- Tests for fundamental validator/miner and engine features
-- Proper datasets for model creation
-- Full reference documentation for development/fine-tuning 
-- Sample implementation of a dedicated validator
-- Improved scoring and gating algorithms
-- ~~Automated miner/validator updating in run.sh script~~ (done)
-- Out-of-the-box support in the miner script for customized engines
-- \+ possibly many other features depending on the needs of the community
+# SN14 patching policy (DRAFT)
 
-The current target is to release version 1.0 either in late Q1/2024 or early Q2/2024.
+In order to ensure the subnet users can prepare in advance we have defined a formal patching policy for the subnet components.
 
+The subnet uses **semantic versioning** in which the version number consists of three parts (Major.Minor.Patch) and an optional pre-release tag (-beta, -alpha). Depending on the type of release, there are a few things that the subnet users should be aware of.
+
+- Major Releases (**X**.0.0)
+    - There can be breaking changes and updates are mandatory for all subnet users.
+    - After the update is released, the `weights_version` hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
+    - Major releases are communicated in the SN14 Discord Channel at least 1 week in advance
+    - The major release will always be done on Wednesday roughly at 15:00 UTC+0
+    - Registration may be disabled for up to 24 hours
+
+- Minor releases (0.**X**.0)
+    - There can be breaking changes.
+    - In case there are breaking changes, the update will be announced in the SN14 Discord Channel at least 48 hours in advance. Otherwise a minimum of 24 hour notice is given.
+    - If there are breaking changes, the `weights_version` hyperparameter is adjusted immediately after release such that in order to set the weights in the subnet, the neurons must be running the latest version.
+    - If there are no breaking changes, the `weights_version` hyperparameter will be adjusted 24 hours after the launch.
+    - Minor releases are released on weekdays roughly at 15:00 UTC+0.
+    - Minor releases are mandatory for all subnet users
+    - Registration may be disabled for up to 24 hours
+
+- Patch releases (0.0.**X**)
+    - Patch releases do not contain breaking changes and updates will not be mandatory unless there is a need to hotfix either scoring or penalty algorithms
+    - Patch releases without changes to scoring or penalty algorithms are pushed to production without a prior notice and the update the update is optional
 
 ## How to integrate into the subnet?
 One of the long-term development targets we have is to provide a subnet that all Bittensor users can rely on when securing their subnets, applications and other solutions built on top of the Bittensor platform. 

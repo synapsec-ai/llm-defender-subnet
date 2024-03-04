@@ -76,7 +76,7 @@ class TestMiner:
         parser.add_argument(
             "--miner_set_weights",
             type=str,
-            default="True",
+            default="False",
             help="Determines if miner should set weights or not",
         )
 
@@ -87,7 +87,7 @@ class TestMiner:
             help="Determine the minimum stake the validator should have to accept requests",
         )
 
-        pytest_miner = miner.PromptInjectionMiner(parser=parser)
+        pytest_miner = miner.LLMDefenderMiner(parser=parser)
         
 
         yield pytest_miner

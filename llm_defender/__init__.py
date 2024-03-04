@@ -1,6 +1,11 @@
 import configparser
-from os import path
+from os import path, environ
+from dotenv import load_dotenv
+import bittensor as bt
 
+load_dotenv()
+
+# Read version
 config = configparser.ConfigParser()
 setup_file = path.dirname(path.dirname(path.abspath(__file__))) + "/setup.cfg"
 
@@ -14,3 +19,10 @@ __spec_version__ = (
     + (10 * int(version_split[1]))
     + (1 * int(version_split[2]))
 )
+
+# Read wandb status
+wandb_enabled = environ.get("WANDB_ENABLE")
+if wandb_enabled is not None and int(wandb_enabled) == 1:
+    __wandb__ = True
+else:
+    __wandb__ = False

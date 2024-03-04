@@ -15,39 +15,45 @@ class LLMDefenderProtocol(bt.Synapse):
 
     # Parse variables
     prompt: typing.Optional[str] = None
-    engine: typing.Optional[str] = None
     output: typing.Optional[dict] = None
 
     synapse_uuid: str = pydantic.Field(
         ...,
-        description="Synapse UUID",
+        description="Synapse UUID provides an unique identifier for the prompt send out by the validator",
+        allow_mutation=False
+    )
+
+    synapse_nonce: str = pydantic.Field(
+        ...,
+        description="Synapse nonce provides an unique identifier for the prompt send out by the validator",
+        allow_mutation=False
+    )
+
+    synapse_timestamp: str = pydantic.Field(
+        ...,
+        description="Synapse timestamp provides an unique identifier for the prompt send out by the validator",
         allow_mutation=False
     )
 
     subnet_version: int = pydantic.Field(
         ...,
-        description="Current subnet version",
+        description="Subnet version provides information about the subnet version the Synapse creator is running at",
         allow_mutation=False,
     )
 
-    roles: typing.List[str] = pydantic.Field(
-        ...,
-        title="Roles",
-        description="An immutable list depicting the roles",
-        allow_mutation=False,
-    )
-
-    analyzer: typing.List[str] = pydantic.Field(
+    analyzer: str = pydantic.Field(
         ...,
         title="analyzer",
-        description="An immutable list depicting the analyzers to execute",
+        description="The analyzer field provides instructions on which Analyzer to execute on the miner",
         allow_mutation=False,
     )
 
-    def get_analyzers(self) -> list:
-        """Returns the analyzers associated with the synapse"""
-
-        return self.analyzer
+    synapse_signature: str = pydantic.Field(
+        ...,
+        title="synapse_signature",
+        description="The synapse_signature field provides the miner means to validate the origin of the Synapse",
+        allow_mutation=False,
+    )
 
     def deserialize(self) -> bt.Synapse:
         """Deserialize the instance of the protocol"""

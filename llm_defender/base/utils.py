@@ -4,6 +4,7 @@ features and their engines.
 """
 import gc
 import multiprocessing
+import bittensor as bt
 
 class EngineResponse:
     """
@@ -292,4 +293,91 @@ def validate_response_data(engine_response: dict) -> bool:
             if not validate_numerical_value(value=engine_response[key], value_type=float, min_value=0.0, max_value=1.0):
                 return False
         
+    return True
+
+def validate_signature(hotkey: str, data: str, signature: str) -> bool:
+    """Validates that the given hotkey has been used to generate the
+    signature for data
+    
+    Arguments:
+        hotkey:
+            SS58_address of the hotkey used to sign the data
+        data:
+            Data signed
+        signature:
+            Signature of the signed data
+    
+    Returns:
+        verdict:
+            A bool depicting the validity of the signature
+    """
+    try:
+        outcome = bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
+        return outcome
+    except AttributeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except TypeError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+    except ValueError as e:
+        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        return False
+
+def sign_data(wallet: bt.wallet, data: str) -> str:
+    """Signs the given data with the wallet hotkey
+    
+    Arguments:
+        wallet:
+            The wallet used to sign the Data
+        data:
+            Data to be signed
+    
+    Returns:
+        signature:
+            Signature of the key signing for the data
+    """
+    try:
+        signature = wallet.hotkey.sign(data.encode()).hex()
+        return signature
+    except TypeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise TypeError from e
+    except AttributeError as e:
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        raise AttributeError from e
+
+def validate_prompt(prompt_dict):
+
+    # define valid data types for each key to check later
+    key_types = {
+    'analyzer':str,
+    'category':str,
+    'prompt':str,
+    'label':int,
+    'weight':(int, float),
+    'hotkey': str,
+    'synapse_uuid': str,
+    'created_at': str,
+    }
+    # run checks
+    if not isinstance(prompt_dict, dict):
+        return False
+    if len([pd for pd in prompt_dict]) != 8:
+        return False
+    for pd in prompt_dict:
+        if pd not in ['analyzer','category','prompt','label','weight', 'created_at', 'synapse_uuid', 'hotkey']:
+            return False 
+        if not isinstance(prompt_dict[pd], key_types[pd]):
+            return False 
+        elif pd == 'label':
+            if isinstance(prompt_dict[pd], bool):
+                return False
+            if prompt_dict[pd] not in [0,1]:
+                return False
+        elif pd == 'weight':
+            if isinstance(prompt_dict[pd], bool):
+                return False 
+            if not (0.0 < prompt_dict[pd] <= 1.0):
+                return False
     return True

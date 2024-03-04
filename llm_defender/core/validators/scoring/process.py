@@ -71,11 +71,13 @@ def calculate_subscore_distance(response, target) -> float:
     if isinstance(response, bool) or not isinstance(response, dict):
         return None
 
+    # If engine response is invalid, return None
     if (
         "engines" not in response.keys()
         or isinstance(response["engines"], bool)
         or not isinstance(response["engines"], list)
         or response["engines"] == []
+        or len(response["engines"]) != 3
     ):
         return None
 
@@ -107,7 +109,7 @@ def calculate_subscore_speed(timeout, response_time):
     return speed_score
 
 
-def validate_response(response) -> bool:
+def validate_response(hotkey, response) -> bool:
     """This method validates the individual response to ensure it has
     been format correctly
 
@@ -136,6 +138,9 @@ def validate_response(response) -> bool:
         "engines",
         "synapse_uuid",
         "subnet_version",
+        "signature",
+        "nonce",
+        "timestamp",
     ]
     if not all(key in response for key in mandatory_keys):
         logging.trace(
@@ -150,6 +155,20 @@ def validate_response(response) -> bool:
                 f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
             )
             return False
+
+    # Check signature
+    data = f'{response["synapse_uuid"]}{response["nonce"]}{response["timestamp"]}'
+    if not utils.validate_signature(
+        hotkey=hotkey, data=data, signature=response["signature"]
+    ):
+        logging.debug(
+            f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
+        )
+        return False
+    else:
+        logging.debug(
+            f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
+        )
 
     # Check the validity of the confidence score
     if isinstance(response["confidence"], bool) or not isinstance(
@@ -169,7 +188,9 @@ def validate_response(response) -> bool:
     return True
 
 
-def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score: float):
+def assign_score_for_uid(
+    scores: Tensor, uid: int, alpha: float, response_score: float, prompt_weight: float
+):
     """Assigns a score to an UID
 
     Arguments:
@@ -179,6 +200,8 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
             UID of the neuron to set the score for
         alpha:
             Scaling factor used for the degradation
+        prompt_weight:
+            Weight of the current prompt.
 
     Returns:
         scores:
@@ -195,6 +218,16 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
         logging.error(f"Value for alpha is incorrect: {alpha}")
         raise AttributeError(
             f"Alpha must be less than 1.0 and greater than or equal to 0.1. Value: {alpha}"
+        )
+
+    if (
+        not isinstance(prompt_weight, (int, float))
+        or isinstance(prompt_weight, bool)
+        or not (0.0 < prompt_weight <= 1.0)
+    ):
+        logging.error(f"Value for prompt_weight is incorrect: {prompt_weight}")
+        raise AttributeError(
+            f"prompt_weight must be greater than or equal to 0.0 and less than or equal to 1.0. Value: {prompt_weight}"
         )
 
     # Ensure the response score is correctly defined
@@ -223,11 +256,16 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
 
     # If current score is already at 0.0 we do not need to do anything
     if response_score == 0.0 and scores[uid] == 0.0:
-        return scores, old_score
+        return scores, old_score, 0.0
 
-    logging.trace(f"Assigning score of 0.0 for UID: {uid}. Current score: {old_score}")
-    scores[uid] = alpha * scores[uid] + (1 - alpha) * response_score
-    logging.trace(f"Assigned score of 0.0 for UID: {uid}. New score: {scores[uid]}")
+    logging.trace(f"Assigning score for UID: {uid}. Current score: {old_score}")
+    unweighted_new_score = alpha * scores[uid] + (1 - alpha) * response_score
+    logging.trace(
+        f"Unweighted score for UID: {uid}. Unweighted score: {unweighted_new_score}"
+    )
+    diff = unweighted_new_score - scores[uid]
+    scores[uid] = scores[uid] + (prompt_weight * diff)
+    logging.trace(f"Assigned weighted score for UID: {uid}. New score: {scores[uid]}")
 
     if old_score == scores[uid]:
         logging.error(
@@ -237,7 +275,7 @@ def assign_score_for_uid(scores: Tensor, uid: int, alpha: float, response_score:
             f"Score for UID: {uid} did not change. Old score: {old_score}, new score: {scores[uid]}"
         )
 
-    return scores, old_score
+    return scores, old_score, unweighted_new_score.item()
 
 
 def get_engine_response_object(
@@ -247,7 +285,7 @@ def get_engine_response_object(
     distance_penalty: float = 0.0,
     speed_penalty: float = 0.0,
     raw_distance_score: float = 0.0,
-    raw_speed_score: float = 0.0
+    raw_speed_score: float = 0.0,
 ) -> dict:
     """This method returns the score object. Calling the method
     without arguments returns default response used for invalid
@@ -279,11 +317,7 @@ def get_response_object(
         "synapse_uuid": synapse_uuid,
         "response": {},
         "scored_response": get_engine_response_object(),
-        "weight_scores": {
-            "new": 0.0,
-            "old": 0.0,
-            "change": 0.0,
-        },
+        "weight_scores": {"new": 0.0, "old": 0.0, "change": 0.0, "unweighted": 0.0},
         "engine_data": [],
     }
 

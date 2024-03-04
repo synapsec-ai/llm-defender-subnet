@@ -20,7 +20,7 @@ We are highly recommending to not changing anything but the engines to keep rest
 
 You can obviously also do the fine-tuning with some other way, but this way you can quite easily keep rest of the code up-to-date with the main branch but still be able to fine-tune the miner code. This is also the way to do it if you want to get support from the subnet developers to help you get started with the fine-tuning process.
 
-One important fine-tuning method is to also tune the engine weights in the `PromptInjectionMiner` class. Please note that this is the only fine-tuning you need to make outside of the engines. 
+One important fine-tuning method is to also tune the engine weights in the `LLMDefenderMiner` class. Please note that this is the only fine-tuning you need to make outside of the engines. 
 
 So in a nutshell, in order to fine-tune the **text classification** engine, you need to modify the following file:
 - llm_defender/core/miners/engines/prompt_injection/text_classification.py
