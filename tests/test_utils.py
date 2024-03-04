@@ -1,6 +1,8 @@
 import llm_defender.base.utils as utils
 import bittensor as bt
 import pytest
+from uuid import uuid4
+from datetime import datetime
 
 def test_uid_validation():
     valid_uids = range(0, 256)
@@ -146,7 +148,20 @@ def test_signatures_and_validation():
         with pytest.raises(AttributeError):
                 utils.sign_data(data=entry, wallet=wallet)
 
+def get_wallet_params(wallet):
+    hotkey = wallet.hotkey.ss58_address
+    synapse_uuid = str(uuid4())
+    return hotkey, synapse_uuid
+
+def generate_wallet(ck = "burner_test_ck", hk = "burner_test_hk"):
+    wallet = bt.wallet(name=ck, hotkey=hk)
+    wallet.create_if_non_existent()
+    return wallet
+
+
 def test_validate_prompt():
+
+    hotkey, synapse_uuid = get_wallet_params(generate_wallet())
     # Test correct input 
     prompt_dicts = [
         {
@@ -154,63 +169,90 @@ def test_validate_prompt():
         'category':'Dataset',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'Prompt Injection',
         'category':'Dataset',
         'prompt':'Test prompt.',
         'label':1,
-        'weight':1.0
+        'weight':1.0,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'Prompt Injection',
         'category':'Dataset',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0.1
+        'weight':0.1,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':1,
-        'weight':0.1
+        'weight':0.1,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':1,
-        'weight':0.9
+        'weight':0.9,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0.00001
+        'weight':0.00001,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0.5
+        'weight':0.5,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0.2
+        'weight':0.2,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0.75923249
+        'weight':0.75923249,
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat()
         },
     ]
     
@@ -226,13 +268,19 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,
-            'unnecessary_key':'unnecessary_value'    
+            'unnecessary_key':'unnecessary_value',
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()    
         },
         {
             'analyzer':'Prompt Injection',
             'category':'Dataset',
             'prompt':'Test prompt.',
             'label':0, 
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         None,
         ['analyzer','category','prompt','label','weight'],
@@ -259,14 +307,20 @@ def test_validate_prompt():
             'category':'Dataset',
             'prompt':'Test prompt.',
             'label':0,
-            'weight':1.0,   
+            'weight':1.0,
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()     
         },
         {
             'analyzer':False,
             'category':'Dataset',
             'prompt':'Test prompt.',
             'label':0,
-            'weight':1.0,   
+            'weight':1.0,
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':[],
@@ -274,6 +328,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':['Prompt Injection'],
@@ -281,6 +338,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':None,
@@ -288,20 +348,29 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':1,
             'category':'Dataset',
             'prompt':'Test prompt.',
             'label':0,
-            'weight':1.0,   
+            'weight':1.0,  
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()   
         },
         {
             'analyzer':1.1,
             'category':'Dataset',
             'prompt':'Test prompt.',
             'label':0,
-            'weight':1.0,   
+            'weight':1.0, 
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()    
         },
         {
             'analyzer':-0.1,
@@ -309,6 +378,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':-1,
@@ -316,6 +388,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':{'analyzer':'Prompt Injection'},
@@ -323,6 +398,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':(),
@@ -330,6 +408,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         },
         {
             'analyzer':['Prompt Injection','Prompt Injection'],
@@ -337,6 +418,9 @@ def test_validate_prompt():
             'prompt':'Test prompt.',
             'label':0,
             'weight':1.0,   
+            "hotkey":hotkey,
+            "synapse_uuid":synapse_uuid,
+            "created_at":datetime.now().isoformat()  
         }
     ]
 
@@ -351,84 +435,120 @@ def test_validate_prompt():
         'category':None,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':True,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':False,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':1,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':0.1,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':100,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':-1,
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':[],
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':['Dataset'],
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':(),
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':{"category":"Dataset"},
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'Prompt Injection',
         'category':{},
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.0
+        'weight':1.0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         }
     ]
 
@@ -443,98 +563,140 @@ def test_validate_prompt():
         'category':'Multilingual',
         'prompt':True,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':False,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':None,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':(),
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':[],
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':{},
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':1,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':100,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':0,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':-1,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':0.1,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':100.1,
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':["Test prompt."],
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':{"prompt":'Test prompt.'},
         'label':0,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         }
     ]        
 
@@ -549,84 +711,120 @@ def test_validate_prompt():
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':None,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':True,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':False,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0.1,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0.5,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':-1,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':100,
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':'foo',
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':(),
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':[],
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':[0],
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':{"label":0},
-        'weight':0.1
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         }
     ]       
 
@@ -641,98 +839,140 @@ def test_validate_prompt():
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':-0.00001
+        'weight':-0.00001,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':1.00001
+        'weight':1.00001,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':0
+        'weight':0,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':True
+        'weight':True,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':False
+        'weight':False,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':None
+        'weight':None,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':()
+        'weight':(),   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':-100
+        'weight':-100,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':100.3424324234
+        'weight':100.3424324234,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':{}
+        'weight':{},   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':[]
+        'weight':[],   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':[0.5]
+        'weight':[0.5],   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':{"weight":1.0}
+        'weight':{"weight":1.0},   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         },
         {
         'analyzer':'PII',
         'category':'Multilingual',
         'prompt':'Test prompt.',
         'label':0,
-        'weight':[0.1,0.2,0.3]
+        'weight':[0.1,0.2,0.3],   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
         }
     ] 
 
@@ -740,9 +980,316 @@ def test_validate_prompt():
         print(prompt_dict)
         assert utils.validate_prompt(prompt_dict) == False
 
+    # Test incorrect inputs for hotkey key
+    
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":True,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":False,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },        
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":1,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":-1,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":1.0,
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":(),
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":{"hotkey":hotkey},
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":[hotkey],
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":[],
+        "synapse_uuid":synapse_uuid,
+        "created_at":datetime.now().isoformat() 
+        }
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+    # Test for incorrect synapse_uuid key
+        
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":True,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":False,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":100,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":-0.01,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":0,
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":[synapse_uuid],
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":{"synapse_uuid":synapse_uuid},
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":(),
+        "created_at":datetime.now().isoformat() 
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":[],
+        "created_at":datetime.now().isoformat() 
+        }
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+
+    # Test for incorrect created_at key
+    prompt_dicts = [
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":1039482394
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":-1
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":[datetime.now().isoformat()]
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":{"created_at":datetime.now().isoformat()}
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":[]
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":{}
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":()
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":True
+        },
+        {
+        'analyzer':'PII',
+        'category':'Multilingual',
+        'prompt':'Test prompt.',
+        'label':1,
+        'weight':0.1,   
+        "hotkey":hotkey,
+        "synapse_uuid":synapse_uuid,
+        "created_at":False
+        }
+    ]
+
+    for prompt_dict in prompt_dicts:
+        print(prompt_dict)
+        assert utils.validate_prompt(prompt_dict) == False
+
+
     print("All tests for utils.validate_prompt() complete.")
 
 def main():
+    print("test_uid_validation")
+    test_uid_validation()
+    print("test_numerical_value_validation")
+    test_numerical_value_validation()
+    print("test_response_data_validation")
+    test_response_data_validation()
+    print("test_signatures_and_validation")
+    test_signatures_and_validation()
+    print("test_validate_prompt")
     test_validate_prompt()
 
 if __name__ == '__main__':
