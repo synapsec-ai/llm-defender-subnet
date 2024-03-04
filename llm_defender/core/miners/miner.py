@@ -353,9 +353,14 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.debug(
             f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
         )
-        bt.logging.success(
-            f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
-        )
+        if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
+            bt.logging.success(
+                f'Processed synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            )
+        else:
+            bt.logging.success(
+                f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            )
 
         return synapse
 
