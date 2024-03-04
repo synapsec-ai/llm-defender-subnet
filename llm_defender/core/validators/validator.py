@@ -626,7 +626,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=6)
+            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=12)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output

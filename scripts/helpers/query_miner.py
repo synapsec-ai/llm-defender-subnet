@@ -6,6 +6,8 @@ from llm_defender.base.protocol import LLMDefenderProtocol
 import uuid
 from llm_defender.base import utils
 from llm_defender import __spec_version__ as subnet_version
+import secrets
+import time
 
 
 def main(args, parser):
@@ -19,6 +21,12 @@ def main(args, parser):
     bt.logging.info(f"Axon to query: {axon_to_query}")
     synapse_uuid = str(uuid.uuid4())
 
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+
+    data = f'{synapse_uuid}{nonce}{timestamp}'
+    signed_data = utils.sign_data(wallet=wallet, data=data)
+    
     responses = dendrite.query(
         axon_to_query,
         LLMDefenderProtocol(
@@ -26,7 +34,9 @@ def main(args, parser):
             analyzer="Prompt Injection",
             subnet_version=subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=utils.sign_data(wallet=wallet, data=synapse_uuid),
+            synapse_signature=signed_data,
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp
         ),
         timeout=12,
         deserialize=True,
