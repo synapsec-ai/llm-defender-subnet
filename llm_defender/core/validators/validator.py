@@ -35,12 +35,8 @@ from llm_defender.core.validators import penalty
 import requests
 import llm_defender.core.validators.scoring as scoring
 
-# Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
-
-if wandb is True:
-    from llm_defender.base.wandb_handler import WandbHandler
-
+from llm_defender.base.wandb_handler import WandbHandler
+from llm_defender.core.exceptions import ValidatorNotPresentAtMetagraph
 
 class PromptInjectionValidator(BaseNeuron):
     """Summary of the class
@@ -69,13 +65,12 @@ class PromptInjectionValidator(BaseNeuron):
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
         self.prompt = None
+        self._wandb = WandbHandler()
 
-        # Enable wandb if it has been configured
-        if wandb is True:
-            self.wandb_enabled = True
-            self.wandb_handler = WandbHandler()
-        else:
-            self.wandb_enabled = False
+
+    @property
+    def wandb(self):
+        return self._wandb
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -90,15 +85,9 @@ class PromptInjectionValidator(BaseNeuron):
 
         return True
 
-    def validator_validation(self, metagraph, wallet, subtensor) -> bool:
+    def is_validator_valid(self, metagraph, wallet, subtensor) -> bool:
         """This method validates the validator has registered correctly"""
-        if wallet.hotkey.ss58_address not in metagraph.hotkeys:
-            bt.logging.error(
-                f"Your validator: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
-            )
-            return False
-
-        return True
+        return wallet.hotkey.ss58_address not in metagraph.hotkeys
 
     def setup_bittensor_objects(
         self, neuron_config
@@ -150,8 +139,13 @@ class PromptInjectionValidator(BaseNeuron):
         )
 
         # Validate that the validator has registered to the metagraph correctly
-        if not self.validator_validation(metagraph, wallet, subtensor):
-            raise IndexError("Unable to find validator key from metagraph")
+        if not self.is_validator_valid(metagraph, wallet, subtensor):
+            exception = ValidatorNotPresentAtMetagraph("Unable to find validator key from metagraph")
+            exception.log_to_bittensor(
+                f"{wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again.",
+                level="error"
+            )
+            raise exception
 
         # Get the unique identity (UID) from the network
         validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
@@ -163,36 +157,39 @@ class PromptInjectionValidator(BaseNeuron):
         self.metagraph = metagraph
 
         # Read command line arguments and perform actions based on them
-        args = self._parse_args(parser=self.parser)
-
-        if args:
-            if args.load_state == "False":
-                self.load_validator_state = False
-            else:
-                self.load_validator_state = True
-
-            if self.load_validator_state:
-                self.load_state()
-                self.load_miner_state()
-            else:
-                self.init_default_scores()
-
-            if args.max_targets:
-                self.max_targets = args.max_targets
-            else:
-                self.max_targets = 256
-
-        else:
-            # Setup initial scoring weights
-            self.init_default_scores()
-            self.max_targets = 256
-
+        self._parse_args(parser=self.parser)
         self.target_group = 0
 
         return True
 
     def _parse_args(self, parser):
-        return parser.parse_args()
+        args = parser.parse_args()
+        self.load_validator_state = True
+
+        if getattr(args, "load_state") == "False":
+            self.load_validator_state = False
+            self.init_default_scores()
+        else:
+            self.load_state()
+            self.load_miner_state()
+
+        self.max_targets = getattr(args, "max_targets", 256)
+
+    def set_scores(self, uuid, response_score, weight):
+        return scoring.process.assign_score_for_uid(
+            self.scores,
+            uuid,
+            self.neuron_config.alpha,
+            response_score,
+            weight,
+        )
+
+    def extract_engine_from_response(self, response, engine_name):
+        return [
+            data
+            for data in response.output["engines"]
+            if data["name"] == f"engine:{engine_name}"
+        ]
 
     def process_responses(
         self,
@@ -207,14 +204,9 @@ class PromptInjectionValidator(BaseNeuron):
 
         target = query["label"]
 
-        if self.wandb_enabled:
-            # Update wandb timestamp for the current run
-            self.wandb_handler.set_timestamp()
-
-            # Log target to wandb
-            self.wandb_handler.log(data={"Target": target})
-            bt.logging.trace(f"Adding wandb logs for target: {target}")
-
+        self.wandb.set_timestamp()
+        self.wandb.log(data={"Target": target})
+        bt.logging.trace(f"Adding wandb logs for target: {target}")
         bt.logging.debug(f"Confidence target set to: {target}")
 
         # Initiate the response objects
@@ -234,14 +226,8 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Set the score for invalid responses to 0.0
             if not scoring.process.validate_response(hotkey, response.output):
-                self.scores, old_score, unweighted_new_score = (
-                    scoring.process.assign_score_for_uid(
-                        self.scores,
-                        processed_uids[i],
-                        self.neuron_config.alpha,
-                        0.0,
-                        query["weight"],
-                    )
+                self.scores, old_score, unweighted_new_score = self.set_scores(
+                    processed_uids[i], 0.0, query["weight"]
                 )
                 responses_invalid_uids.append(processed_uids[i])
 
@@ -252,15 +238,8 @@ class PromptInjectionValidator(BaseNeuron):
                 scored_response = self.calculate_score(
                     response.output, target, query["prompt"], response_time, hotkey
                 )
-
-                self.scores, old_score, unweighted_new_score = (
-                    scoring.process.assign_score_for_uid(
-                        self.scores,
-                        processed_uids[i],
-                        self.neuron_config.alpha,
-                        scored_response["scores"]["total"],
-                        query["weight"],
-                    )
+                self.scores, old_score, unweighted_new_score = self.set_scores(
+                    processed_uids[i], scored_response["scores"]["total"], query["weight"]
                 )
 
                 miner_response = {
@@ -271,44 +250,27 @@ class PromptInjectionValidator(BaseNeuron):
                     "nonce": response.output["nonce"],
                     "timestamp": response.output["timestamp"],
                 }
-
-                text_class = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:text_classification"
-                ]
-
-                vector_search = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:vector_search"
-                ]
-
-                yara = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:yara"
-                ]
+                text_class = self.extract_engine_from_response(response, "text_classification")
+                vector_search = self.extract_engine_from_response(response, "vector_search")
+                yara = self.extract_engine_from_response(response, "text_classification")
 
                 engine_data = []
 
-                if text_class:
-                    if len(text_class) > 0:
-                        engine_data.append(text_class[0])
-                if vector_search:
-                    if len(vector_search) > 0:
-                        engine_data.append(vector_search[0])
-                if yara:
-                    if len(yara) > 0:
-                        engine_data.append(yara[0])
+                if text_class and len(text_class) > 0:
+                    engine_data.append(text_class[0])
+                if vector_search and len(vector_search) > 0:
+                    engine_data.append(vector_search[0])
+                if yara and len(yara) > 0:
+                    engine_data.append(yara[0])
 
                 responses_valid_uids.append(processed_uids[i])
+                subnet_version = response.output.get("subnet_version", 0)
 
-                if response.output["subnet_version"]:
-                    if response.output["subnet_version"] > self.subnet_version:
-                        bt.logging.warning(
-                            f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({self.subnet_version}). Please update the validator.'
-                        )
+                if subnet_version and subnet_version > self.subnet_version:
+                    bt.logging.warning(
+                        f'Received a response from a miner invalid subnet version ({subnet_version}>{self.subnet_version}). '
+                        'Please update the validator.'
+                    )
 
                 # Populate response data
                 response_object["response"] = miner_response
