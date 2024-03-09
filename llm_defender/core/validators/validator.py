@@ -596,7 +596,7 @@ class PromptInjectionValidator(BaseNeuron):
             uid, self.miner_responses[hotkey]
         )
         base += penalty.base.check_penalty(
-            uid, self.miner_responses[hotkey], response, prompt
+            uid, self.miner_responses[hotkey], response
         )
         duplicate += penalty.duplicate.check_penalty(
             uid, self.miner_responses[hotkey], response
@@ -616,7 +616,7 @@ class PromptInjectionValidator(BaseNeuron):
             "X-SynapseUUID": synapse_uuid,
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
-            "X-Version": self.subnet_version
+            "X-Version": str(self.subnet_version)
         }
 
         data = {

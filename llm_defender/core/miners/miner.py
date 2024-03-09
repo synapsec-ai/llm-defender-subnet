@@ -14,9 +14,11 @@ from typing import Tuple
 import sys
 import requests
 import bittensor as bt
+import secrets
+import time
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.base.utils import validate_miner_blacklist, validate_signature
+from llm_defender.base.utils import validate_miner_blacklist, validate_signature, sign_data
 from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
@@ -175,6 +177,46 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
+    
+    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+        """Retrieves a prompt from the prompt API"""
+
+        headers = {
+            "X-Hotkey": hotkey,
+            "X-Signature": signature,
+            "X-SynapseUUID": synapse_uuid,
+            "X-Timestamp": timestamp,
+            "X-Nonce": nonce,
+            "X-Version": str(self.subnet_version)
+        }
+
+        fetch_api_url = "https://api.synapsec.ai/fetch"
+
+        try:
+            # get prompt
+            res = requests.post(url=fetch_api_url, headers=headers, data={}, timeout=6)
+            # check for correct status code
+            if res.status_code == 200:
+                # get prompt entry from the API output
+                prompt_entry = res.json()
+                # check to make sure prompt is valid
+                bt.logging.trace(
+                    f"Loaded remote prompt to serve to miners: {prompt_entry}"
+                )
+                return prompt_entry["prompt"]
+
+            else:
+                bt.logging.warning(
+                    f"Unable to get prompt from the Fetch API: HTTP/{res.status_code} - {res.json()}"
+                )
+        except requests.exceptions.ReadTimeout as e:
+            bt.logging.error(f"Fetch API request timed out: {e}")
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the fetch API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the fetch API: {e}")
+        except Exception as e:
+            bt.logging.error(f'Generic error during request: {e}')
 
     def check_whitelist(self, hotkey):
         """
@@ -337,10 +379,24 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
 
+        # Get the prompt to be analyzed
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
+
+        data = f'{synapse.synapse_uuid}{nonce}{timestamp}'
+
+        prompt = self.get_prompt_from_api(
+            hotkey=self.wallet.hotkey.ss58_address,
+            signature=sign_data(wallet=self.wallet, data=data),
+            synapse_uuid=synapse.synapse_uuid, 
+            timestamp=timestamp, 
+            nonce=nonce
+        )
+
         # Execute the correct analyzer
         if synapse.analyzer == "Prompt Injection":
             bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-            output = self.analyzers["Prompt Injection"].execute(synapse=synapse)
+            output = self.analyzers["Prompt Injection"].execute(synapse=synapse, prompt=prompt)
         else:
             bt.logging.error(
                 f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
