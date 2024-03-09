@@ -190,33 +190,11 @@ class LLMDefenderMiner(BaseNeuron):
             "X-Version": str(self.subnet_version)
         }
 
-        fetch_api_url = "https://fetch-api.synapsec.ai/fetch"
-
-        try:
-            # get prompt
-            res = requests.post(url=fetch_api_url, headers=headers, data={}, timeout=6)
-            # check for correct status code
-            if res.status_code == 200:
-                # get prompt entry from the API output
-                prompt_entry = res.json()
-                # check to make sure prompt is valid
-                bt.logging.trace(
-                    f"Loaded remote prompt to serve to miners: {prompt_entry}"
-                )
-                return prompt_entry["prompt"]
-
-            else:
-                bt.logging.warning(
-                    f"Unable to get prompt from the Fetch API: HTTP/{res.status_code} - {res.json()}"
-                )
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Fetch API request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the fetch API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the fetch API: {e}")
-        except Exception as e:
-            bt.logging.error(f'Generic error during request: {e}')
+        res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
+        
+        if res and "prompt" in res.keys():
+            return res["prompt"]
+        return None
 
     def check_whitelist(self, hotkey):
         """

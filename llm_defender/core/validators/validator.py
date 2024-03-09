@@ -217,6 +217,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Initiate the response objects
         response_data = []
+        response_logger = []
         responses_invalid_uids = []
         responses_valid_uids = []
 
@@ -227,7 +228,7 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Get the default response object
             response_object = scoring.process.get_response_object(
-                processed_uids[i], hotkey, target, synapse_uuid
+                processed_uids[i], hotkey, target, synapse_uuid, query["analyzer"]
             )
 
             # Set the score for invalid responses to 0.0
@@ -263,9 +264,6 @@ class PromptInjectionValidator(BaseNeuron):
 
                 miner_response = {
                     "confidence": response.output["confidence"],
-                    "synapse_uuid": response.output["synapse_uuid"],
-                    "signature": response.output["signature"],
-                    "nonce": response.output["nonce"],
                     "timestamp": response.output["timestamp"],
                 }
 
@@ -318,6 +316,8 @@ class PromptInjectionValidator(BaseNeuron):
                     "unweighted": unweighted_new_score,
                     "weight": query["weight"],
                 }
+
+                response_logger.append(response_object)
 
                 if self.wandb_enabled:
                     wandb_logs = [
@@ -411,6 +411,7 @@ class PromptInjectionValidator(BaseNeuron):
                         f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}"
                     )
 
+
             bt.logging.debug(f"Processed response: {response_object}")
 
             response_data.append(response_object)
@@ -420,6 +421,10 @@ class PromptInjectionValidator(BaseNeuron):
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
+        bt.logging.debug(f'Message to log: {response_logger}')
+        if not self.remote_logger(wallet=self.wallet, message=response_logger):
+            bt.logging.warning('Unable to push validator logs')
+        
         return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):
