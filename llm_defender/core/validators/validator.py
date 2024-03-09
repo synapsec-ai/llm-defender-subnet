@@ -439,11 +439,11 @@ class PromptInjectionValidator(BaseNeuron):
 
         return speed_score
 
-    def get_response_penalties(self, response, hotkey, prompt):
+    def get_response_penalties(self, response, hotkey):
         """This function resolves the penalties for the response"""
 
         similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
-            response, hotkey, prompt
+            response, hotkey
         )
 
         distance_penalty_multiplier = 1.0
@@ -483,7 +483,7 @@ class PromptInjectionValidator(BaseNeuron):
         return total_score, final_distance_score, final_speed_score
 
     def calculate_score(
-        self, response, target: float, prompt: str, response_time: float, hotkey: str
+        self, response, target: float, response_time: float, hotkey: str
     ) -> dict:
         """This function sets the score based on the response.
 
@@ -524,7 +524,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Get penalty multipliers
         distance_penalty, speed_penalty = self.get_response_penalties(
-            response, hotkey, prompt
+            response, hotkey
         )
 
         # Apply penalties to scores
@@ -574,7 +574,7 @@ class PromptInjectionValidator(BaseNeuron):
             raw_speed_score=speed_score,
         )
 
-    def apply_penalty(self, response, hotkey, prompt) -> tuple:
+    def apply_penalty(self, response, hotkey) -> tuple:
         """
         Applies a penalty score based on the response and previous
         responses received from the miner.

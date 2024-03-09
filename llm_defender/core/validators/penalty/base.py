@@ -141,7 +141,7 @@ def check_penalty(uid, miner_responses, response):
         penalty:
             The total penalty score within the base category.
     """
-    if not validate_uid(uid) or not miner_responses or not response or not prompt:
+    if not validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
         return 10.0
 

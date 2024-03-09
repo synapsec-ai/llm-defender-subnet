@@ -149,7 +149,6 @@ class VectorEngine(BaseEngine):
             return {
                 "outcome": "ResultsFound",
                 "distances": results["distances"][0],
-                "documents": results["documents"][0],
             }
         return {"outcome": "ResultsNotFound"}
 
