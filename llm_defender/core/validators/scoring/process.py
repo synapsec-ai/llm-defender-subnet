@@ -134,7 +134,6 @@ def validate_response(hotkey, response) -> bool:
     # Check for mandatory keys
     mandatory_keys = [
         "confidence",
-        "prompt",
         "engines",
         "synapse_uuid",
         "subnet_version",

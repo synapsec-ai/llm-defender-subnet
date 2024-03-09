@@ -62,7 +62,7 @@ class PromptInjectionAnalyzer:
     
     def execute(self, synapse: LLMDefenderProtocol) -> dict:
         # Responses are stored in a dict
-        output = {"analyzer": "Prompt Injection", "prompt": synapse.prompt, "confidence": None, "engines": []}
+        output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
         engine_confidences = []
 

@@ -348,7 +348,7 @@ class LLMDefenderMiner(BaseNeuron):
             return synapse
 
         bt.logging.debug(
-            f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}'
+            f'Processed prompt with analyzer: {output["analyzer"]}'
         )
         bt.logging.debug(
             f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'

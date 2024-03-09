@@ -27,10 +27,8 @@ from llm_defender.base.utils import (
     timeout_decorator,
     validate_miner_blacklist,
     validate_numerical_value,
-    validate_prompt,
     sign_data,
 )
-from llm_defender.base import mock_data
 from llm_defender.core.validators import penalty
 import requests
 import llm_defender.core.validators.scoring as scoring
@@ -229,7 +227,7 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Get the default response object
             response_object = scoring.process.get_response_object(
-                processed_uids[i], hotkey, target, query["prompt"], synapse_uuid
+                processed_uids[i], hotkey, target, synapse_uuid
             )
 
             # Set the score for invalid responses to 0.0
@@ -250,7 +248,7 @@ class PromptInjectionValidator(BaseNeuron):
                 response_time = response.dendrite.process_time
 
                 scored_response = self.calculate_score(
-                    response.output, target, query["prompt"], response_time, hotkey
+                    response.output, target, response_time, hotkey
                 )
 
                 self.scores, old_score, unweighted_new_score = (
@@ -264,7 +262,6 @@ class PromptInjectionValidator(BaseNeuron):
                 )
 
                 miner_response = {
-                    "prompt": response.output["prompt"],
                     "confidence": response.output["confidence"],
                     "synapse_uuid": response.output["synapse_uuid"],
                     "signature": response.output["signature"],
@@ -553,7 +550,6 @@ class PromptInjectionValidator(BaseNeuron):
         # Log the scoring data
         score_logger = {
             "hotkey": hotkey,
-            "prompt": prompt,
             "target": target,
             "synapse_uuid": response["synapse_uuid"],
             "score_weights": score_weights,
@@ -611,7 +607,7 @@ class PromptInjectionValidator(BaseNeuron):
         )
         return similarity, base, duplicate
 
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -619,14 +615,19 @@ class PromptInjectionValidator(BaseNeuron):
             "X-Signature": signature,
             "X-SynapseUUID": synapse_uuid,
             "X-Timestamp": timestamp,
-            "X-Nonce": nonce
+            "X-Nonce": nonce,
+            "X-Version": self.subnet_version
+        }
+
+        data = {
+            "miner_hotkeys": miner_hotkeys
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=12)
+            res = requests.post(url=prompt_api_url, headers=headers, data=data, timeout=12)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output
@@ -650,17 +651,8 @@ class PromptInjectionValidator(BaseNeuron):
         except Exception as e:
             bt.logging.error(f'Generic error during request: {e}')
 
-    def get_local_prompt(self, hotkey, synapse_uuid):
-        try:
-            # Get the old dataset if the API cannot be called for some reason
-            entry = mock_data.get_prompt(hotkey, synapse_uuid)
-            return entry
-        except Exception as e:
-            raise RuntimeError(
-                f"Unable to retrieve a prompt from the API and from local database: {e}"
-            ) from e
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -674,30 +666,22 @@ class PromptInjectionValidator(BaseNeuron):
             entry:
                 A dict instance
         """
-        if self.target_group == 0:
-            # Attempt to get prompt from prompt API
-            nonce = str(secrets.token_hex(24))
-            timestamp = str(int(time.time()))
+        # Attempt to get prompt from prompt API
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
 
-            data = f'{synapse_uuid}{nonce}{timestamp}'
+        data = f'{synapse_uuid}{nonce}{timestamp}'
 
-            entry = self.get_api_prompt(
-                hotkey=self.wallet.hotkey.ss58_address,
-                signature=sign_data(wallet=self.wallet, data=data),
-                synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce
-            )
-            if not validate_prompt(entry):
-                bt.logging.warning(
-                    f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead."
-                )
-                self.prompt = self.get_local_prompt(
-                    hotkey = self.wallet.hotkey.ss58_address, 
-                    synapse_uuid = synapse_uuid
-                )
-            else:
-                self.prompt = entry
+        entry = self.get_api_prompt(
+            hotkey=self.wallet.hotkey.ss58_address,
+            signature=sign_data(wallet=self.wallet, data=data),
+            synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
+        )
+        
+        self.prompt = entry
 
         return self.prompt
+
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1057,4 +1041,4 @@ class PromptInjectionValidator(BaseNeuron):
 
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys

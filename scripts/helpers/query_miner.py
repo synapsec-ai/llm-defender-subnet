@@ -30,7 +30,6 @@ def main(args, parser):
     responses = dendrite.query(
         axon_to_query,
         LLMDefenderProtocol(
-            prompt=args.prompt,
             analyzer="Prompt Injection",
             subnet_version=subnet_version,
             synapse_uuid=synapse_uuid,
