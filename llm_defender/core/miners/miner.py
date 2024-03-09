@@ -190,7 +190,7 @@ class LLMDefenderMiner(BaseNeuron):
             "X-Version": str(self.subnet_version)
         }
 
-        fetch_api_url = "https://api.synapsec.ai/fetch"
+        fetch_api_url = "https://fetch-api.synapsec.ai/fetch"
 
         try:
             # get prompt
