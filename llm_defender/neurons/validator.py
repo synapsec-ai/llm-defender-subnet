@@ -134,8 +134,8 @@ def main(validator: PromptInjectionValidator):
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-                time.sleep(bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+                time.sleep(2 * bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
                     bt.logging.trace(
@@ -193,8 +193,8 @@ def main(validator: PromptInjectionValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-            time.sleep(bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+            time.sleep(2 * bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:

@@ -96,15 +96,14 @@ class BaseNeuron:
 
         headers = {
             "X-Hotkey": wallet.hotkey.ss58_address,
-            "X-Signature": sign_data(wallet=wallet, data=f'{timestamp}-{nonce}'),
-            "X-Timestamp": timestamp,
+            "X-Signature": sign_data(wallet=wallet, data=f'{nonce}-{timestamp}'),
             "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version)
+            "X-Timestamp": timestamp,
         }
 
         data = message
 
-        res = self.requests_post(url="https://logger.synapsec.ai/push", headers=headers, data=data)
+        res = self.requests_post(url="https://logger.synapsec.ai/logger", headers=headers, data=data)
 
         if res:
             return True

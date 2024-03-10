@@ -217,7 +217,12 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Initiate the response objects
         response_data = []
-        response_logger = []
+        response_logger = {
+            "logger": "validator",
+            "hotkey": self.wallet.hotkey.ss58_address,
+            "timestamp": str(time.time()),
+            "miner_metrics": []
+        }
         responses_invalid_uids = []
         responses_valid_uids = []
 
@@ -228,7 +233,7 @@ class PromptInjectionValidator(BaseNeuron):
 
             # Get the default response object
             response_object = scoring.process.get_response_object(
-                processed_uids[i], hotkey, target, synapse_uuid, query["analyzer"]
+                processed_uids[i], hotkey, target, synapse_uuid, query["analyzer"], query["category"]
             )
 
             # Set the score for invalid responses to 0.0
@@ -317,7 +322,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "weight": query["weight"],
                 }
 
-                response_logger.append(response_object)
+                response_logger["miner_metrics"].append(response_object)
 
                 if self.wandb_enabled:
                     wandb_logs = [
@@ -421,9 +426,9 @@ class PromptInjectionValidator(BaseNeuron):
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        bt.logging.debug(f'Message to log: {response_logger}')
+        bt.logging.trace(f'Message to log: {response_logger}')
         if not self.remote_logger(wallet=self.wallet, message=response_logger):
-            bt.logging.warning('Unable to push validator logs')
+            bt.logging.warning('Unable to push miner validation results to the logger service')
         
         return response_data
 
