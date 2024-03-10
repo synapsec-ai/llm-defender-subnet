@@ -219,7 +219,7 @@ class PromptInjectionValidator(BaseNeuron):
         response_data = []
         response_logger = {
             "logger": "validator",
-            "hotkey": self.wallet.hotkey.ss58_address,
+            "validator_hotkey": self.wallet.hotkey.ss58_address,
             "timestamp": str(time.time()),
             "miner_metrics": []
         }
