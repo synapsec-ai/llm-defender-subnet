@@ -37,6 +37,10 @@ def main(validator: PromptInjectionValidator):
                 # Update local knowledge of the hotkeys
                 validator.check_hotkeys()
 
+                # Check registration status
+                if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
+                    bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
                 # Save state
                 validator.save_state()
 
