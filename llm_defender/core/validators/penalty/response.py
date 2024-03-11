@@ -3,6 +3,7 @@ from llm_defender.core.validators import penalty
 
 
 class PenaltyResponse:
+
     @classmethod
     def get_response_penalties(cls, miner_responses, metagraph, response, hotkey, prompt):
         """This function resolves the penalties for the response"""
