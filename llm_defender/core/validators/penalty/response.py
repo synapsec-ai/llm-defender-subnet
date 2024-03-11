@@ -4,11 +4,11 @@ from llm_defender.core.validators import penalty
 
 class PenaltyResponse:
     @classmethod
-    def get_response_penalties(cls, response, hotkey, prompt):
+    def get_response_penalties(cls, miner_responses, metagraph, response, hotkey, prompt):
         """This function resolves the penalties for the response"""
 
         similarity_penalty, base_penalty, duplicate_penalty = cls.apply_penalty(
-            response, hotkey, prompt
+            miner_responses, metagraph, response, hotkey, prompt
         )
 
         distance_penalty_multiplier = 1.0
@@ -28,7 +28,8 @@ class PenaltyResponse:
 
         return distance_penalty_multiplier, speed_penalty
 
-    def apply_penalty(cls, miner_responses, metagraph, response, hotkey, prompt) -> tuple:
+    @staticmethod
+    def apply_penalty(miner_responses, metagraph, response, hotkey, prompt) -> tuple:
         """
         Applies a penalty score based on the response and previous
         responses received from the miner.

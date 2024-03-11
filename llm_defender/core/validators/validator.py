@@ -390,7 +390,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Get penalty multipliers
         distance_penalty, speed_penalty = PenaltyResponse.get_response_penalties(
-            response, hotkey, prompt
+            self.miner_responses, self.metagraph, response, hotkey, prompt
         )
 
         # Apply penalties to scores
