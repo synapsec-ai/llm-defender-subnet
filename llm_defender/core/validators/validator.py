@@ -203,11 +203,11 @@ class PromptInjectionValidator(BaseNeuron):
         """
 
         target = query["label"]
-
-        self.wandb.set_timestamp()
-        self.wandb.log(data={"Target": target})
-        bt.logging.trace(f"Adding wandb logs for target: {target}")
-        bt.logging.debug(f"Confidence target set to: {target}")
+        if self.wandb.use_wandb:
+            self.wandb.set_timestamp()
+            self.wandb.log(data={"Target": target})
+            bt.logging.trace(f"Adding wandb logs for target: {target}")
+            bt.logging.debug(f"Confidence target set to: {target}")
 
         # Initiate the response objects
         response_data = []
@@ -284,97 +284,21 @@ class PromptInjectionValidator(BaseNeuron):
                     "weight": query["weight"],
                 }
 
-                if self.wandb_enabled:
-                    wandb_logs = [
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_confidence": response_object[
-                                "response"
-                            ][
-                                "confidence"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "total"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "distance"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "speed"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                                "scored_response"
-                            ][
-                                "raw_scores"
-                            ][
-                                "distance"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                                "scored_response"
-                            ][
-                                "raw_scores"
-                            ][
-                                "speed"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
-                                "weight_scores"
-                            ][
-                                "new"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
-                                "weight_scores"
-                            ][
-                                "old"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
-                                "weight_scores"
-                            ][
-                                "change"
-                            ]
-                        },
+                if self.wandb.use_wandb:
+                    metrics = [
+                        "confidence", "score_total", "score_distance",
+                        "score_speed", "raw_score_distance", "raw_score_speed",
+                        "weight_score_new", "weight_score_old", "weight_score_change"
                     ]
-
-                    for entry in response_object["engine_data"]:
-                        wandb_logs.append(
-                            {
-                                f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence": entry[
-                                    "confidence"
-                                ]
-                            },
-                        )
-                    for wandb_log in wandb_logs:
-                        self.wandb_handler.log(wandb_log)
-
-                    bt.logging.trace(
-                        f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}"
-                    )
+                    self.wandb.append_wandb_logs = [
+                        self.wandb.log_from_object_rules(metric, response_object)
+                        for metric in metrics
+                    ]
+                    self.wandb.append_wandb_logs = [
+                        self.wandb.log_from_object_rules("engine_confidence", entry)
+                        for entry in response_object["engine_data"]
+                    ]
+                    self.wandb.discharge_logs()
 
             bt.logging.debug(f"Processed response: {response_object}")
 
