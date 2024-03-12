@@ -351,7 +351,7 @@ class LLMDefenderMiner(BaseNeuron):
             output = self.analyzers[SupportedAnalyzers.PROMPT_INJECTION].execute(synapse=synapse)
         elif synapse.analyzer == SupportedAnalyzers.SENSITIVE_INFORMATION:
             bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-            output = self.analyzers[SupportedAnalyzers.SENSITIVE_INFORMATION].execute()
+            output = self.analyzers[SupportedAnalyzers.SENSITIVE_INFORMATION].execute(synapse=synapse)
         else:
             bt.logging.error(
                 f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
