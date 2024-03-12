@@ -23,6 +23,10 @@ from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
+from llm_defender.core.miners.analyzers.sensitive_information.analyzer import (
+    SensitiveInformationAnalyzer
+)
+
 if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
 
@@ -116,7 +120,10 @@ class LLMDefenderMiner(BaseNeuron):
         # Initialize the analyzers
         self.analyzers = {
             "Prompt Injection": PromptInjectionAnalyzer(
-                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler,miner_uid = self.miner_uid
+                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
+            ),
+            "Sensitive Information": SensitiveInformationAnalyzer(
+                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             )
         }
 
