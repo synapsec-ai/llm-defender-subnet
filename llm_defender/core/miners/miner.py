@@ -17,6 +17,7 @@ import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.base.utils import validate_miner_blacklist, validate_signature
+from llm_defender.core.miners.analyzers import SupportedAnalyzers
 from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
@@ -116,13 +117,13 @@ class LLMDefenderMiner(BaseNeuron):
         else:
             self.wandb_enabled = False
             self.wandb_handler = None
-        
+
         # Initialize the analyzers
         self.analyzers = {
-            "Prompt Injection": PromptInjectionAnalyzer(
+            SupportedAnalyzers.PROMPT_INJECTION: PromptInjectionAnalyzer(
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             ),
-            "Sensitive Information": SensitiveInformationAnalyzer(
+            SupportedAnalyzers.SENSITIVE_INFORMATION: SensitiveInformationAnalyzer(
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             )
         }
@@ -345,9 +346,12 @@ class LLMDefenderMiner(BaseNeuron):
             )
 
         # Execute the correct analyzer
-        if synapse.analyzer == "Prompt Injection":
+        if synapse.analyzer == SupportedAnalyzers.PROMPT_INJECTION:
             bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-            output = self.analyzers["Prompt Injection"].execute(synapse=synapse)
+            output = self.analyzers[SupportedAnalyzers.PROMPT_INJECTION].execute(synapse=synapse)
+        elif synapse.analyzer == SupportedAnalyzers.SENSITIVE_INFORMATION:
+            bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
+            output = self.analyzers[SupportedAnalyzers.SENSITIVE_INFORMATION].execute()
         else:
             bt.logging.error(
                 f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
