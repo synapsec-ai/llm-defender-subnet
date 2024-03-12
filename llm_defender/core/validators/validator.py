@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 import secrets
 import time
+import requests
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
@@ -31,10 +32,8 @@ from llm_defender.base.utils import (
     sign_data,
 )
 from llm_defender.base import mock_data
-from llm_defender.core.validators.penalty.response import PenaltyResponse
-import requests
-
-from llm_defender.core.validators.analyzers.prompt_injection.reward import PromptInjectionScoring
+from llm_defender.core.validators.analyzers.prompt_injection.reward.scoring import PromptInjectionScoring
+from llm_defender.core.validators.analyzers import Analyzers
 
 from llm_defender.base.wandb_handler import WandbHandler
 from llm_defender.core.exceptions import ValidatorNotPresentAtMetagraph
@@ -178,10 +177,6 @@ class PromptInjectionValidator(BaseNeuron):
 
         self.max_targets = getattr(args, "max_targets", 256)
 
-    def set_scores(self, uuid, response_score, weight):
-        return PromptInjectionScoring.assign_score_for_uid(
-            self.scores, uuid, self.neuron_config.alpha, response_score, weight
-        )
 
     def extract_engine_from_response(self, response, engine_name):
         return [
@@ -201,7 +196,6 @@ class PromptInjectionValidator(BaseNeuron):
         This function processes the responses received from the miners.
         """
 
-        target = query["label"]
         if self.wandb.use_wandb:
             self.wandb.set_timestamp()
             self.wandb.log(data={"Target": target})
@@ -215,108 +209,20 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Check each response
         for i, response in enumerate(responses):
-            # Get the hotkey for the response
-            hotkey = self.metagraph.hotkeys[processed_uids[i]]
-
-            # Get the default response object
-            response_object = PromptInjectionScoring.get_response_object(
-                processed_uids[i], hotkey, target, query["prompt"], synapse_uuid
-            )
-
-            # Set the score for invalid responses to 0.0
-            if not PromptInjectionScoring.validate_response(hotkey, response.output):
-                self.scores, old_score, unweighted_new_score = self.set_scores(
-                    processed_uids[i], 0.0, query["weight"]
+           # From where should I check the analyzer?
+           if Analyzers.PROMPT_INJECTION == Analyzers.PROMPT_INJECTION:
+               analyzer = Analyzers.PROMPT_INJECTION
+               Analyzers.process_analyzer(analyzer)(
+                    metagraph_hotkey=self.metagraph,
+                    uid=processed_uids[i],
+                    query=query, 
+                    synapse_uuid=synapse_uuid,
+                    response=response,
+                    scores=self.scores,
+                    miner_responses=self.miner_responses
                 )
-                responses_invalid_uids.append(processed_uids[i])
-
-            # Calculate score for valid response
-            else:
-                response_time = response.dendrite.process_time
-
-                scored_response = self.calculate_score(
-                    response.output, target, query["prompt"], response_time, hotkey
-                )
-                self.scores, old_score, unweighted_new_score = self.set_scores(
-                    processed_uids[i], scored_response["scores"]["total"], query["weight"]
-                )
-
-                miner_response = {
-                    "prompt": response.output["prompt"],
-                    "confidence": response.output["confidence"],
-                    "synapse_uuid": response.output["synapse_uuid"],
-                    "signature": response.output["signature"],
-                    "nonce": response.output["nonce"],
-                    "timestamp": response.output["timestamp"],
-                }
-                text_class = self.extract_engine_from_response(
-                    response, "text_classification"
-                )
-                vector_search = self.extract_engine_from_response(
-                    response, "vector_search"
-                )
-                yara = self.extract_engine_from_response(response, "text_classification")
-
-                engine_data = []
-
-                if text_class and len(text_class) > 0:
-                    engine_data.append(text_class[0])
-                if vector_search and len(vector_search) > 0:
-                    engine_data.append(vector_search[0])
-                if yara and len(yara) > 0:
-                    engine_data.append(yara[0])
-
-                responses_valid_uids.append(processed_uids[i])
-                subnet_version = response.output.get("subnet_version", 0)
-
-                if subnet_version and subnet_version > self.subnet_version:
-                    bt.logging.warning(
-                        f"Received a response from a miner invalid subnet version ({subnet_version}>{self.subnet_version}). "
-                        "Please update the validator."
-                    )
-
-                # Populate response data
-                response_object["response"] = miner_response
-                response_object["engine_data"] = engine_data
-                response_object["scored_response"] = scored_response
-                response_object["weight_scores"] = {
-                    "new": float(self.scores[processed_uids[i]]),
-                    "old": float(old_score),
-                    "change": float(self.scores[processed_uids[i]]) - float(old_score),
-                    "unweighted": unweighted_new_score,
-                    "weight": query["weight"],
-                }
-
-                if self.wandb.use_wandb:
-                    metrics = [
-                        "confidence",
-                        "score_total",
-                        "score_distance",
-                        "score_speed",
-                        "raw_score_distance",
-                        "raw_score_speed",
-                        "weight_score_new",
-                        "weight_score_old",
-                        "weight_score_change",
-                    ]
-                    self.wandb.append_wandb_logs = [
-                        self.wandb.log_from_object_rules(metric, response_object)
-                        for metric in metrics
-                    ]
-                    self.wandb.append_wandb_logs = [
-                        self.wandb.log_from_object_rules("engine_confidence", entry)
-                        for entry in response_object["engine_data"]
-                    ]
-                    self.wandb.discharge_logs()
-
-            bt.logging.debug(f"Processed response: {response_object}")
-
-            response_data.append(response_object)
-
-        bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
-        bt.logging.info(f"Received invalid responses from UIDs: {responses_invalid_uids}")
-
-        return response_data
+        
+        return miner_response
 
     def calculate_subscore_speed(self, hotkey, response_time):
         """Calculates the speed subscore for the response"""
@@ -334,113 +240,6 @@ class PromptInjectionValidator(BaseNeuron):
         speed_score = 1.0 - (response_time / self.timeout)
 
         return speed_score
-
-    def calculate_penalized_scores(
-        self, score_weights, distance_score, speed_score, distance_penalty, speed_penalty
-    ):
-        """Applies the penalties to the score and calculates the final score"""
-
-        final_distance_score = (
-            score_weights["distance"] * distance_score
-        ) * distance_penalty
-        final_speed_score = (score_weights["speed"] * speed_score) * speed_penalty
-
-        total_score = final_distance_score + final_speed_score
-
-        return total_score, final_distance_score, final_speed_score
-
-    def calculate_score(
-        self, response, target: float, prompt: str, response_time: float, hotkey: str
-    ) -> dict:
-        """This function sets the score based on the response.
-
-        Returns:
-            score:
-                An instance of dict containing the scoring information for a response
-        """
-
-        # Calculate distance score
-        distance_score = PromptInjectionScoring.calculate_subscore_distance(response, target)
-        if distance_score is None:
-            bt.logging.debug(
-                f"Received an invalid response: {response} from hotkey: {hotkey}"
-            )
-            distance_score = 0.0
-
-        # Calculate speed score
-        speed_score = PromptInjectionScoring.calculate_subscore_speed(
-            self.timeout, response_time
-        )
-        if speed_score is None:
-            bt.logging.debug(
-                f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
-            )
-            speed_score = 0.0
-
-        # Validate individual scores
-        if not validate_numerical_value(
-            distance_score, float, 0.0, 1.0
-        ) or not validate_numerical_value(speed_score, float, 0.0, 1.0):
-            bt.logging.error(
-                f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
-            )
-            return PromptInjectionScoring.get_engine_response_object()
-
-        # Set weights for scores
-        score_weights = {"distance": 0.85, "speed": 0.15}
-
-        # Get penalty multipliers
-        distance_penalty, speed_penalty = PenaltyResponse.get_response_penalties(
-            self.miner_responses, self.metagraph, response, hotkey, prompt
-        )
-
-        # Apply penalties to scores
-        (
-            total_score,
-            final_distance_score,
-            final_speed_score,
-        ) = self.calculate_penalized_scores(
-            score_weights, distance_score, speed_score, distance_penalty, speed_penalty
-        )
-
-        # Validate individual scores
-        if (
-            not validate_numerical_value(total_score, float, 0.0, 1.0)
-            or not validate_numerical_value(final_distance_score, float, 0.0, 1.0)
-            or not validate_numerical_value(final_speed_score, float, 0.0, 1.0)
-        ):
-            bt.logging.error(
-                f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
-            )
-            return PromptInjectionScoring.get_engine_response_object()
-
-        # Log the scoring data
-        score_logger = {
-            "hotkey": hotkey,
-            "prompt": prompt,
-            "target": target,
-            "synapse_uuid": response["synapse_uuid"],
-            "score_weights": score_weights,
-            "penalties": {"distance": distance_penalty, "speed": speed_penalty},
-            "raw_scores": {"distance": distance_score, "speed": speed_score},
-            "final_scores": {
-                "total": total_score,
-                "distance": final_distance_score,
-                "speed": final_speed_score,
-            },
-        }
-
-        bt.logging.debug(f"Calculated score: {score_logger}")
-
-        return PromptInjectionScoring.get_engine_response_object(
-            total_score=total_score,
-            final_distance_score=final_distance_score,
-            final_speed_score=final_speed_score,
-            distance_penalty=distance_penalty,
-            speed_penalty=speed_penalty,
-            raw_distance_score=distance_score,
-            raw_speed_score=speed_score,
-        )
 
     def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
         """Retrieves a prompt from the prompt API"""

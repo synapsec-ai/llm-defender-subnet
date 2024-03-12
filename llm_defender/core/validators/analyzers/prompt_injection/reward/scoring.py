@@ -1,8 +1,12 @@
 import logging
 import llm_defender.base.utils as utils
+import bittensor as bt
 
 from copy import deepcopy
 from torch import Tensor
+
+from llm_defender.base.utils import validate_numerical_value
+from llm_defender.core.validators.penalty.response import PenaltyResponse
 
 
 class PromptInjectionScoring:
@@ -311,7 +315,7 @@ class PromptInjectionScoring:
         return total_distance_score
     
     @staticmethod
-    def calculate_subscore_speed(timeout, response_time):
+    def calculate_subscore_speed(*, response_time, timeout: int = 2):
         """Calculates the speed subscore for the response"""
 
         if isinstance(response_time, bool) or not isinstance(response_time, (float, int)):
@@ -326,3 +330,118 @@ class PromptInjectionScoring:
         speed_score = 1.0 - (response_time / timeout)
 
         return speed_score
+    
+    @staticmethod
+    def calculate_score(
+        *, response, target: float, prompt: str, response_time: float, hotkey: str,
+        miner_responses, metagraph
+    ) -> dict:
+        """This function sets the score based on the response.
+
+        Returns:
+            score:
+                An instance of dict containing the scoring information for a response
+        """
+
+        # Calculate distance score
+        distance_score = PromptInjectionScoring.calculate_subscore_distance(response, target)
+        if distance_score is None:
+            bt.logging.debug(
+                f"Received an invalid response: {response} from hotkey: {hotkey}"
+            )
+            distance_score = 0.0
+
+        # Calculate speed score
+        speed_score = PromptInjectionScoring.calculate_subscore_speed(response_time)
+        if speed_score is None:
+            bt.logging.debug(
+                f"Response time {response_time} was larger than timeout for response: {response} from hotkey: {hotkey}"
+            )
+            speed_score = 0.0
+
+        # Validate individual scores
+        has_valid_distance = validate_numerical_value(
+            distance_score, float, 0.0, 1.0
+        )
+        has_valid_speed_score = validate_numerical_value(
+            speed_score, float, 0.0, 1.0
+        )
+        if not has_valid_distance or not has_valid_speed_score:
+            bt.logging.error(
+                f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
+            )
+            return PromptInjectionScoring.get_engine_response_object()
+
+        # Set weights for scores
+        score_weights = {"distance": 0.85, "speed": 0.15}
+
+        # Get penalty multipliers
+        distance_penalty, speed_penalty = PenaltyResponse.get_response_penalties(
+            miner_responses, metagraph, response, hotkey, prompt
+        )
+
+        # Apply penalties to scores
+        (
+            total_score,
+            final_distance_score,
+            final_speed_score,
+        ) = PromptInjectionScoring.calculate_penalized_scores(
+            score_weights, distance_score, speed_score, distance_penalty, speed_penalty
+        )
+
+        # Validate individual scores
+        if (
+            not validate_numerical_value(total_score, float, 0.0, 1.0)
+            or not validate_numerical_value(final_distance_score, float, 0.0, 1.0)
+            or not validate_numerical_value(final_speed_score, float, 0.0, 1.0)
+        ):
+            bt.logging.error(
+                "Calculated out-of-bounds individual scores ("
+                f"Total: {total_score} - "
+                f"Distance: {final_distance_score} - "
+                f"Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
+            )
+            return PromptInjectionScoring.get_engine_response_object()
+
+        # Log the scoring data
+        score_logger = {
+            "hotkey": hotkey,
+            "prompt": prompt,
+            "target": target,
+            "synapse_uuid": response["synapse_uuid"],
+            "score_weights": score_weights,
+            "penalties": {"distance": distance_penalty, "speed": speed_penalty},
+            "raw_scores": {"distance": distance_score, "speed": speed_score},
+            "final_scores": {
+                "total": total_score,
+                "distance": final_distance_score,
+                "speed": final_speed_score,
+            },
+        }
+
+        bt.logging.debug(f"Calculated score: {score_logger}")
+
+        return PromptInjectionScoring.get_engine_response_object(
+            total_score=total_score,
+            final_distance_score=final_distance_score,
+            final_speed_score=final_speed_score,
+            distance_penalty=distance_penalty,
+            speed_penalty=speed_penalty,
+            raw_distance_score=distance_score,
+            raw_speed_score=speed_score,
+        )
+
+    @staticmethod
+    def calculate_penalized_scores(
+        score_weights, distance_score, speed_score, distance_penalty, speed_penalty
+    ):
+        """Applies the penalties to the score and calculates the final score"""
+
+        final_distance_score = (
+            score_weights["distance"] * distance_score
+        ) * distance_penalty
+        final_speed_score = (score_weights["speed"] * speed_score) * speed_penalty
+
+        total_score = final_distance_score + final_speed_score
+
+        return total_score, final_distance_score, final_speed_score

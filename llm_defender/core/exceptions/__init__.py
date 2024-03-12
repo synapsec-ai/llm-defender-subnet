@@ -8,3 +8,7 @@ class LLMDefenderGenericException(Exception):
 
 class ValidatorNotPresentAtMetagraph(LLMDefenderGenericException):
     pass
+
+
+class UIDValidationFailed(LLMDefenderGenericException):
+    pass
