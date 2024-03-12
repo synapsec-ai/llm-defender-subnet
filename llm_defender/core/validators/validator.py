@@ -33,7 +33,8 @@ from llm_defender.base.utils import (
 from llm_defender.base import mock_data
 from llm_defender.core.validators.penalty.response import PenaltyResponse
 import requests
-import llm_defender.core.validators.scoring as scoring
+
+from llm_defender.core.validators.analyzers.prompt_injection.reward import PromptInjectionScoring
 
 from llm_defender.base.wandb_handler import WandbHandler
 from llm_defender.core.exceptions import ValidatorNotPresentAtMetagraph
@@ -178,7 +179,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.max_targets = getattr(args, "max_targets", 256)
 
     def set_scores(self, uuid, response_score, weight):
-        return scoring.process.assign_score_for_uid(
+        return PromptInjectionScoring.assign_score_for_uid(
             self.scores, uuid, self.neuron_config.alpha, response_score, weight
         )
 
@@ -218,12 +219,12 @@ class PromptInjectionValidator(BaseNeuron):
             hotkey = self.metagraph.hotkeys[processed_uids[i]]
 
             # Get the default response object
-            response_object = scoring.process.get_response_object(
+            response_object = PromptInjectionScoring.get_response_object(
                 processed_uids[i], hotkey, target, query["prompt"], synapse_uuid
             )
 
             # Set the score for invalid responses to 0.0
-            if not scoring.process.validate_response(hotkey, response.output):
+            if not PromptInjectionScoring.validate_response(hotkey, response.output):
                 self.scores, old_score, unweighted_new_score = self.set_scores(
                     processed_uids[i], 0.0, query["weight"]
                 )
@@ -359,7 +360,7 @@ class PromptInjectionValidator(BaseNeuron):
         """
 
         # Calculate distance score
-        distance_score = scoring.process.calculate_subscore_distance(response, target)
+        distance_score = PromptInjectionScoring.calculate_subscore_distance(response, target)
         if distance_score is None:
             bt.logging.debug(
                 f"Received an invalid response: {response} from hotkey: {hotkey}"
@@ -367,7 +368,7 @@ class PromptInjectionValidator(BaseNeuron):
             distance_score = 0.0
 
         # Calculate speed score
-        speed_score = scoring.process.calculate_subscore_speed(
+        speed_score = PromptInjectionScoring.calculate_subscore_speed(
             self.timeout, response_time
         )
         if speed_score is None:
@@ -383,7 +384,7 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.error(
                 f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
             )
-            return scoring.process.get_engine_response_object()
+            return PromptInjectionScoring.get_engine_response_object()
 
         # Set weights for scores
         score_weights = {"distance": 0.85, "speed": 0.15}
@@ -411,7 +412,7 @@ class PromptInjectionValidator(BaseNeuron):
             bt.logging.error(
                 f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
             )
-            return scoring.process.get_engine_response_object()
+            return PromptInjectionScoring.get_engine_response_object()
 
         # Log the scoring data
         score_logger = {
@@ -431,7 +432,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         bt.logging.debug(f"Calculated score: {score_logger}")
 
-        return scoring.process.get_engine_response_object(
+        return PromptInjectionScoring.get_engine_response_object(
             total_score=total_score,
             final_distance_score=final_distance_score,
             final_speed_score=final_speed_score,
