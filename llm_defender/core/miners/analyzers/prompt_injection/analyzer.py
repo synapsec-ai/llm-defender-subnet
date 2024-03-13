@@ -3,15 +3,14 @@ import time
 import secrets
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
+from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
 from llm_defender.core.miners.analyzers.prompt_injection.vector_search import VectorEngine
 from llm_defender.base.utils import sign_data
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
-
 if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
-
 
 class PromptInjectionAnalyzer:
     """This class is responsible for handling the analysis for prompt injection
@@ -23,6 +22,10 @@ class PromptInjectionAnalyzer:
         chromadb_client:
             Stores the 'client' output from VectorEngine.initialize() This is from:
             llm_defender/core/miners/engines/prompt_injection/vector_search.py
+        model:
+            Stores the 'model' output for an engine.
+        tokenizer:
+            Stores the 'tokenized' output for an engine.
 
     Methods:
         execute:
@@ -39,6 +42,7 @@ class PromptInjectionAnalyzer:
 
         # Configuration options for the analyzer
         self.chromadb_client = VectorEngine().initialize()
+        self.model, self.tokenizer = TextClassificationEngine().initialize()
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -53,6 +57,13 @@ class PromptInjectionAnalyzer:
         output = {"analyzer": "Prompt Injection", "prompt": synapse.prompt, "confidence": None, "engines": []}
         engine_confidences = []
 
+        # Execute Text Classification engine
+        text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
+        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        text_classification_response = text_classification_engine.get_response().get_dict()
+        output["engines"].append(text_classification_response)
+        engine_confidences.append(text_classification_response["confidence"])
+
         # Execute Vector Search engine
         vector_engine = VectorEngine(prompt=synapse.prompt)
         vector_engine.execute(client=self.chromadb_client)
@@ -61,7 +72,7 @@ class PromptInjectionAnalyzer:
         engine_confidences.append(vector_response["confidence"])
 
         # Calculate confidence score
-        output["confidence"] = sum(engine_confidences) / len(engine_confidences)
+        output["confidence"] = sum(engine_confidences)/len(engine_confidences)
 
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
@@ -79,6 +90,7 @@ class PromptInjectionAnalyzer:
             self.wandb_handler.set_timestamp()
 
             wandb_logs = [
+                {f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response['confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Vector Search Confidence": vector_response['confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output['confidence']}
             ]
