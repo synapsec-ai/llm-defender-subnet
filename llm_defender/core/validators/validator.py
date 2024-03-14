@@ -87,7 +87,7 @@ class PromptInjectionValidator(BaseNeuron):
 
     def is_validator_valid(self, metagraph, wallet, subtensor) -> bool:
         """This method validates the validator has registered correctly"""
-        return wallet.hotkey.ss58_address not in metagraph.hotkeys
+        return wallet.hotkey.ss58_address in metagraph.hotkeys
 
     def setup_bittensor_objects(
         self, neuron_config
@@ -143,9 +143,10 @@ class PromptInjectionValidator(BaseNeuron):
             exception = ValidatorNotPresentAtMetagraph(
                 "Unable to find validator key from metagraph"
             )
+
             exception.log_to_bittensor(
-                f"{wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again.",
-                level="error",
+                message=f"{wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again.",
+                level="error"
             )
             raise exception
 
@@ -195,7 +196,7 @@ class PromptInjectionValidator(BaseNeuron):
         """
         This function processes the responses received from the miners.
         """
-
+        target = query["label"]
         if self.wandb.use_wandb:
             self.wandb.set_timestamp()
             self.wandb.log(data={"Target": target})
@@ -204,25 +205,24 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Initiate the response objects
         response_data = []
-        responses_invalid_uids = []
-        responses_valid_uids = []
 
         # Check each response
         for i, response in enumerate(responses):
            # From where should I check the analyzer?
            if Analyzers.PROMPT_INJECTION == Analyzers.PROMPT_INJECTION:
                analyzer = Analyzers.PROMPT_INJECTION
-               Analyzers.process_analyzer(analyzer)(
-                    metagraph_hotkey=self.metagraph,
+               response = Analyzers.process_analyzer(analyzer)(
+                    metagraph=self.metagraph,
                     uid=processed_uids[i],
                     query=query, 
                     synapse_uuid=synapse_uuid,
                     response=response,
-                    scores=self.scores,
+                    score=self.scores,
                     miner_responses=self.miner_responses
                 )
+               response_data.append(response)
         
-        return miner_response
+        return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):
         """Calculates the speed subscore for the response"""

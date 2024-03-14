@@ -24,13 +24,17 @@ class PromptInjectionScoring:
                 An instance of bool depicting the outcome of the validation.
         """
         # Responses without output are not valid
-        if not response or isinstance(response, bool):
-            logging.trace(f"Received an response without an output: {response}")
+        if not response:
+            logging.warning(f"Received an empty response:")
+            return False
+    
+        if not getattr(response, "output"):
+            logging.warning(f"Received an response without an output: {response}")
             return False
 
         # Check for type
         if not isinstance(response, dict):
-            logging.trace(f"Received an response with incorrect type: {response}")
+            logging.warning(f"Received an response with incorrect type: {response}")
             return False
 
         # Check for mandatory keys
@@ -45,7 +49,7 @@ class PromptInjectionScoring:
             "timestamp",
         ]
         if not all(key in response for key in mandatory_keys):
-            logging.trace(
+            logging.info(
                 f"One or more mandatory keys: {mandatory_keys} missing from response: {response}"
             )
             return False
@@ -60,6 +64,7 @@ class PromptInjectionScoring:
 
         # Check signature
         data = f'{response["synapse_uuid"]}{response["nonce"]}{response["timestamp"]}'
+
         if not utils.validate_signature(
             hotkey=hotkey, data=data, signature=response["signature"]
         ):

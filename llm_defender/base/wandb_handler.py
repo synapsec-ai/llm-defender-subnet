@@ -3,7 +3,6 @@
 from os import environ
 from dotenv import load_dotenv
 from bittensor import logging
-import wandb
 import time
 
 class WandbRuleFromResponse:
@@ -36,21 +35,16 @@ class WandbHandler(WandbRuleFromResponse):
         self.use_wandb = False
         self._wandb_logs = []
         # Validate the environmental variables are present
-        if key is None:
-            raise ValueError("WANDB_KEY is not set")
-        if project is None:
-            raise ValueError("WANDB_PROJECT is not set")
-        if entity is None:
-            raise ValueError("WANDB_ENTITY is not set")
-
-        # Initialize
-        try:
-            wandb.login(key=key, verify=True)
-            self.wandb_run = wandb.init(project=project, entity=entity)
-            self.use_wandb = True
-        except Exception as e:
-            logging.error(f"Unable to init wandb connectivity: {e}")
-            raise RuntimeError(f"Unable to init wandb connectivity: {e}") from e
+        if all([key, project, entity]):
+            # Initialize
+            try:
+                import wandb
+                wandb.login(key=key, verify=True)
+                self.wandb_run = wandb.init(project=project, entity=entity)
+                self.use_wandb = True
+            except Exception as e:
+                logging.error(f"Unable to init wandb connectivity: {e}")
+                raise RuntimeError(f"Unable to init wandb connectivity: {e}") from e
 
         # Define class variables
         self.log_timestamp = None

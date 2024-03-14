@@ -17,19 +17,17 @@ def process_response(*,
     target = query["label"]
     prompt = query["prompt"]
     weight = query["weight"]
-    invalid_uids = []
     # Get the default response object
-    response_object = PromptInjectionScoring.get_response_object(
+    response = PromptInjectionScoring.get_response_object(
         uid, hotkey, target, prompt, synapse_uuid
     )
 
     # Set the score for invalid responses to 0.0
     if not PromptInjectionScoring.validate_response(hotkey, response.output):
         score, _, _ = PromptInjectionScoring.assign_score_for_uid(
-            score, uid, 0.0, 0.0, weight
+            score, uid, 0.1, 0.0, weight
         )
         raise UIDValidationFailed(uid)
-
     # Calculate score for valid response
     scored_response = PromptInjectionScoring.calculate_score(
         response=response.output,
@@ -42,7 +40,7 @@ def process_response(*,
     )
     total_score_from_response = scored_response["scores"]["total"]
     score, _, _ = PromptInjectionScoring.assign_score_for_uid(
-        score, uid, 0.0, total_score_from_response, weight
+        score, uid, 0.1, total_score_from_response, weight
     )
 
     return {
