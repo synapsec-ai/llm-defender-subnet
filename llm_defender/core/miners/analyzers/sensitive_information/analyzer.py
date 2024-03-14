@@ -70,6 +70,9 @@ class SensitiveInformationAnalyzer:
         output["engines"].append(text_classification_response)
         engine_confidences.append(text_classification_response["confidence"])
 
+        # Calculate confidence score
+        output["confidence"] = sum(engine_confidences)/len(engine_confidences)
+
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
         output["synapse_uuid"] = synapse.synapse_uuid
