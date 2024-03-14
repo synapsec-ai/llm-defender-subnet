@@ -85,7 +85,7 @@ def _get_injection_prompt_from_file(hotkey, synapse_uuid):
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 1, 0.1, hotkey, synapse_uuid)
+    return serve_response("Sensitive Information", "Dataset", prompt, 1, 0.1, hotkey, synapse_uuid)
 
 
 def _get_safe_prompt_from_file(hotkey, synapse_uuid):
@@ -102,7 +102,7 @@ def _get_safe_prompt_from_file(hotkey, synapse_uuid):
         templates = templates_file.readlines()
         prompt = random.choice(templates).decode().strip()
 
-    return serve_response("Prompt Injection", "Dataset", prompt, 0, 0.1, hotkey, synapse_uuid)
+    return serve_response("Sensitive Information", "Dataset", prompt, 0, 0.1, hotkey, synapse_uuid)
 
 def _get_injection_prompt_from_template(hotkey, synapse_uuid):
     template_file_name = "templates.bin.gz"
@@ -128,4 +128,4 @@ def _get_injection_prompt_from_template(hotkey, synapse_uuid):
     # Replace [inject-string] with the injection content in the template line
     prompt = template_line.replace("[inject-string]", injection_line)
 
-    return serve_response("Prompt Injection", "Universal", prompt, 1, 0.1, hotkey, synapse_uuid)
+    return serve_response("Sensitive Information", "Universal", prompt, 1, 0.1, hotkey, synapse_uuid)
