@@ -2,6 +2,8 @@ import typing
 import bittensor as bt
 import pydantic
 
+from llm_defender.core.miners.analyzers import SupportedAnalyzers
+
 
 class LLMDefenderProtocol(bt.Synapse):
     """
@@ -41,7 +43,7 @@ class LLMDefenderProtocol(bt.Synapse):
         allow_mutation=False,
     )
 
-    analyzer: str = pydantic.Field(
+    analyzer: SupportedAnalyzers = pydantic.Field(
         ...,
         title="analyzer",
         description="The analyzer field provides instructions on which Analyzer to execute on the miner",

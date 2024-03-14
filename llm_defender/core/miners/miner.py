@@ -353,7 +353,7 @@ class LLMDefenderMiner(BaseNeuron):
             return synapse
 
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-        output = self.analyzers[SupportedAnalyzers.PROMPT_INJECTION].execute(synapse=synapse)
+        output = self.analyzers[synapse.analyzer].execute(synapse=synapse)
 
         bt.logging.debug(
             f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}'
