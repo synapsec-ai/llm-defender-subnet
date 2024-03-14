@@ -2,8 +2,6 @@ import typing
 import bittensor as bt
 import pydantic
 
-from llm_defender.core.miners.analyzers import SupportedAnalyzers
-
 
 class LLMDefenderProtocol(bt.Synapse):
     """
