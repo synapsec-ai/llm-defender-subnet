@@ -43,7 +43,7 @@ class LLMDefenderProtocol(bt.Synapse):
         allow_mutation=False,
     )
 
-    analyzer: SupportedAnalyzers = pydantic.Field(
+    analyzer: str = pydantic.Field(
         ...,
         title="analyzer",
         description="The analyzer field provides instructions on which Analyzer to execute on the miner",

@@ -120,10 +120,10 @@ class LLMDefenderMiner(BaseNeuron):
 
         # Initialize the analyzers
         self.analyzers = {
-            SupportedAnalyzers.PROMPT_INJECTION: PromptInjectionAnalyzer(
+            str(SupportedAnalyzers.PROMPT_INJECTION): PromptInjectionAnalyzer(
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             ),
-            SupportedAnalyzers.SENSITIVE_INFORMATION: SensitiveInformationAnalyzer(
+            str(SupportedAnalyzers.SENSITIVE_INFORMATION): SensitiveInformationAnalyzer(
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             )
         }

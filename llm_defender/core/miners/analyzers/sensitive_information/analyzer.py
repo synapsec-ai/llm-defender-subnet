@@ -1,11 +1,13 @@
+import secrets
+import time
 import bittensor as bt
-
-# Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
 from llm_defender.base.protocol import LLMDefenderProtocol
+from llm_defender.base.utils import sign_data
 from llm_defender.core.miners.analyzers.sensitive_information.text_classification import TextClassificationEngine
 from llm_defender.core.miners.analyzers.sensitive_information.yara import YaraEngine
 
+# Load wandb library only if it is enabled
+from llm_defender import __wandb__ as wandb
 if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
 
@@ -51,7 +53,7 @@ class SensitiveInformationAnalyzer:
             self.wandb_handler = None
 
     def execute(self, synapse: LLMDefenderProtocol):
-        output = {"analyzer": "Prompt Injection", "prompt": synapse.prompt, "confidence": None, "engines": []}
+        output = {"analyzer": "Sensitive Information", "prompt": synapse.prompt, "confidence": None, "engines": []}
         engine_confidences = []
 
         # Execute YARA engine
@@ -67,6 +69,16 @@ class SensitiveInformationAnalyzer:
         text_classification_response = text_classification_engine.get_response().get_dict()
         output["engines"].append(text_classification_response)
         engine_confidences.append(text_classification_response["confidence"])
+
+        # Add subnet version and UUID to the output
+        output["subnet_version"] = self.subnet_version
+        output["synapse_uuid"] = synapse.synapse_uuid
+        output["nonce"] = secrets.token_hex(24)
+        output["timestamp"] = str(int(time.time()))
+        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{output["timestamp"]}'
+
+        # Generate signature for the response
+        output["signature"] = sign_data(self.wallet, data_to_sign)
 
         # Wandb logging
         if self.wandb_enabled:
