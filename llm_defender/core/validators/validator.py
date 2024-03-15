@@ -270,6 +270,7 @@ class PromptInjectionValidator(BaseNeuron):
                     "signature": response.output["signature"],
                     "nonce": response.output["nonce"],
                     "timestamp": response.output["timestamp"],
+                    "category": response.output["analyzer"]
                 }
 
                 text_class = [
