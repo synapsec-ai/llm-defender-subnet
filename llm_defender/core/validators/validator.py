@@ -208,8 +208,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Check each response
         for i, response in enumerate(responses):
-           # From where should I check the analyzer?
-           if Analyzers.PROMPT_INJECTION == Analyzers.PROMPT_INJECTION:
+           if response.analyzer == Analyzers.PROMPT_INJECTION:
                analyzer = Analyzers.PROMPT_INJECTION
                response = Analyzers.process_analyzer(analyzer)(
                     metagraph=self.metagraph,
