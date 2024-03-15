@@ -1,43 +1,6 @@
 import bittensor as bt
 from llm_defender.base.utils import validate_uid
-
-def _check_prompt_response_mismatch(
-    uid, response, prompt, penalty_name="Prompt/Response mismatch"
-):
-    """
-    Checks if the response's prompt matches the given prompt. If there is a mismatch,
-    a penalty of 20.0 is applied. If the response prompt and given prompt do match,
-    then a penalty of 0.0 is applied. The penalty is then returned. 
-
-    Arguments:
-        uid:
-            An int instance displaying a unique user id for a miner. Must be 
-            between 0 and 255.
-        response:
-            A dict instance which must contain the flag 'prompt' containing a str
-            instance which displays the exact same prompt as the prompt argument.
-        prompt:
-            A str instance which displays a prompt. 
-        penalty_name:
-            A str instance displaying the name of the penalty being administered
-            by the _check_prompt_response_mismatch() method. Default is 'Prompt/Response
-            Mismatch'.
-            
-            This argument generally should not be altered.
-
-    Returns:
-        penalty:
-            A float value which will either be 0.0 (response['prompt'] and prompt are
-            identical strings), or 20.0 if they are not and there is a prompt/response 
-            mismatch.
-    """
-    penalty = 0.0
-    if response["prompt"] != prompt:
-        penalty = 20.0
-    bt.logging.trace(
-        f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
-    )
-    return penalty
+from llm_defender.core.validators.penalty.response import PenaltyResponse
 
 
 def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bounds"):
@@ -146,7 +109,7 @@ def _check_response_history(
 
     return penalty
 
-def check_penalty(uid, miner_responses, response, prompt):
+def check_penalty(uid, miner_responses, response, prompt): #@1
     """
     This function checks the total penalty score within the base category, which
     contains the methods:
@@ -189,7 +152,7 @@ def check_penalty(uid, miner_responses, response, prompt):
         return 5.0
 
     penalty = 0.0
-    penalty += _check_prompt_response_mismatch(uid, response, prompt)
+    penalty += PenaltyResponse.check_prompt_response_mismatch(uid, response, prompt)
     penalty += _check_confidence_validity(uid, response)
     penalty += _check_response_history(uid, miner_responses)
 

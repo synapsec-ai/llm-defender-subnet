@@ -27,12 +27,10 @@ from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
     timeout_decorator,
     validate_miner_blacklist,
-    validate_numerical_value,
     validate_prompt,
     sign_data,
 )
 from llm_defender.base import mock_data
-from llm_defender.core.validators.analyzers.prompt_injection.reward.scoring import PromptInjectionScoring
 from llm_defender.core.validators.analyzers import Analyzers
 
 from llm_defender.base.wandb_handler import WandbHandler
