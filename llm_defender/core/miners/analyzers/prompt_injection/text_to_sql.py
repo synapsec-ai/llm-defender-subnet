@@ -75,7 +75,7 @@ class TextToSqlEngine(BaseEngine):
             This method returns a clean list of the prompt given as an argument for the class.
     """
 
-    def __init__(self, prompt: str = None, name: str = "engine:text_to_sql"):
+    def __init__(self, prompt: str = None, name: str = "prompt_injection:text_to_sql"):
         """
         Initializes the TextToSqlEngine with attributes prompt, keywords and name.
 
@@ -85,7 +85,7 @@ class TextToSqlEngine(BaseEngine):
                 query-formatted prompt injection attacks.
             name:
                 An instance of str displaying the name of the engine. Default is 
-                'engine:text-to-sql'
+                'prompt_injection:text_to_sql'
 
         Returns:
             None
