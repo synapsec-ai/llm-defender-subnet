@@ -143,7 +143,13 @@ def check_penalty(uid, miner_responses):
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
-    for engine in ["engine:text_classification", "engine:yara", "engine:vector_search"]:
+    for engine in [
+        "prompt_injection:text_classification",
+        "prompt_injection:text_to_sql",
+        "prompt_injection:vector_search",
+        "sensitive_info:text_classification",
+        "sensitive_info:yara"
+    ]:
         penalty += _check_response_history(uid, miner_responses, engine)
     # penalty += _check_confidence_history(uid, miner_responses)
 
