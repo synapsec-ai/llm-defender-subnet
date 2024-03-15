@@ -76,7 +76,7 @@ class YaraEngine(BaseEngine):
             Generates the YARA analysis output and confidence score for a given 
             prompt being a prompt injection attack.
     """
-    def __init__(self, prompt: str=None, name: str = "sensitive_info:yara"):
+    def __init__(self, prompt: str=None, name: str = "engine:yara"):
         """
         Initializes the name, prompt, compiled & rules attributes for the YaraEngine.
 

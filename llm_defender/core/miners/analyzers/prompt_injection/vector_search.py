@@ -66,7 +66,7 @@ class VectorEngine(BaseEngine):
     def __init__(
         self,
         prompt: str = None,
-        name="prompt_injection:vector_search",
+        name="engine:vector_search",
         reset_on_init=False
     ):
         """
