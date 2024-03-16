@@ -1,5 +1,5 @@
 """
-This module implements the base-engine used by the prompt-injection
+This module implements the base-engine used by the sensitive-data
 feature of the llm-defender-subnet.
 """
 import torch
@@ -14,12 +14,12 @@ from llm_defender.base.engine import BaseEngine
 
 
 class TextClassificationEngine(BaseEngine):
-    """Text classification engine for detecting prompt injection.
+    """Text classification engine for detecting sensitive data exposure.
 
     This class implements an engine that uses text classification to
-    identity prompt injection attacks. The text classification engine is
+    identity sensitive data exposure. The text classification engine is
     the primary detection method along with the heuristics engine
-    detecting prompt injection attacks.
+    detecting sensitive data exposure.
 
     Whereas the heuristics engine is a collection of specialized
     sub-engines the text-classification engine focuses on analyzing the
@@ -65,7 +65,7 @@ class TextClassificationEngine(BaseEngine):
             Loads the model and tokenizer used for the TextClassificationEngine.
         execute():
             This function performs classification of the given prompt to
-            enable it to detect prompt injection. The function returns the
+            enable it to detect sensitive data exposure. The function returns the
             label and score provided by the classifier and defines the class
             attributes based on the outcome of the classifier.
     """
@@ -121,7 +121,7 @@ class TextClassificationEngine(BaseEngine):
             results:
                 A list instance depicting the results from the text classification 
                 pipeline. The first element in the list (index=0) must be a dict
-                instance contaning the flag 'outcome', and possibly the flag 'score'.
+                instance containing the flag 'outcome', and possibly the flag 'score'.
 
         Returns:
             A dict instance with two flags--the 'outcome' flag is required and will 
@@ -205,7 +205,7 @@ class TextClassificationEngine(BaseEngine):
         """Perform text-classification for the prompt.
 
         This function performs classification of the given prompt to
-        enable it to detect prompt injection. The function returns the
+        enable it to detect sensitive data exposure. The function returns the
         label and score provided by the classifier and defines the class
         attributes based on the outcome of the classifier.
 
