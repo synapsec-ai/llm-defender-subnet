@@ -203,10 +203,17 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Initiate the response objects
         response_data = []
+        response_logger = {
+            "logger": "validator",
+            "validator_hotkey": self.wallet.hotkey.ss58_address,
+            "timestamp": str(time.time()),
+            "miner_metrics": []
+        }
 
         # Check each response
         for i, response in enumerate(responses):
-           if response.analyzer == Analyzers.PROMPT_INJECTION:
+            # Get the hotkey for the response
+            if response.analyzer == Analyzers.PROMPT_INJECTION:
                analyzer = Analyzers.PROMPT_INJECTION
                response = Analyzers.process_analyzer(analyzer)(
                     metagraph=self.metagraph,
@@ -217,8 +224,11 @@ class PromptInjectionValidator(BaseNeuron):
                     score=self.scores,
                     miner_responses=self.miner_responses
                 )
+               response_logger["miner_metrics"].append(response)
                response_data.append(response)
-        
+        bt.logging.trace(f'Message to log: {response_logger}')
+        if not self.remote_logger(wallet=self.wallet, message=response_logger):
+            bt.logging.warning('Unable to push miner validation results to the logger service')
         return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):
@@ -238,7 +248,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         return speed_score
 
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -247,13 +257,18 @@ class PromptInjectionValidator(BaseNeuron):
             "X-SynapseUUID": synapse_uuid,
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
+            "X-Version": str(self.subnet_version)
+        }
+
+        data = {
+            "miner_hotkeys": miner_hotkeys
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=6)
+            res = requests.post(url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output
@@ -277,17 +292,8 @@ class PromptInjectionValidator(BaseNeuron):
         except Exception as e:
             bt.logging.error(f"Generic error during request: {e}")
 
-    def get_local_prompt(self, hotkey, synapse_uuid):
-        try:
-            # Get the old dataset if the API cannot be called for some reason
-            entry = mock_data.get_prompt(hotkey, synapse_uuid)
-            return entry
-        except Exception as e:
-            raise RuntimeError(
-                f"Unable to retrieve a prompt from the API and from local database: {e}"
-            ) from e
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -301,31 +307,22 @@ class PromptInjectionValidator(BaseNeuron):
             entry:
                 A dict instance
         """
-        if self.target_group == 0:
-            # Attempt to get prompt from prompt API
-            nonce = str(secrets.token_hex(24))
-            timestamp = str(int(time.time()))
+        # Attempt to get prompt from prompt API
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
 
-            data = f"{synapse_uuid}{nonce}{timestamp}"
+        data = f'{synapse_uuid}{nonce}{timestamp}'
 
-            entry = self.get_api_prompt(
-                hotkey=self.wallet.hotkey.ss58_address,
-                signature=sign_data(wallet=self.wallet, data=data),
-                synapse_uuid=synapse_uuid,
-                timestamp=timestamp,
-                nonce=nonce,
-            )
-            if not validate_prompt(entry):
-                bt.logging.warning(
-                    f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead."
-                )
-                self.prompt = self.get_local_prompt(
-                    hotkey=self.wallet.hotkey.ss58_address, synapse_uuid=synapse_uuid
-                )
-            else:
-                self.prompt = entry
+        entry = self.get_api_prompt(
+            hotkey=self.wallet.hotkey.ss58_address,
+            signature=sign_data(wallet=self.wallet, data=data),
+            synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
+        )
+        
+        self.prompt = entry
 
         return self.prompt
+
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -676,4 +673,4 @@ class PromptInjectionValidator(BaseNeuron):
 
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys

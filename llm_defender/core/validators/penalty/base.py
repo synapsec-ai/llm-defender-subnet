@@ -109,7 +109,7 @@ def _check_response_history(
 
     return penalty
 
-def check_penalty(uid, miner_responses, response, prompt): #@1
+def check_penalty(uid, miner_responses, response):
     """
     This function checks the total penalty score within the base category, which
     contains the methods:
@@ -142,7 +142,7 @@ def check_penalty(uid, miner_responses, response, prompt): #@1
         penalty:
             The total penalty score within the base category.
     """
-    if not validate_uid(uid) or not miner_responses or not response or not prompt:
+    if not validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
         return 10.0
 
@@ -152,7 +152,7 @@ def check_penalty(uid, miner_responses, response, prompt): #@1
         return 5.0
 
     penalty = 0.0
-    penalty += PenaltyResponse.check_prompt_response_mismatch(uid, response, prompt)
+    penalty += PenaltyResponse.check_prompt_response_mismatch(uid, response)
     penalty += _check_confidence_validity(uid, response)
     penalty += _check_response_history(uid, miner_responses)
 

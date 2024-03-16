@@ -10,8 +10,6 @@ from llm_defender.base.utils import sign_data
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
-if wandb is True:
-    from llm_defender.base.wandb_handler import WandbHandler
 
 class PromptInjectionAnalyzer:
     """This class is responsible for handling the analysis for prompt injection
@@ -60,28 +58,30 @@ class PromptInjectionAnalyzer:
             self.wandb_handler = None
 
     
-    def execute(self, synapse: LLMDefenderProtocol) -> dict:
+    def execute(self, synapse: LLMDefenderProtocol, prompt: str) -> dict:
         # Responses are stored in a dict
-        output = {"analyzer": "Prompt Injection", "prompt": synapse.prompt, "confidence": None, "engines": []}
+        output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
+
+        prompt = prompt
 
         engine_confidences = []
 
         # Execute YARA engine
-        yara_engine = YaraEngine(prompt=synapse.prompt)
+        yara_engine = YaraEngine(prompt=prompt)
         yara_engine.execute(rules=self.yara_rules)
         yara_response = yara_engine.get_response().get_dict()
         output["engines"].append(yara_response)
         engine_confidences.append(yara_response["confidence"])
 
         # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
+        text_classification_engine = TextClassificationEngine(prompt=prompt)
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         text_classification_response = text_classification_engine.get_response().get_dict()
         output["engines"].append(text_classification_response)
         engine_confidences.append(text_classification_response["confidence"])
 
         # Execute Vector Search engine
-        vector_engine = VectorEngine(prompt=synapse.prompt)
+        vector_engine = VectorEngine(prompt=prompt)
         vector_engine.execute(client=self.chromadb_client)
         vector_response = vector_engine.get_response().get_dict()
         output["engines"].append(vector_response)
