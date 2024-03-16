@@ -1,4 +1,4 @@
-from llm_defender.core.validators.analyzers.prompt_injection.reward import PromptInjectionScoring
+from llm_defender.core.validators.scoring import process
 import pytest
 import copy
 from uuid import uuid4
@@ -41,40 +41,40 @@ def test_subscore_distance_calculation():
     }
 
     # Valid responses 
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response_base, target=1.0), 2) == 0.33
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response_base, target=0.0), 2) == 0.67
+    assert round(process.calculate_subscore_distance(valid_response_base, target=1.0), 2) == 0.33
+    assert round(process.calculate_subscore_distance(valid_response_base, target=0.0), 2) == 0.67
 
     valid_response = copy.deepcopy(valid_response_base)
     valid_response["engines"][0]["confidence"] = 0.0
     valid_response["engines"][1]["confidence"] = 0.0
     valid_response["engines"][2]["confidence"] = 0.0
 
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=1.0), 2) == 0.0
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=0.0), 2) == 1.0
+    assert round(process.calculate_subscore_distance(valid_response, target=1.0), 2) == 0.0
+    assert round(process.calculate_subscore_distance(valid_response, target=0.0), 2) == 1.0
 
     valid_response["engines"][0]["confidence"] = 1.0
     valid_response["engines"][1]["confidence"] = 1.0
     valid_response["engines"][2]["confidence"] = 1.0
 
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=1.0), 2) == 1.0
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=0.0), 2) == 0.0
+    assert round(process.calculate_subscore_distance(valid_response, target=1.0), 2) == 1.0
+    assert round(process.calculate_subscore_distance(valid_response, target=0.0), 2) == 0.0
 
     valid_response["engines"][0]["confidence"] = 0.5
     valid_response["engines"][1]["confidence"] = 0.5
     valid_response["engines"][2]["confidence"] = 0.5
 
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=1.0), 2) == 0.5
-    assert round(PromptInjectionScoring.calculate_subscore_distance(valid_response, target=0.0), 2) == 0.5
+    assert round(process.calculate_subscore_distance(valid_response, target=1.0), 2) == 0.5
+    assert round(process.calculate_subscore_distance(valid_response, target=0.0), 2) == 0.5
 
     # Invalid data
     invalid_response = copy.deepcopy(valid_response_base)
     for _,entry in enumerate([-1, -0.0001, 1.1, 1.00001, True, False, [], {}, None]):
         invalid_response["engines"][0]["confidence"] = entry
-        assert PromptInjectionScoring.calculate_subscore_distance(invalid_response, target=0.0) is None
+        assert process.calculate_subscore_distance(invalid_response, target=0.0) is None
     
     for _,entry in enumerate([-1, -0.0001, 1.1, 1.00001, True, False, [], {}, None, {"foo": "bar"}, {"engines": True}, {"engines": []}, {"engines": False}, {"engines": None}]):
         print(entry)
-        assert PromptInjectionScoring.calculate_subscore_distance(entry, target=0.0) is None
+        assert process.calculate_subscore_distance(entry, target=0.0) is None
 
 def test_score_assignment():
 
@@ -88,7 +88,7 @@ def test_score_assignment():
     # Basic scenario
     test_scores = []
     for uid, _ in enumerate(scores.tolist()):
-        test_score,test_old_score,_ = PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_score,test_old_score,_ = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         test_scores.append(round(test_score.tolist()[uid],4))
         assert test_old_score == ref_scores.tolist()[uid]
 
@@ -102,7 +102,7 @@ def test_score_assignment():
     uids = [0,1,2,3,4,5]
 
     for rs, pw, ns, uid in zip(response_scores,prompt_weights,new_scores, uids):
-        test_score,old_score,_ = PromptInjectionScoring.assign_score_for_uid(scores = scores, uid=uid, alpha=alpha, response_score=rs,prompt_weight=pw)
+        test_score,old_score,_ = process.assign_score_for_uid(scores = scores, uid=uid, alpha=alpha, response_score=rs,prompt_weight=pw)
         assert old_score == 0.5
         assert round(test_score.tolist()[uid],3) == ns
 
@@ -113,38 +113,38 @@ def test_score_assignment():
     response_score = 0.5
     test_prompt_weights = [0.000001, 0.1, 0.3, 0.5, 0.7, 0.9, 0.9999999, 1.0]
     for uid,entry in enumerate(test_prompt_weights):
-        assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
 
 
     # Invalid prompt weights
     test_prompt_weights = [-0.1, -0.00001, 1.1, 1.000001, 3, 5, -3, -5, -100, 100, True, False, 'foo', [], {}, [0.5], {'prompt_weight': 0.5}]
     for uid,entry in enumerate(test_prompt_weights):
         with pytest.raises(AttributeError):
-            assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=entry)
 
     # Test alpha
     # Valid alpha
     test_alpha = [0.1, 0.2, 0.5, 0.9, 0.9999]
     for _,entry in enumerate(test_alpha):
-        assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
     
     # Invalid alpha
     test_alpha = [0.09, 0.0, -0.1, -1, 1.0, 1.1, 1, 0, "foo", True, False, [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_alpha):
         with pytest.raises(AttributeError):
-            assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=entry, response_score=response_score,prompt_weight=prompt_weight)
 
     # Response score
     # Valid response score
     test_response_score = [0.0, 0.1, 0.2, 0.5, 0.9, 1.0]
     for _,entry in enumerate(test_response_score):
-        assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
+        assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
 
     # Invalid response score
     test_response_score = [-0.1, -1, -0.001, 1.1, 1, 0, 5, True, False, None, "foo", [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_response_score):
         with pytest.raises(AttributeError):
-            assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
+            assert process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=entry,prompt_weight=prompt_weight)
 
     # UID
     # Valid UID
@@ -152,17 +152,17 @@ def test_score_assignment():
     response_score = 0.0
     test_uid = [0, 1, 10, 200, 255]
     for _,entry in enumerate(test_uid):
-        assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
 
     # Invalid UID
     test_uid = [-0.1, -1, -0.001, 1.1, 256, True, False, None, "foo", [], {}, [0.1], {"foo": "bar"}]
     for _,entry in enumerate(test_uid):
         with pytest.raises(AttributeError):
-            assert PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+            assert process.assign_score_for_uid(scores=scores, uid=entry, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
     
     # Verify that scores below 0.0000001 are set to 0.0
     scores[uid] = 0.00000005
-    test_score,test_old_score,unweighted_score = PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+    test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
     assert test_score[uid] == 0.0
     assert test_old_score == 0.00000005
 
@@ -173,7 +173,7 @@ def test_score_assignment():
     response_score = 0.0
     prompt_weight = 1.0
     while(True):
-        test_score,test_old_score,unweighted_score = PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         print(test_score[uid])
         if test_score[uid] == 0.0:
             break
@@ -185,7 +185,7 @@ def test_score_assignment():
     response_score = 1.0
     prompt_weight = 1.0
     while(True):
-        test_score,test_old_score,unweighted_score = PromptInjectionScoring.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
+        test_score,test_old_score,unweighted_score = process.assign_score_for_uid(scores=scores, uid=uid, alpha=alpha, response_score=response_score,prompt_weight=prompt_weight)
         print(test_score[uid])
         if test_score[uid] == 1.0:
             break
@@ -193,7 +193,7 @@ def test_score_assignment():
 def test_engine_response_object():
 
     # Defaults
-    engine_response_object = PromptInjectionScoring.get_engine_response_object()
+    engine_response_object = process.get_engine_response_object()
     assert engine_response_object["scores"]["total"] == 0.0
     assert engine_response_object["scores"]["distance"] == 0.0
     assert engine_response_object["scores"]["speed"] == 0.0
@@ -201,7 +201,7 @@ def test_engine_response_object():
     assert engine_response_object["penalties"]["speed"] == 0.0
 
     # Non-defaults
-    engine_response_object = PromptInjectionScoring.get_engine_response_object(
+    engine_response_object = process.get_engine_response_object(
         total_score=0.4,
         final_distance_score=0.2,
         final_speed_score=0.5,
@@ -216,7 +216,7 @@ def test_engine_response_object():
 
 def test_response_object():
     
-    response_object = PromptInjectionScoring.get_response_object(
+    response_object = process.get_response_object(
         uid="foo",
         hotkey="bar",
         target=1.0,
@@ -233,7 +233,7 @@ def test_response_object():
 
     assert response_object["engine_data"] == []
     assert response_object["response"] == {}
-    assert response_object["scored_response"] == PromptInjectionScoring.get_engine_response_object()
+    assert response_object["scored_response"] == process.get_engine_response_object()
 
     assert response_object["weight_scores"]["new"] == 0.0
     assert response_object["weight_scores"]["old"] == 0.0
@@ -254,7 +254,7 @@ def test_total_distance_score_calculation():
 
     for i, entry in enumerate(distance_scores):
         assert (
-            round(PromptInjectionScoring.calculate_total_distance_score(distance_scores=entry), 2)
+            round(process.calculate_total_distance_score(distance_scores=entry), 2)
             == expected_result[i]
         )
 
@@ -273,7 +273,7 @@ def test_total_distance_score_calculation():
     ]
 
     for _, entry in enumerate(invalid_inputs):
-        assert PromptInjectionScoring.calculate_total_distance_score(distance_scores=entry) == 0.0
+        assert process.calculate_total_distance_score(distance_scores=entry) == 0.0
 
 def test_speed_subscore_calculation():
 
@@ -284,7 +284,7 @@ def test_speed_subscore_calculation():
     for i, entry in enumerate(response_speeds):
         assert (
             round(
-                PromptInjectionScoring.calculate_subscore_speed(timeout=timeout, response_time=entry),
+                process.calculate_subscore_speed(timeout=timeout, response_time=entry),
                 2,
             )
             == expected_result[i]
@@ -294,7 +294,7 @@ def test_speed_subscore_calculation():
     response_speeds = [12.00001, True, False, [], {}, -1, -0.00001, 0.0, 0, None]
     for i, entry in enumerate(response_speeds):
         assert (
-            PromptInjectionScoring.calculate_subscore_speed(timeout=timeout, response_time=entry)
+            process.calculate_subscore_speed(timeout=timeout, response_time=entry)
             == None
         )
 
@@ -303,7 +303,7 @@ def test_speed_subscore_calculation():
     response_time = 0.5
     for i, entry in enumerate(timeouts):
         assert (
-            PromptInjectionScoring.calculate_subscore_speed(timeout=entry, response_time=response_time)
+            process.calculate_subscore_speed(timeout=entry, response_time=response_time)
             == None
         )
 
@@ -325,7 +325,7 @@ def test_distance_score_calculation():
     }
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -335,7 +335,7 @@ def test_distance_score_calculation():
     target = 0.0
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -345,7 +345,7 @@ def test_distance_score_calculation():
     engine_response["confidence"] = 0.0
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -355,7 +355,7 @@ def test_distance_score_calculation():
     engine_response["confidence"] = 1.0
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -367,7 +367,7 @@ def test_distance_score_calculation():
     engine_response["confidence"] = -0.1
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -377,7 +377,7 @@ def test_distance_score_calculation():
     engine_response["confidence"] = 1.1
     assert (
         round(
-            PromptInjectionScoring.calculate_distance_score(
+            process.calculate_distance_score(
                 target=target, engine_response=engine_response
             ),
             2,
@@ -425,11 +425,11 @@ def test_response_validator():
     valid_response["signature"] = utils.sign_data(wallet=wallet, data=valid_response["synapse_uuid"])
 
     # Tests for valid responses
-    assert PromptInjectionScoring.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
+    assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
 
     for confidence in [0.0, 0.1, 0.5, 0, 1, 1.0, 0.8, 0.999, 0.00001]:
         valid_response["confidence"] = confidence
-        assert PromptInjectionScoring.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True
 
     # Test for invalid confidence scores
     invalid_response = copy.deepcopy(valid_response)
@@ -448,8 +448,8 @@ def test_response_validator():
         [0.5, 0.4],
     ]:
         invalid_response["confidence"] = val
-        assert PromptInjectionScoring.validate_response(hotkey=wallet.hotkey.ss58_address, response=invalid_response) is False
-        assert PromptInjectionScoring.validate_response(hotkey=wallet.hotkey.ss58_address, response=val) is False
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=invalid_response) is False
+        assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=val) is False
 
 def main():
     test_subscore_distance_calculation()

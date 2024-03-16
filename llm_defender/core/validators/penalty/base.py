@@ -1,6 +1,5 @@
 import bittensor as bt
 from llm_defender.base.utils import validate_uid
-from llm_defender.core.validators.penalty.response import PenaltyResponse
 
 
 def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bounds"):
@@ -152,7 +151,6 @@ def check_penalty(uid, miner_responses, response):
         return 5.0
 
     penalty = 0.0
-    penalty += PenaltyResponse.check_prompt_response_mismatch(uid, response)
     penalty += _check_confidence_validity(uid, response)
     penalty += _check_response_history(uid, miner_responses)
 
