@@ -59,13 +59,13 @@ def _calculate_duplicate_percentage(
     if not duplicate_percentage:
         return penalty
 
-    if engine == "engine:yara":
+    if "yara" in engine:
         if duplicate_percentage > 0.95:
             penalty += 0.25
-    elif engine == "engine:vector_search":
+    elif "vector_search" in engine:
         if duplicate_percentage > 0.15:
             penalty += 0.5
-    elif engine == "engine:text_classification":
+    elif "text_classification" in engine:
         if duplicate_percentage > 0.5:
             if duplicate_percentage > 0.95:
                 penalty += 1.0
@@ -178,7 +178,13 @@ def check_penalty(uid, miner_responses, response):
         return 20.0
 
     penalty = 0.0
-    for engine in ["engine:text_classification", "engine:yara", "engine:vector_search"]:
+    for engine in [
+        "prompt_injection:text_classification",
+        "prompt_injection:text_to_sql",
+        "prompt_injection:vector_search",
+        "sensitive_info:text_classification",
+        "sensitive_info:yara"
+    ]:
         penalty += _find_identical_reply(uid, miner_responses, response, engine)
         penalty += _calculate_duplicate_percentage(uid, miner_responses, engine)
 

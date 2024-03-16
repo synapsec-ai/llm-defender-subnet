@@ -27,7 +27,7 @@ class YaraEngine(BaseEngine):
             to analyze. Default is None.
         name:
             An instance of str which describes the name for the YaraEngine. 
-            Default is 'engine:yara'
+            Default is 'sensitive_info:yara'
         cache_dir: 
             The cache directory allocated for the engine.
         compiled:
@@ -76,7 +76,7 @@ class YaraEngine(BaseEngine):
             Generates the YARA analysis output and confidence score for a given 
             prompt being a prompt injection attack.
     """
-    def __init__(self, prompt: str=None, name: str = "engine:yara"):
+    def __init__(self, prompt: str=None, name: str = "sensitive_info:yara"):
         """
         Initializes the name, prompt, compiled & rules attributes for the YaraEngine.
 
@@ -86,7 +86,7 @@ class YaraEngine(BaseEngine):
                 Default is None.
             name:
                 An instance of str which describes the name for the YaraEngine. Default is
-                'engine:yara'
+                'sensitive_info:yara'
 
         Returns:
             None

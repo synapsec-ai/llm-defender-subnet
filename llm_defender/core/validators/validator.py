@@ -270,24 +270,25 @@ class PromptInjectionValidator(BaseNeuron):
                 miner_response = {
                     "confidence": response.output["confidence"],
                     "timestamp": response.output["timestamp"],
+                    "category": response.output["analyzer"]
                 }
 
                 text_class = [
                     data
                     for data in response.output["engines"]
-                    if data["name"] == "engine:text_classification"
+                    if "text_classification" in data["name"]
                 ]
 
                 vector_search = [
                     data
                     for data in response.output["engines"]
-                    if data["name"] == "engine:vector_search"
+                    if "vector_search" in data["name"]
                 ]
 
                 yara = [
                     data
                     for data in response.output["engines"]
-                    if data["name"] == "engine:yara"
+                    if "yara" in data["name"]
                 ]
 
                 engine_data = []
