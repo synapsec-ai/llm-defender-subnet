@@ -52,19 +52,19 @@ class SensitiveInformationAnalyzer:
             self.wandb_enabled = False
             self.wandb_handler = None
 
-    def execute(self, synapse: LLMDefenderProtocol):
-        output = {"analyzer": "Sensitive Information", "prompt": synapse.prompt, "confidence": None, "engines": []}
+    def execute(self, synapse: LLMDefenderProtocol, prompt: str):
+        output = {"analyzer": "Sensitive Information", "confidence": None, "engines": []}
         engine_confidences = []
 
         # Execute YARA engine
-        yara_engine = YaraEngine(prompt=synapse.prompt)
+        yara_engine = YaraEngine(prompt=prompt)
         yara_engine.execute(rules=self.yara_rules)
         yara_response = yara_engine.get_response().get_dict()
         output["engines"].append(yara_response)
         engine_confidences.append(yara_response["confidence"])
 
         # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=synapse.prompt)
+        text_classification_engine = TextClassificationEngine(prompt=prompt)
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         text_classification_response = text_classification_engine.get_response().get_dict()
         output["engines"].append(text_classification_response)

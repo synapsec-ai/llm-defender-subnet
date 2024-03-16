@@ -75,14 +75,14 @@ class TestValidator:
         with pytest.raises(AttributeError):
             # Invalid type
             parser = "foo"
-            subnet_validator = validator.PromptInjectionValidator(parser=parser)
+            subnet_validator = validator.LLMDefenderValidator(parser=parser)
             subnet_validator.apply_config(
                 bt_classes=[self.subtensor, self.logging, self.wallet]
             )
 
             # Empty argparser
             parser = ArgumentParser()
-            subnet_validator = validator.PromptInjectionValidator(parser=parser)
+            subnet_validator = validator.LLMDefenderValidator(parser=parser)
             subnet_validator.apply_config(
                 bt_classes=[self.subtensor, self.logging, self.wallet]
             )
@@ -96,7 +96,7 @@ class TestValidator:
             parser.add_argument("--wallet.name", type=str, default=self.wallet.name)
             parser.add_argument("--wallet.hotkey", type=str, default=self.wallet.hotkey)
             parser.add_argument("--netuid", type=int, default=self.netuid)
-            subnet_validator = validator.PromptInjectionValidator(parser=parser)
+            subnet_validator = validator.LLMDefenderValidator(parser=parser)
             subnet_validator.apply_config(
                 bt_classes=[self.subtensor, self.logging, self.wallet]
             )
@@ -110,7 +110,7 @@ class TestValidator:
     #         parser.add_argument("--wallet.hotkey", type=str, default=self.wallet.hotkey)
     #         parser.add_argument("--netuid", type=int, default=self.netuid)
 
-    #         subnet_validator = validator.PromptInjectionValidator(parser=parser)
+    #         subnet_validator = validator.LLMDefenderValidator(parser=parser)
     #         subnet_validator.apply_config(
     #             bt_classes=[self.subtensor, self.logging, self.wallet]
     #         )
@@ -130,7 +130,7 @@ class TestValidator:
             "--subtensor.network", type=str, default="test"
         )
 
-        valid_validator = validator.PromptInjectionValidator(parser=parser)
+        valid_validator = validator.LLMDefenderValidator(parser=parser)
 
         yield valid_validator
 

@@ -11,10 +11,10 @@ import torch
 import bittensor as bt
 from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.validators.validator import PromptInjectionValidator
+from llm_defender.core.validators.validator import LLMDefenderValidator
 from llm_defender import __version__ as version
 
-def main(validator: PromptInjectionValidator):
+def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
@@ -98,7 +98,6 @@ def main(validator: PromptInjectionValidator):
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
             data_to_sign = f'{synapse_uuid}{nonce}{timestamp}'
-            
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
@@ -112,16 +111,7 @@ def main(validator: PromptInjectionValidator):
                 timeout=validator.timeout,
                 deserialize=True,
             )
-
-            # Process blacklisted UIDs (set scores to 0)
-            # for uid in blacklisted_uids:
-            #     bt.logging.debug(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
-            #     validator.scores[uid] = (
-            #         validator.neuron_config.alpha * validator.scores[uid]
-            #         + (1 - validator.neuron_config.alpha) * 0.0
-            #     )
-            #     bt.logging.debug(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
-
+            
             # Process UIDs we did not query (set scores to 0)
             for uid in uids_not_to_query:
                 bt.logging.trace(
@@ -242,7 +232,7 @@ if __name__ == "__main__":
     )
 
     # Create a validator based on the Class definitions and initialize it
-    subnet_validator = PromptInjectionValidator(parser=parser)
+    subnet_validator = LLMDefenderValidator(parser=parser)
     if (
         not subnet_validator.apply_config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet]
