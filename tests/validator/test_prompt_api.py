@@ -25,7 +25,7 @@ def get_api_prompt(hotkey, signature, synapse_uuid) -> dict:
 
     try:
         # get prompt
-        res = requests.get(url=prompt_api_url, params=request_data, timeout=6)
+        res = requests.get(url=prompt_api_url, params=request_data, timeout=12)
         # check for correct status code
         if res.status_code == 200:
             # get prompt entry from the API output 

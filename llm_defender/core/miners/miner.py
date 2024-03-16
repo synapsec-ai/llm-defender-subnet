@@ -14,10 +14,12 @@ from typing import Tuple
 import sys
 import requests
 import bittensor as bt
+import secrets
+import time
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.base.utils import validate_miner_blacklist, validate_signature
 from llm_defender.core.miners.analyzers import SupportedAnalyzers
+from llm_defender.base.utils import validate_miner_blacklist, validate_signature, sign_data
 from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
@@ -183,6 +185,24 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
+    
+    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+        """Retrieves a prompt from the prompt API"""
+
+        headers = {
+            "X-Hotkey": hotkey,
+            "X-Signature": signature,
+            "X-SynapseUUID": synapse_uuid,
+            "X-Timestamp": timestamp,
+            "X-Nonce": nonce,
+            "X-Version": str(self.subnet_version)
+        }
+
+        res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
+        
+        if res and "prompt" in res.keys():
+            return res["prompt"]
+        return None
 
     def check_whitelist(self, hotkey):
         """
@@ -345,6 +365,20 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
 
+        # Get the prompt to be analyzed
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
+
+        data = f'{synapse.synapse_uuid}{nonce}{timestamp}'
+
+        prompt = self.get_prompt_from_api(
+            hotkey=self.wallet.hotkey.ss58_address,
+            signature=sign_data(wallet=self.wallet, data=data),
+            synapse_uuid=synapse.synapse_uuid, 
+            timestamp=timestamp, 
+            nonce=nonce
+        )
+
         # Execute the correct analyzer
         if not SupportedAnalyzers.is_valid(synapse.analyzer):
             bt.logging.error(
@@ -353,17 +387,22 @@ class LLMDefenderMiner(BaseNeuron):
             return synapse
 
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-        output = self.analyzers[synapse.analyzer].execute(synapse=synapse)
+        output = self.analyzers[synapse.analyzer].execute(synapse=synapse, prompt=prompt)
 
         bt.logging.debug(
-            f'Processed prompt: {output["prompt"]} with analyzer: {output["analyzer"]}'
+            f'Processed prompt with analyzer: {output["analyzer"]}'
         )
         bt.logging.debug(
             f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
         )
-        bt.logging.success(
-            f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
-        )
+        if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
+            bt.logging.success(
+                f'Processed synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            )
+        else:
+            bt.logging.success(
+                f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            )
 
         return synapse
 

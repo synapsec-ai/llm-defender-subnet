@@ -37,6 +37,10 @@ def main(validator: PromptInjectionValidator):
                 # Update local knowledge of the hotkeys
                 validator.check_hotkeys()
 
+                # Check registration status
+                if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
+                    bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
                 # Save state
                 validator.save_state()
 
@@ -73,19 +77,20 @@ def main(validator: PromptInjectionValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            # Get the query to send to the valid Axons
-            synapse_uuid = str(uuid4())
-            query = validator.serve_prompt(synapse_uuid)
-
             # Get list of UIDs to query
             (
                 uids_to_query,
                 list_of_uids,
                 blacklisted_uids,
                 uids_not_to_query,
+                list_of_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
+            
+            # Get the query to send to the valid Axons
+            synapse_uuid = str(uuid4())
+            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
 
             bt.logging.debug(f"Serving query: {query}")
 
@@ -97,7 +102,6 @@ def main(validator: PromptInjectionValidator):
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    prompt=query["prompt"],
                     analyzer=query["analyzer"],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
@@ -134,8 +138,8 @@ def main(validator: PromptInjectionValidator):
             # Log the results for monitoring purposes.
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-                time.sleep(bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+                time.sleep(2 * bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
                     bt.logging.trace(
@@ -193,8 +197,8 @@ def main(validator: PromptInjectionValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-            time.sleep(bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+            time.sleep(2 * bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
