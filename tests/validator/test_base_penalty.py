@@ -1,31 +1,34 @@
-from llm_defender.core.validators.penalty.response import PenaltyResponse
-from llm_defender.core.validators.penalty.base import check_penalty, _check_response_history
-from llm_defender.core.validators.analyzers.prompt_injection.reward import PromptInjectionScoring
+from llm_defender.core.validators.penalty.base import _check_prompt_response_mismatch, _check_confidence_validity,_check_response_history, check_penalty
+from llm_defender.core.validators.scoring.process import calculate_distance_score, calculate_total_distance_score, calculate_subscore_distance
+import unittest
+import pytest
+import bittensor as bt
+
 
 class TestBasePenaltyFunctions():
 
     def test_check_prompt_response_mismatch(self):
         print("\nNOW TESTING: _check_prompt_response_mismatch()\n")
         print("Testing that prompt and response match.")
-        assert PenaltyResponse.check_prompt_response_mismatch(1,{'prompt': 'test'},'test') == 0.0
+        assert _check_prompt_response_mismatch(1,{'prompt': 'test'},'test') == 0.0
         print("Test successful.")
 
         print("Testing that prompt and response do not match.")
-        assert 20.0 == PenaltyResponse.check_prompt_response_mismatch(2,{'prompt': 'test'},'different')
+        assert 20.0 == _check_prompt_response_mismatch(2,{'prompt': 'test'},'different')
         print("Test successful.")
 
     def test_check_confidence_validity(self):
         print("\nNOW TESTING: _check_confidence_validity()\n")
         print("Testing for valid confidence score.")
-        assert PenaltyResponse.check_confidence_validity(0,{'confidence': 0.5}) ==  0.0
+        assert _check_confidence_validity(0,{'confidence': 0.5}) ==  0.0
         print("Test successful.")
 
         print("Testing for invalid confidence score of 1.1 raising 20.0 penalty.")
-        assert PenaltyResponse.check_confidence_validity(3,{'confidence': 1.1}) == 20.0
+        assert _check_confidence_validity(3,{'confidence': 1.1}) == 20.0
         print("Test successful.")
 
         print("Testing for invalid confidence score of -0.1 raising 20.0 penalty.")
-        assert PenaltyResponse.check_confidence_validity(255,{'confidence': -0.1}) == 20.0
+        assert _check_confidence_validity(255,{'confidence': -0.1}) == 20.0
         print("Test successful.")
 
     def test_check_response_history(self):
@@ -33,43 +36,43 @@ class TestBasePenaltyFunctions():
 
         print("Testing that calculate_distance_score outputs distance score 1.0 when confidence = 0.0 and target = 1.0, and when confidence = 1.0 and target = 0.0")
         engine_response = {"name":"engine:text_classification","confidence": 0.0,"data":{}}
-        assert PromptInjectionScoring.calculate_distance_score(target=1.0, engine_response=engine_response) == 1.0
+        assert calculate_distance_score(target=1.0, engine_response=engine_response) == 1.0
         engine_response = {"name":"engine:text_classification","confidence": 1.0,"data":{}}
-        assert PromptInjectionScoring.calculate_distance_score(target=0.0, engine_response=engine_response) == 1.0
+        assert calculate_distance_score(target=0.0, engine_response=engine_response) == 1.0
         print("Test successful.")
 
         print("Testing that calculate_distance_score outputs distance score 0.0 when confidence = 0.0 and target = 0.0, and when confidence = 1.0 and target = 1.0")
         engine_response = {"name":"engine:text_classification","confidence": 0.0,"data":{}}
-        assert PromptInjectionScoring.calculate_distance_score(target=0.0, engine_response=engine_response) == 0.0
+        assert calculate_distance_score(target=0.0, engine_response=engine_response) == 0.0
         engine_response = {"name":"engine:text_classification","confidence": 1.0,"data":{}}
-        assert PromptInjectionScoring.calculate_distance_score(target=1.0, engine_response=engine_response) == 0.0
+        assert calculate_distance_score(target=1.0, engine_response=engine_response) == 0.0
         print("Test successful.")
 
         print("Testing that calculate_distance_score outputs distance score 0.2 when confidence = 0.8 and target = 1.0, and also when confidence = 0.2 and target = 0.0")
         engine_response = {"name":"engine:text_classification","confidence": 0.8,"data":{}}
-        assert round(PromptInjectionScoring.calculate_distance_score(target=1.0, engine_response=engine_response),2) == 0.2
+        assert round(calculate_distance_score(target=1.0, engine_response=engine_response),2) == 0.2
         engine_response = {"name":"engine:text_classification","confidence": 0.2,"data":{}}
-        assert round(PromptInjectionScoring.calculate_distance_score(target=0.0, engine_response=engine_response),2) == 0.2
+        assert round(calculate_distance_score(target=0.0, engine_response=engine_response),2) == 0.2
         print("Test successful.")
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 1.0 when distance_scores = [0.0,0.0,0.0]")
         distance_scores = [0.0,0.0,0.0]
-        assert PromptInjectionScoring.calculate_total_distance_score(distance_scores=distance_scores) == 1.0
+        assert calculate_total_distance_score(distance_scores=distance_scores) == 1.0
         print("Test successful.")
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 0.0 when distance_scores = [1.0,1.0,1.0]")
         distance_scores = [1.0,1.0,1.0]
-        assert PromptInjectionScoring.calculate_total_distance_score(distance_scores=distance_scores) == 0.0
+        assert calculate_total_distance_score(distance_scores=distance_scores) == 0.0
         print("Test successful.")
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 0.8 when distance_scores = [0.1,0.2,0.3]")
         distance_scores = [0.1,0.2,0.3]
-        assert round(PromptInjectionScoring.calculate_total_distance_score(distance_scores=distance_scores),2) == 0.8
+        assert round(calculate_total_distance_score(distance_scores=distance_scores),2) == 0.8
         print("Test successful.")
 
         print("Testing that calculate_total_distance_score outputs total_distance_score 0.25 when distance_scores = [0.5,0.75,1.0]")
         distance_scores = [0.5,0.75,1.0]
-        assert round(PromptInjectionScoring.calculate_total_distance_score(distance_scores=distance_scores),2) == 0.25
+        assert round(calculate_total_distance_score(distance_scores=distance_scores),2) == 0.25
         print("Test successful.")
 
         print("Testing that calculate_subscore_distance outputs total_distance_score 0.0 when confidence scores = [1.0,1.0,1.0] and target = 0.0, and also when confidence scores = [0.0,0.0,0.0] and target score = 1.0")
@@ -81,7 +84,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 0.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.0
         response = {
             "engines":[
                 {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
@@ -90,7 +93,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 1.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.0
+        assert calculate_subscore_distance(response=response,target=target) == 0.0
         print("Test successful.")
 
         print("Testing that calculate_subscore_distance outputs total_distance_score 1.0 when confidence scores = [1.0,1.0,1.0] and target score = 1.0, and also when confidence scores = [0.0,0.0,0.0] and target score = 0.0")
@@ -102,7 +105,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 1.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 1.0
         response = {
             "engines":[
                 {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
@@ -111,7 +114,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 0.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 1.0
+        assert calculate_subscore_distance(response=response,target=target) == 1.0
         print("Test successful.")
 
         print("Testing that calculate_subscore_distance outputs total_distance_score 0.25 when confidence scores = [0.5,0.75,1.0] and target score = 0.0, and also when confidence scores = [0.0,0.25,0.5] and target score = 1.0.")
@@ -123,7 +126,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 0.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.25
+        assert calculate_subscore_distance(response=response,target=target) == 0.25
         response = {
             "engines":[
                 {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
@@ -132,7 +135,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 1.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.25
+        assert calculate_subscore_distance(response=response,target=target) == 0.25
         print("Test successful.")
 
         print("Testing that calculate_subscore_distance outputs total_distance_score 0.75 when confidence scores = [0.0,0.25,0.5] and target score = 0.0, and also when confidence scores = [0.5,0.75,1.0] and target score = 1.0")
@@ -144,7 +147,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 1.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.75
+        assert calculate_subscore_distance(response=response,target=target) == 0.75
         response = {
             "engines":[
                 {"name":"engine:vector_search","confidence":0.0,"data":{"outcome":"ResultsFound"}},
@@ -153,7 +156,7 @@ class TestBasePenaltyFunctions():
             ]
         }
         target = 0.0
-        assert PromptInjectionScoring.calculate_subscore_distance(response=response,target=target) == 0.75
+        assert calculate_subscore_distance(response=response,target=target) == 0.75
         print("Test successful.")
 
         print("\nNOW TESTING: _check_response_history()\n")
