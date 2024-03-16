@@ -1,10 +1,4 @@
-from llm_defender.core.validators.penalty.duplicate import (
-    _calculate_duplicate_percentage,
-    _find_identical_reply,
-    check_penalty,
-)
-import unittest
-import pytest
+from llm_defender.core.validators.penalty.response import PenaltyResponse
 import random
 import copy
 from uuid import uuid4
@@ -163,12 +157,12 @@ def test_calculate_duplicate_percentage():
         miner_responses += [rp] * num_duplicate
         return miner_responses
 
-    print("\nNOW TESTING: _calculate_duplicate_percentage()\n")
+    print("\nNOW TESTING: PenaltyResponse.calculate_duplicate_percentage()\n")
 
     print(
         "Testing that penalty score of 0.25 is applied if duplicate_percentage > 0.95 for the YARA engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6, miner_responses=generate_miner_responses(2, 98), engine="engine:yara"
     )
     assert duplicate_penalty == 0.25
@@ -177,11 +171,11 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.0 is applied if duplicate_percentage <= 0.95 for the YARA engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6, miner_responses=generate_miner_responses(10, 90), engine="engine:yara"
     )
     assert duplicate_penalty == 0.0
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6, miner_responses=generate_miner_responses(5, 95), engine="engine:yara"
     )
     assert duplicate_penalty == 0.0
@@ -190,7 +184,7 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.5 is applied if duplicate_percentage > 0.15 for the Vector Search engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(83, 17),
         engine="engine:vector_search",
@@ -201,13 +195,13 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.0 is applied if duplicate_percentage <= 0.15 for the Vector Search engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(85, 15),
         engine="engine:vector_search",
     )
     assert duplicate_penalty == 0.0
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(90, 10),
         engine="engine:vector_search",
@@ -218,19 +212,19 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.15 is applied if 0.5 < duplicate_percentage <= 0.8 for the Text Classification engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(48, 52),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.15
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(35, 65),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.15
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(1, 4),
         engine="engine:text_classification",
@@ -241,19 +235,19 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.33 is applied if 0.8 < duplicate_percentage <= 0.9 for the Text Classification engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(18, 82),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.33
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(10, 90),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.33
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(15, 85),
         engine="engine:text_classification",
@@ -264,13 +258,13 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.66 is applied if 0.9 < duplicate_percentage <= 0.95 for the Text Classification engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(8, 92),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.66
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(7, 93),
         engine="engine:text_classification",
@@ -281,13 +275,13 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 1.0 is applied if duplicate_percentage > 0.95 for the Text Classification engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(3, 97),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 1.0
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(1, 99),
         engine="engine:text_classification",
@@ -298,13 +292,13 @@ def test_calculate_duplicate_percentage():
     print(
         "Testing that penalty score of 0.0 is applied if duplicate_percentage <= 0.5 for the Text Classification engine."
     )
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(1, 1),
         engine="engine:text_classification",
     )
     assert duplicate_penalty == 0.0
-    duplicate_penalty = _calculate_duplicate_percentage(
+    duplicate_penalty = PenaltyResponse.calculate_duplicate_percentage(
         uid=6,
         miner_responses=generate_miner_responses(90, 10),
         engine="engine:text_classification",
@@ -412,21 +406,21 @@ def test_find_identical_reply():
     print(
         "Testing that 0.0 penalty is applied for the case where engine_response is empty"
     )
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=[],
         response={"engines": [{"name": "engine:yara"}]},
         engine="engine:text_classification",
     )
     assert identical_penalty == 0.0
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=[],
         response={"engines": [{"name": "engine:vector_search"}]},
         engine="engine:text_classification",
     )
     assert identical_penalty == 0.0
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=[],
         response={"engines": [{"name": "engine:text_classification"}]},
@@ -438,21 +432,21 @@ def test_find_identical_reply():
     print(
         "Testing that 0.25 penalty is applied for the case where identical reply is found."
     )
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(2, 2),
         response=current_response,
         engine="engine:yara",
     )
     assert identical_penalty == 0.25
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(2, 2),
         response=current_response,
         engine="engine:text_classification",
     )
     assert identical_penalty == 0.25
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(2, 2),
         response=current_response,
@@ -464,21 +458,21 @@ def test_find_identical_reply():
     print(
         "Testing that 0.0 penalty is applied for the case where no identical replies are found."
     )
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(50, 0),
         response=current_response,
         engine="engine:yara",
     )
     assert identical_penalty == 0.0
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(50, 0),
         response=current_response,
         engine="engine:text_classification",
     )
     assert identical_penalty == 0.0
-    identical_penalty = _find_identical_reply(
+    identical_penalty = PenaltyResponse.find_identical_reply(
         uid=6,
         miner_responses=generate_miner_responses(50, 0),
         response=current_response,
@@ -496,7 +490,7 @@ def test_check_penalty():
 
     for invuid in invalid_uids:
         print(f"Testing that 20.0 penalty is returned for invalid uid: {invuid}")
-        penalty = check_penalty(
+        penalty = PenaltyResponse.check_penalty(
             uid=invuid,
             miner_responses=[
                 {"name": "vector_engine", "confidence": 0.5},
@@ -515,7 +509,7 @@ def test_check_penalty():
         print("Test successful.")
 
     print("Testing that 20.0 penalty is returned for invalid miner_responses input.")
-    penalty = check_penalty(
+    penalty = PenaltyResponse.check_penalty(
         uid=7,
         miner_responses=[],
         response={
@@ -527,7 +521,7 @@ def test_check_penalty():
         },
     )
     assert penalty == 20.0
-    penalty = check_penalty(
+    penalty = PenaltyResponse.check_penalty(
         uid=7,
         miner_responses=None,
         response={
@@ -542,7 +536,7 @@ def test_check_penalty():
     print("Test successful.")
 
     print("Testing that 20.0 penalty is returned for invalid response input.")
-    penalty = check_penalty(
+    penalty = PenaltyResponse.check_penalty(
         uid=7,
         miner_responses=[
             {"name": "vector_engine", "confidence": 0.5},
@@ -552,7 +546,7 @@ def test_check_penalty():
         response={},
     )
     assert penalty == 20.0
-    penalty = check_penalty(
+    penalty = PenaltyResponse.check_penalty(
         uid=7,
         miner_responses=[
             {"name": "vector_engine", "confidence": 0.5},

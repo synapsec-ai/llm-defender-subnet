@@ -1,1 +1,1 @@
-from . import base, similarity, duplicate
+from . import base, similarity, duplicate, response
