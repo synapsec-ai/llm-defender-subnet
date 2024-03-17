@@ -221,7 +221,7 @@ class TokenClassificationEngine(BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "text-classification",
+                "token-classification",
                 model=model,
                 tokenizer=tokenizer,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
