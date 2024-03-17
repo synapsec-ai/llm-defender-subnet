@@ -141,8 +141,8 @@ class BaseNeuron:
     def save_used_nonces(self):
         """Saves used nonces to a local file"""
 
-        if len(self.used_nonces) > 50000:
-            self.used_nonce = self.used_nonces[-50000:]
+        if len(self.used_nonces) > 1000000:
+            self.used_nonces = self.used_nonces[-500000:]
             bt.logging.info("Truncated list of used_nonces")
         with open(f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle", "wb") as pickle_file:
             pickle.dump(self.used_nonces, pickle_file)
