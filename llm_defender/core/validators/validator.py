@@ -315,7 +315,8 @@ class LLMDefenderValidator(BaseNeuron):
             "X-SynapseUUID": synapse_uuid,
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version)
+            "X-Version": str(self.subnet_version),
+            "X-API-Key": hotkey
         }
 
         data = {

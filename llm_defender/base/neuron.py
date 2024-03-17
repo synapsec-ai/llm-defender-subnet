@@ -99,6 +99,7 @@ class BaseNeuron:
             "X-Signature": sign_data(wallet=wallet, data=f'{nonce}-{timestamp}'),
             "X-Nonce": nonce,
             "X-Timestamp": timestamp,
+            "X-API-Key": wallet.hotkey.ss58_address
         }
 
         data = message
