@@ -101,7 +101,7 @@ def main(validator: LLMDefenderValidator):
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    analyzer=query["analyzer"],
+                    analyzer="Sensitive Information",
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
                     synapse_signature=utils.sign_data(wallet=validator.wallet, data=data_to_sign),
@@ -111,7 +111,7 @@ def main(validator: LLMDefenderValidator):
                 timeout=validator.timeout,
                 deserialize=True,
             )
-            
+
             # Process UIDs we did not query (set scores to 0)
             for uid in uids_not_to_query:
                 bt.logging.trace(
