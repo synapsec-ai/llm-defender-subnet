@@ -63,12 +63,6 @@ def process_response(
             if "token_classification" in data["name"]
         ]
 
-        text_class = [
-            data
-            for data in response.output["engines"]
-            if "text_classification" in data["name"]
-        ]
-
         yara = [
             data
             for data in response.output["engines"]
@@ -83,9 +77,6 @@ def process_response(
         if yara:
             if len(yara) > 0:
                 engine_data.append(yara[0])
-        if text_class:
-            if len(text_class) > 0:
-                engine_data.append(text_class[0])
 
         responses_valid_uids.append(uid)
 

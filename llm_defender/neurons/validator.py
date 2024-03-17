@@ -91,7 +91,9 @@ def main(validator: LLMDefenderValidator):
             # Get the query to send to the valid Axons
             synapse_uuid = str(uuid4())
             query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
-
+            # TEMPORARY, NEED TO REMOVE LATER
+            query['analyzer'] = 'Sensitive Information'
+            
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
@@ -101,7 +103,7 @@ def main(validator: LLMDefenderValidator):
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    analyzer="Sensitive Information",
+                    analyzer=query['analyzer'],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
                     synapse_signature=utils.sign_data(wallet=validator.wallet, data=data_to_sign),
