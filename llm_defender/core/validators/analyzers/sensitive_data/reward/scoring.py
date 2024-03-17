@@ -156,7 +156,7 @@ def validate_response(hotkey, response) -> bool:
             return False
 
     # Check signature
-    data = f'{response["synapse_uuid"]}{response["nonce"]}{response["timestamp"]}'
+    data = f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     if not utils.validate_signature(
         hotkey=hotkey, data=data, signature=response["signature"]
     ):

@@ -256,8 +256,8 @@ class LLMDefenderValidator(BaseNeuron):
             
             # Handle response
             response_data.append(response_object)
-            if processed_uids[i] in responses_valid_uids:
-                response_logger["miner_metrics"].append(response_data)
+            if response_object["response"]:
+                response_logger["miner_metrics"].append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
