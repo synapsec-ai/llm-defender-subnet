@@ -13,16 +13,16 @@ import bittensor as bt
 from llm_defender.base.engine import BaseEngine
 
 
-class TextClassificationEngine(BaseEngine):
-    """Text classification engine for detecting sensitive data exposure.
+class TokenClassificationEngine(BaseEngine):
+    """Token classification engine for detecting sensitive data exposure.
 
-    This class implements an engine that uses text classification to
-    identity sensitive data exposure. The text classification engine is
+    This class implements an engine that uses token classification to
+    identity sensitive data exposure. The token classification engine is
     the primary detection method along with the heuristics engine
     detecting sensitive data exposure.
 
     Whereas the heuristics engine is a collection of specialized
-    sub-engines the text-classification engine focuses on analyzing the
+    sub-engines the token-classification engine focuses on analyzing the
     prompt as a whole and thus has a potential to yield better results
     than the heuristic based approaches.
 
@@ -70,7 +70,7 @@ class TextClassificationEngine(BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompt: str = None, name: str = "sensitive_info:text_classification"):
+    def __init__(self, prompt: str = None, name: str = "sensitive_info:token_classification"):
         """
         Initializes the TextClassificationEngine object with the name and prompt attributes.
 
@@ -80,7 +80,7 @@ class TextClassificationEngine(BaseEngine):
                 TextClassificationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
-                'sensitive_info:text_classification'
+                'sensitive_info:token_classification'
 
         Returns:
             None
@@ -113,13 +113,13 @@ class TextClassificationEngine(BaseEngine):
 
     def _populate_data(self, results):
         """
-        Takes in the results from the text classification and outputs a properly
+        Takes in the results from the token classification and outputs a properly
         formatted dict instance which can later be used to generate a confidence 
         score with the _calculate_confidence() method.
         
         Arguments:
             results:
-                A list instance depicting the results from the text classification 
+                A list instance depicting the results from the token classification 
                 pipeline. The first element in the list (index=0) must be a dict
                 instance containing the flag 'outcome', and possibly the flag 'score'.
 
@@ -202,7 +202,7 @@ class TextClassificationEngine(BaseEngine):
         return model, tokenizer
 
     def execute(self, model, tokenizer):
-        """Perform text-classification for the prompt.
+        """Perform token-classification for the prompt.
 
         This function performs classification of the given prompt to
         enable it to detect sensitive data exposure. The function returns the
@@ -221,7 +221,7 @@ class TextClassificationEngine(BaseEngine):
                 empty when the function is called.
             Exception:
                 The Exception will be raised if a general error occurs during the 
-                execution of the text classification pipeline. This is based on 
+                execution of the token classification pipeline. This is based on 
                 try/except syntax.
         """
 
@@ -229,7 +229,7 @@ class TextClassificationEngine(BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "text-classification",
+                "token-classification",
                 model=model,
                 tokenizer=tokenizer,
                 truncation=True,
@@ -239,13 +239,13 @@ class TextClassificationEngine(BaseEngine):
             results = pipe(self.prompt)
         except Exception as e:
             raise Exception(
-                f"Error occurred during text classification pipeline execution: {e}"
+                f"Error occurred during token classification pipeline execution: {e}"
             ) from e
 
         self.output = self._populate_data(results)
         self.confidence = self._calculate_confidence()
 
         bt.logging.debug(
-            f"Text Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
+            f"Token Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
         )
         return True

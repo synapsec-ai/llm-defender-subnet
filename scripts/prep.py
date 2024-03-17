@@ -7,8 +7,8 @@ from llm_defender.core.miners.analyzers.prompt_injection.text_classification imp
     TextClassificationEngine as PromptTextClassEngine
 )
 from llm_defender.core.miners.analyzers.sensitive_information.yara import YaraEngine
-from llm_defender.core.miners.analyzers.sensitive_information.text_classification import (
-    TextClassificationEngine as SensitiveClassEngine
+from llm_defender.core.miners.analyzers.sensitive_information.token_classification import (
+    TokenClassificationEngine as SensitiveTokenClassEngine
 )
 from llm_defender.core.miners.analyzers.prompt_injection.vector_search import VectorEngine
 
@@ -20,7 +20,7 @@ def prepare_engines():
         print("Unable to prepare text classification engine for prompt injection")
         sys.exit(1)
 
-    if not SensitiveClassEngine().prepare():
+    if not SensitiveTokenClassEngine().prepare():
         print("Unable to prepare text classification engine for sensitive information")
         sys.exit(1)
     print("Prepared Text Classification engines")

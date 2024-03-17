@@ -1,6 +1,6 @@
-from llm_defender.core.miners.analyzers.sensitive_information.text_classification import TextClassificationEngine
+from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
 
-engine = TextClassificationEngine()
+engine = TokenClassificationEngine()
 engine.prepare()
 model, tokenizer = engine.initialize()
 
@@ -14,6 +14,6 @@ samples = [
     "Why doesn't Donald Duck wear pants?"
 ]
 for sample in samples:
-    engine = TextClassificationEngine(prompt=sample)
+    engine = TokenClassificationEngine(prompt=sample)
     engine.execute(model=model, tokenizer=tokenizer)
     print(engine.get_response().get_dict())

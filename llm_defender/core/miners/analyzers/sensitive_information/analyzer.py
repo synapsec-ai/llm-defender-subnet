@@ -3,7 +3,7 @@ import time
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.base.utils import sign_data
-from llm_defender.core.miners.analyzers.sensitive_information.text_classification import TextClassificationEngine
+from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
 from llm_defender.core.miners.analyzers.sensitive_information.yara import YaraEngine
 
 # Load wandb library only if it is enabled
@@ -41,7 +41,7 @@ class SensitiveInformationAnalyzer:
         self.subnet_version = subnet_version
         self.miner_uid = miner_uid
 
-        self.model, self.tokenizer = TextClassificationEngine().initialize()
+        self.model, self.tokenizer = TokenClassificationEngine().initialize()
         self.yara_rules = YaraEngine().initialize()
 
         # Enable wandb if it has been configured
@@ -64,11 +64,11 @@ class SensitiveInformationAnalyzer:
         engine_confidences.append(yara_response["confidence"])
 
         # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=prompt)
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        text_classification_response = text_classification_engine.get_response().get_dict()
-        output["engines"].append(text_classification_response)
-        engine_confidences.append(text_classification_response["confidence"])
+        token_classification_engine = TokenClassificationEngine(prompt=prompt)
+        token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        token_classification_response = token_classification_engine.get_response().get_dict()
+        output["engines"].append(token_classification_response)
+        engine_confidences.append(token_classification_response["confidence"])
 
         # Calculate confidence score
         output["confidence"] = sum(engine_confidences)/len(engine_confidences)
@@ -89,7 +89,7 @@ class SensitiveInformationAnalyzer:
 
             wandb_logs = [
                 {f"{self.miner_uid}:{self.miner_hotkey}_YARA Confidence": yara_response['confidence']},
-                {f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response[
+                {f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
                     'confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output['confidence']}
             ]
