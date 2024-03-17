@@ -101,6 +101,7 @@ class PromptInjectionAnalyzer:
 
             bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
+        bt.logging.debug(f'Setting synapse.output to: {output}')
         synapse.output = output
 
         return output

@@ -5,6 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
 from llm_defender.base.utils import validate_uid
+
 def check_similarity_penalty(uid, miner_responses):
     """
     This function checks the total penalty score within the similarity category. 
@@ -145,8 +146,6 @@ def check_similarity_penalty(uid, miner_responses):
     for engine in [
         "prompt_injection:text_classification",
         "prompt_injection:vector_search",
-        "sensitive_info:text_classification",
-        "sensitive_info:yara"
     ]:
         penalty += _check_response_history(uid, miner_responses, engine)
     # penalty += _check_confidence_history(uid, miner_responses)
@@ -246,10 +245,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
         if not duplicate_percentage:
             return penalty
 
-        if "yara" in engine:
-            if duplicate_percentage > 0.95:
-                penalty += 0.25
-        elif "vector_search" in engine:
+        if "vector_search" in engine:
             if duplicate_percentage > 0.15:
                 penalty += 0.5
         elif "text_classification" in engine:
@@ -331,8 +327,6 @@ def check_duplicate_penalty(uid, miner_responses, response):
     for engine in [
         "prompt_injection:text_classification",
         "prompt_injection:vector_search",
-        "sensitive_info:text_classification",
-        "sensitive_info:yara"
     ]:
         penalty += _find_identical_reply(uid, miner_responses, response, engine)
         penalty += _calculate_duplicate_percentage(uid, miner_responses, engine)
@@ -345,7 +339,7 @@ def check_base_penalty(uid, miner_responses, response):
     contains the methods:
 
         ---> _check_prompt_response_mismatch()
-        ---> _check_confidence_validity()
+        ---> _check_response_validity()
         ---> _check_response_history()
 
     It also applies a penalty of 10.0 if invalid values are provided to the function, 
@@ -372,7 +366,7 @@ def check_base_penalty(uid, miner_responses, response):
         penalty:
             The total penalty score within the base category.
     """
-    def _check_confidence_validity(uid, response, penalty_name="Confidence out-of-bounds"):
+    def _check_response_validity(uid, response, penalty_name="Response Validity"):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
         If this is the case, it applies a penalty of 20.0, and if this is not the case the penalty
@@ -387,7 +381,7 @@ def check_base_penalty(uid, miner_responses, response):
                 instance representing the confidence score for a given prompt.
             penalty_name:
                 A str instance displaying the name of the penalty being administered
-                by the _check_confidence_validity() method. Default is 'Confidence out-of-bounds'.
+                by the _check_response_validity() method. Default is 'Confidence out-of-bounds'.
                 
                 This argument generally should not be altered.
 
@@ -400,9 +394,51 @@ def check_base_penalty(uid, miner_responses, response):
         penalty = 0.0
         if response["confidence"] > 1.0 or response["confidence"] < 0.0:
             penalty = 20.0
+
+        # Validate engine responses
+        if "engines" not in response.keys():
+            bt.logging.trace(f'No engines key in response: {response}')
+            penalty = 20.0
+        else:
+            for entry in response["engines"]:
+                
+                # Check engine-specific confidence
+                if "confidence" not in response.keys() or (response["confidence"] > 1.0 or response["confidence"] < 0.0):
+                    bt.logging.trace(f'Confidence out-of-bounds or missing: {response}')
+                    penalty = 20.0
+                    break
+                
+                # Basic checks for vector search response
+                if entry["name"] == "prompt_injection:vector_search":
+                    if "data" not in entry.keys():
+                        bt.logging.trace(f'No data key in engines entry: {response}')
+                        penalty = 20.0
+                        break
+                    
+                    if "outcome" not in entry["data"].keys() or "distances" not in entry["data"].keys() or "documents" not in entry["data"].keys():
+                        bt.logging.trace(f'Data key has missing values: {response}')
+                        penalty = 20.0
+                        break
+                    
+                    if entry["data"]["outcome"] not in ("ResultsFound", "ResultsNotFound"):
+                        bt.logging.trace(f'Outcome is not an expected value: {response}')
+                        penalty = 20.0
+                        break
+                    
+                    if response["confidence"] >= 0.6 and entry["data"]["outcome"] == "ResultsNotFound":
+                        bt.logging.trace(f'Suspicious confidence/outcome combination: {response}')
+                        penalty = 10.0
+                        break
+                        
+                    if (entry["data"]["outcome"] == "ResultsFound") and (len(entry["data"]["documents"]) != len(entry["data"]["distances"])):
+                        bt.logging.trace(f'Distances/Documents mismatch: {response}')
+                        penalty = 20.0
+                        break
+        
         bt.logging.trace(
             f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
         )
+
         return penalty
 
 
@@ -479,13 +515,13 @@ def check_base_penalty(uid, miner_responses, response):
         # Apply penalty if invalid values are provided to the function
         return 10.0
 
-    if len(miner_responses) < 50:
+    if len(miner_responses) < 25:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}')
         return 5.0
 
     penalty = 0.0
-    penalty += _check_confidence_validity(uid, response)
+    penalty += _check_response_validity(uid, response)
     penalty += _check_response_history(uid, miner_responses)
 
     return penalty

@@ -77,7 +77,7 @@ def calculate_subscore_distance(response, target) -> float:
         or isinstance(response["engines"], bool)
         or not isinstance(response["engines"], list)
         or response["engines"] == []
-        or len(response["engines"]) != 2
+        or len(response["engines"]) != 1
     ):
         return None
 

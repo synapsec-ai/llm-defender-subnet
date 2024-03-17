@@ -97,7 +97,8 @@ def main(validator: LLMDefenderValidator):
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
-            data_to_sign = f'{synapse_uuid}{nonce}{timestamp}'
+            data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+            # query['analyzer'] = "Sensitive Information"
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
@@ -125,11 +126,9 @@ def main(validator: LLMDefenderValidator):
                     f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
                 )
 
-            # Log the results for monitoring purposes.
+            # Check if all responses are empty
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
-                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
-                time.sleep(2 * bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
                     bt.logging.trace(
@@ -142,6 +141,8 @@ def main(validator: LLMDefenderValidator):
                     bt.logging.trace(
                         f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
                     )
+                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+                time.sleep(2 * bt.__blocktime__)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")

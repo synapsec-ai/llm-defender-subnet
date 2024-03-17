@@ -6,7 +6,7 @@ import torch
 from os import path, makedirs
 from transformers import (
     AutoTokenizer,
-    AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
 )
 from transformers import pipeline
 import bittensor as bt
@@ -29,7 +29,7 @@ class TokenClassificationEngine(BaseEngine):
     Attributes:
         prompt:
             A str instance displaying the prompt to be analyzed by the 
-            TextClassificationEngine.
+            TokenClassificationEngine.
         name (from the BaseEngine located at llm_defender/base/engine.py):
             A str instance displaying the name of the engine. 
         cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
@@ -50,19 +50,19 @@ class TokenClassificationEngine(BaseEngine):
 
     Methods:
         __init__():
-            Defines the name and prompt attributes for the TextClassificationEngine 
+            Defines the name and prompt attributes for the TokenClassificationEngine 
             object.
         _calculate_confidence():
             Determines the confidence score for a given prompt being malicious & 
             returns the value which ranges from 0.0 (SAFE) to 1.0 (MALICIOUS).
         _populate_data():
             Returns a dict instance that displays the outputs for the 
-            TextClassificationEngine.
+            TokenClassificationEngine.
         prepare():
             Checks and creates a cache directory if it doesn't exist, then 
             calls initialize() to set up the model and tokenizer.
         initialize():
-            Loads the model and tokenizer used for the TextClassificationEngine.
+            Loads the model and tokenizer used for the TokenClassificationEngine.
         execute():
             This function performs classification of the given prompt to
             enable it to detect sensitive data exposure. The function returns the
@@ -72,12 +72,12 @@ class TokenClassificationEngine(BaseEngine):
 
     def __init__(self, prompt: str = None, name: str = "sensitive_info:token_classification"):
         """
-        Initializes the TextClassificationEngine object with the name and prompt attributes.
+        Initializes the TokenClassificationEngine object with the name and prompt attributes.
 
         Arguments:
             prompt:
                 A str instance displaying the prompt to be analyzed by the 
-                TextClassificationEngine.
+                TokenClassificationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
                 'sensitive_info:token_classification'
@@ -89,27 +89,12 @@ class TokenClassificationEngine(BaseEngine):
         self.prompt = prompt
 
     def _calculate_confidence(self):
-        """
-        Determines a confidence value based on the self.output attribute. This
-        value will be 0.0 if the 'outcome' flag in self.output is 'SAFE', 0.5 if 
-        the flag value is 'UNKNOWN', and 1.0 otherwise.
-
-        Arguments:
-            None
-
-        Returns:
-            A float instance representing the confidence score, which is either 
-            0.0, 0.5 or 1.0 depending on the state of the 'outcome' flag in the
-            output attribute.
-        """
         # Determine the confidence based on the score
-        if self.output["outcome"] != "UNKNOWN":
-            if self.output["outcome"] == "SAFE":
-                return 0.0
-            else:
-                return 1.0
-        else:
-            return 0.5
+        if self.output["token_data"]:
+            highest_score_entity = max(self.output["token_data"], key=lambda x: x['score'])
+            return float(highest_score_entity["score"])
+        
+        return 0.0
 
     def _populate_data(self, results):
         """
@@ -131,8 +116,15 @@ class TokenClassificationEngine(BaseEngine):
             This dict instance is later saved to the output attribute.
         """
         if results:
-            return {"outcome": results[0]["label"], "score": results[0]["score"]}
-        return {"outcome": "UNKNOWN"}
+
+            # Clean extra data
+            for result in results:
+                result.pop("start")
+                result.pop("end")
+                result["score"] = float(result["score"])
+
+            return {"outcome": "ResultsFound", "token_data": results}
+        return {"outcome": "NoResultsFound", "token_data": []}
 
     def prepare(self) -> bool:
         """
@@ -163,7 +155,7 @@ class TokenClassificationEngine(BaseEngine):
 
     def initialize(self):
         """
-        Initializes the model and tokenizer for the TextClassificationEngine.
+        Initializes the model and tokenizer for the TokenClassificationEngine.
 
         Arguments:
             None
@@ -172,9 +164,9 @@ class TokenClassificationEngine(BaseEngine):
             tuple:
                 A tuple instance. The elements of the tuple are, in order:
                     model:
-                        The model for the TextClassificationEngine.
+                        The model for the TokenClassificationEngine.
                     tokenizer:
-                        The tokenizer for the TextClassificationEngine.
+                        The tokenizer for the TokenClassificationEngine.
 
         Raises:
             Exception:
@@ -184,12 +176,12 @@ class TokenClassificationEngine(BaseEngine):
                 The ValueError is raised if the model or tokenizer is empty.
         """
         try:
-            model = AutoModelForSequenceClassification.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            model = AutoModelForTokenClassification.from_pretrained(
+                "lakshyakh93/deberta_finetuned_pii", cache_dir=self.cache_dir
             )
 
             tokenizer = AutoTokenizer.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+                "lakshyakh93/deberta_finetuned_pii", cache_dir=self.cache_dir
             )
         except Exception as e:
             raise Exception(
@@ -229,14 +221,12 @@ class TokenClassificationEngine(BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "text-classification",
+                "token-classification",
                 model=model,
                 tokenizer=tokenizer,
-                truncation=True,
-                max_length=512,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            results = pipe(self.prompt)
+            results = pipe(self.prompt, aggregation_strategy="first")
         except Exception as e:
             raise Exception(
                 f"Error occurred during token classification pipeline execution: {e}"

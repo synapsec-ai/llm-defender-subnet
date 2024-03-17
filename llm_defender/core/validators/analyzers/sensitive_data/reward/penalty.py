@@ -144,7 +144,6 @@ def check_similarity_penalty(uid, miner_responses):
 
     for engine in [
         "sensitive_info:token_classification",
-        "sensitive_info:yara"
     ]:
         penalty += _check_response_history(uid, miner_responses, engine)
     # penalty += _check_confidence_history(uid, miner_responses)
@@ -244,13 +243,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
         if not duplicate_percentage:
             return penalty
 
-        if "yara" in engine:
-            if duplicate_percentage > 0.95:
-                penalty += 0.25
-        elif "vector_search" in engine:
-            if duplicate_percentage > 0.15:
-                penalty += 0.5
-        elif "token_classification" in engine:
+        if "token_classification" in engine:
             if duplicate_percentage > 0.5:
                 if duplicate_percentage > 0.95:
                     penalty += 1.0
@@ -328,7 +321,6 @@ def check_duplicate_penalty(uid, miner_responses, response):
     penalty = 0.0
     for engine in [
         "sensitive_info:token_classification",
-        "sensitive_info:yara"
     ]:
         penalty += _find_identical_reply(uid, miner_responses, response, engine)
         penalty += _calculate_duplicate_percentage(uid, miner_responses, engine)
@@ -475,7 +467,7 @@ def check_base_penalty(uid, miner_responses, response):
         # Apply penalty if invalid values are provided to the function
         return 10.0
 
-    if len(miner_responses) < 50:
+    if len(miner_responses) < 25:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}')
         return 5.0

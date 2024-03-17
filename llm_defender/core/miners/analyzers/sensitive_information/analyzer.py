@@ -57,13 +57,13 @@ class SensitiveInformationAnalyzer:
         engine_confidences = []
 
         # Execute YARA engine
-        yara_engine = YaraEngine(prompt=prompt)
-        yara_engine.execute(rules=self.yara_rules)
-        yara_response = yara_engine.get_response().get_dict()
-        output["engines"].append(yara_response)
-        engine_confidences.append(yara_response["confidence"])
+        # yara_engine = YaraEngine(prompt=prompt)
+        # yara_engine.execute(rules=self.yara_rules)
+        # yara_response = yara_engine.get_response().get_dict()
+        # output["engines"].append(yara_response)
+        # engine_confidences.append(yara_response["confidence"])
 
-        # Execute Text Classification engine
+        # Execute Token Classification engine
         token_classification_engine = TokenClassificationEngine(prompt=prompt)
         token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         token_classification_response = token_classification_engine.get_response().get_dict()
@@ -88,7 +88,7 @@ class SensitiveInformationAnalyzer:
             self.wandb_handler.set_timestamp()
 
             wandb_logs = [
-                {f"{self.miner_uid}:{self.miner_hotkey}_YARA Confidence": yara_response['confidence']},
+                # {f"{self.miner_uid}:{self.miner_hotkey}_YARA Confidence": yara_response['confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
                     'confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output['confidence']}
@@ -99,6 +99,7 @@ class SensitiveInformationAnalyzer:
 
             bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
+        bt.logging.debug(f'Setting synapse.output to: {output}')
         synapse.output = output
 
         return output

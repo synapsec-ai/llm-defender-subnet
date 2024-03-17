@@ -350,7 +350,7 @@ class LLMDefenderMiner(BaseNeuron):
             )
 
         # Synapse signature verification
-        data = f'{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.synapse_timestamp}'
+        data = f'{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}'
         if not validate_signature(
             hotkey=synapse.dendrite.hotkey,
             data=data,
@@ -390,7 +390,7 @@ class LLMDefenderMiner(BaseNeuron):
         output = self.analyzers[synapse.analyzer].execute(synapse=synapse, prompt=prompt)
 
         bt.logging.debug(
-            f'Processed prompt with analyzer: {output["analyzer"]}'
+            f'Processed prompt "{prompt}" with analyzer: {output["analyzer"]}'
         )
         bt.logging.debug(
             f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
