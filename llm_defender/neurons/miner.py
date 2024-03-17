@@ -101,6 +101,9 @@ def main(miner: LLMDefenderMiner):
                     # Check registration status
                     if miner.wallet.hotkey.ss58_address not in miner.metagraph.hotkeys:
                         bt.logging.error(f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}.")
+                    
+                    # Save used nonces
+                    miner.save_used_nonces()
 
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
                 log = (

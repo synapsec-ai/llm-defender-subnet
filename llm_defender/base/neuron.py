@@ -10,11 +10,13 @@ Typical example usage:
     miner.run()
 """
 from argparse import ArgumentParser
-from os import path, makedirs
+from os import path, makedirs, rename
+from datetime import datetime
 import bittensor as bt
 from llm_defender.base.utils import sign_data
 import requests
 import secrets
+import pickle
 import time
 import json
 from llm_defender import __spec_version__ as subnet_version
@@ -35,11 +37,16 @@ class BaseNeuron:
 
     def __init__(self, parser: ArgumentParser, profile: str) -> None:
         self.parser = parser
+        self.path_hotkey = None
         self.profile = profile
         self.step = 0
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
         self.subnet_version = subnet_version
+        self.used_nonces = []
+
+        # Load used nonces if they exists
+        self.load_used_nonces()
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -77,6 +84,7 @@ class BaseNeuron:
         config = bt.config(self.parser)
 
         # Construct log path
+        self.path_hotkey = config.wallet.hotkey
         log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
 
         # Create the log path if it does not exists
@@ -129,3 +137,44 @@ class BaseNeuron:
             bt.logging.error(f"Unable to connect to the remote API: {e}")
         except Exception as e:
             bt.logging.error(f'Generic error during request: {e}')
+    
+    def save_used_nonces(self):
+        """Saves used nonces to a local file"""
+
+        if len(self.used_nonces) > 50000:
+            self.used_nonce = self.used_nonces[-50000:]
+            bt.logging.info("Truncated list of used_nonces")
+        with open(f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle", "wb") as pickle_file:
+            pickle.dump(self.used_nonces, pickle_file)
+
+        bt.logging.info("Saved used nonces to a file")
+    
+    def load_used_nonces(self):
+        """Loads used nonces from a file"""
+        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle"
+        if path.exists(state_path):
+            try:
+                with open(state_path, "rb") as pickle_file:
+                    self.used_nonces = pickle.load(pickle_file)
+
+                bt.logging.info("Loaded used nonces from a file")
+            except Exception as e:
+                bt.logging.error(
+                    f"Used nonces reset because a failure to read the used nonces data, error: {e}"
+                )
+
+                # Rename the used nonces file if exception
+                # occurs and reset the default state
+                rename(
+                    state_path,
+                    f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                )
+                self.used_nonces = []
+
+    def validate_nonce(self, nonce):
+        """This function validates that the nonce has not been seen
+        before."""
+        if nonce not in self.used_nonces:
+            self.used_nonces.append(nonce)
+            return True
+        return False

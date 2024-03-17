@@ -32,12 +32,12 @@ def prepare_engines():
 
     print("Prepared Vector Search engine")
 
-    # Prepare YARA engine
-    if not YaraEngine().prepare():
-        print("Unable to prepare vector search engine")
-        sys.exit(1)
+    # # Prepare YARA engine
+    # if not YaraEngine().prepare():
+    #     print("Unable to prepare vector search engine")
+    #     sys.exit(1)
 
-    print("Prepared YARA engine")
+    # print("Prepared YARA engine")
 
 if __name__ == "__main__":
     prepare_engines()

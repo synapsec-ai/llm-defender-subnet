@@ -42,7 +42,7 @@ class SensitiveInformationAnalyzer:
         self.miner_uid = miner_uid
 
         self.model, self.tokenizer = TokenClassificationEngine().initialize()
-        self.yara_rules = YaraEngine().initialize()
+        # self.yara_rules = YaraEngine().initialize()
 
         # Enable wandb if it has been configured
         if wandb is True:

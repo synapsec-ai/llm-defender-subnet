@@ -20,8 +20,9 @@ def process_response(
         uid, hotkey, target, synapse_uuid, query["analyzer"], query["category"]
     )
 
-    # Set the score for invalid responses to 0.0
-    if not scoring.validate_response(hotkey, response.output):
+    # Set the score for invalid responses or responses that fail nonce validation to 0.0
+    if not scoring.validate_response(hotkey, response.output) or not validator.validate_nonce(response.output["nonce"]):
+        bt.logging.debug(f'Empty response or nonce validation failed: {response}')
         validator.scores, old_score, unweighted_new_score = (
             scoring.assign_score_for_uid(
                 validator.scores,

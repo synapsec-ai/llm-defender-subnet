@@ -350,6 +350,11 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
             )
 
+        # Validate that nonce has not been reused
+        if not self.validate_nonce(synapse.synapse_nonce):
+            bt.logging.warning(f'Received a synapse with previous used nonce: {synapse}')
+            return synapse
+        
         # Synapse signature verification
         data = f'{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}'
         if not validate_signature(

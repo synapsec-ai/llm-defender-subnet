@@ -154,7 +154,7 @@ def validate_response(hotkey, response) -> bool:
                 f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
             )
             return False
-
+        
     # Check signature
     data = f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     if not utils.validate_signature(

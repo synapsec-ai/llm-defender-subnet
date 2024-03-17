@@ -54,6 +54,9 @@ def main(validator: LLMDefenderValidator):
                 # Update local knowledge of blacklisted miner hotkeys
                 validator.check_blacklisted_miner_hotkeys()
 
+                # Save used nonces
+                validator.save_used_nonces()
+
             # Get all axons
             all_axons = validator.metagraph.axons
             bt.logging.trace(f"All axons: {all_axons}")
@@ -98,6 +101,7 @@ def main(validator: LLMDefenderValidator):
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
             data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+            
             # query['analyzer'] = "Sensitive Information"
             responses = validator.dendrite.query(
                 uids_to_query,
