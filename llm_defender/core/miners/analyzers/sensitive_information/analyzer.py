@@ -78,7 +78,8 @@ class SensitiveInformationAnalyzer:
         output["synapse_uuid"] = synapse.synapse_uuid
         output["nonce"] = secrets.token_hex(24)
         output["timestamp"] = str(int(time.time()))
-        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{output["timestamp"]}'
+        
+        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
         output["signature"] = sign_data(self.wallet, data_to_sign)
