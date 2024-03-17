@@ -229,7 +229,7 @@ class TokenClassificationEngine(BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "token-classification",
+                "text-classification",
                 model=model,
                 tokenizer=tokenizer,
                 truncation=True,
