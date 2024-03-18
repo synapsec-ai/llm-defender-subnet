@@ -13,6 +13,7 @@ from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import LLMDefenderValidator
 from llm_defender import __version__ as version
+import os
 
 def main(validator: LLMDefenderValidator):
     """
@@ -234,7 +235,10 @@ if __name__ == "__main__":
         default=64,
         help="Sets the value for the number of targets to query at once",
     )
-
+    
+    # Disable TOKENIZERS_PARALLELISM
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderValidator(parser=parser)
     if (

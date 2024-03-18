@@ -32,6 +32,8 @@ from llm_defender.base.utils import (
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
 from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
+from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
+
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
@@ -74,6 +76,20 @@ class LLMDefenderValidator(BaseNeuron):
             self.wandb_handler = WandbHandler()
         else:
             self.wandb_enabled = False
+        
+        # Init vector search validators
+        supported_models = [
+            "all-mpnet-base-v2",
+            "all-distilroberta-v1",
+            "all-MiniLM-L12-v2",
+            "all-MiniLM-L6-v2",
+        ]
+
+        self.vector_search_validators = {}
+
+        for model in supported_models:
+            self.vector_search_validators[model] = VectorSearchValidation(model=model)
+
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -230,6 +246,7 @@ class LLMDefenderValidator(BaseNeuron):
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
                 response_object, responses_invalid_uids, responses_valid_uids = prompt_injection_process.process_response(
+                    prompt=query["prompt"],
                     response=response,
                     uid=processed_uids[i],
                     target=target,
@@ -241,6 +258,7 @@ class LLMDefenderValidator(BaseNeuron):
                 )
             elif query["analyzer"] == "Sensitive Information":
                 response_object, responses_invalid_uids, responses_valid_uids = sensitive_data_process.process_response(
+                    prompt=query["prompt"],
                     response=response,
                     uid=processed_uids[i],
                     target=target,

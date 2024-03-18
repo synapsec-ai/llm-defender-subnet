@@ -3,7 +3,7 @@ import bittensor as bt
 from llm_defender.base import utils
 
 def process_response(
-        response,
+        prompt, response,
         uid,
         target,
         synapse_uuid,
@@ -38,7 +38,7 @@ def process_response(
     else:
         response_time = response.dendrite.process_time
 
-        scored_response = calculate_score(validator,
+        scored_response = calculate_score(prompt, validator,
             response.output, target, response_time, hotkey
         )
 
@@ -197,7 +197,7 @@ def process_response(
     return response_object, responses_invalid_uids, responses_valid_uids
 
 def calculate_score(
-        validator, response, target: float, response_time: float, hotkey: str
+        prompt, validator, response, target: float, response_time: float, hotkey: str
     ) -> dict:
     """This function sets the score based on the response.
 
@@ -237,7 +237,7 @@ def calculate_score(
     score_weights = {"distance": 0.85, "speed": 0.15}
 
     # Get penalty multipliers
-    distance_penalty, speed_penalty = get_response_penalties(validator,
+    distance_penalty, speed_penalty = get_response_penalties(prompt, validator,
         response, hotkey
     )
 

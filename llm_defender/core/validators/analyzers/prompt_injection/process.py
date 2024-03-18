@@ -3,7 +3,7 @@ import bittensor as bt
 from llm_defender.base import utils
 
 def process_response(
-        response,
+        prompt, response,
         uid,
         target,
         synapse_uuid,
@@ -38,7 +38,7 @@ def process_response(
     else:
         response_time = response.dendrite.process_time
 
-        scored_response = calculate_score(validator,
+        scored_response = calculate_score(prompt, validator,
             response.output, target, response_time, hotkey
         )
 
@@ -197,7 +197,7 @@ def process_response(
     return response_object, responses_invalid_uids, responses_valid_uids
 
 def calculate_score(
-        validator, response, target: float, response_time: float, hotkey: str
+        prompt, validator, response, target: float, response_time: float, hotkey: str
     ) -> dict:
     """This function sets the score based on the response.
 
@@ -237,7 +237,7 @@ def calculate_score(
     score_weights = {"distance": 0.85, "speed": 0.15}
 
     # Get penalty multipliers
-    distance_penalty, speed_penalty = get_response_penalties(validator,
+    distance_penalty, speed_penalty = get_response_penalties(prompt, validator,
         response, hotkey
     )
 
@@ -288,7 +288,7 @@ def calculate_score(
         raw_speed_score=speed_score,
     )
 
-def apply_penalty(validator, response, hotkey) -> tuple:
+def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -309,7 +309,7 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     similarity += penalty.check_similarity_penalty(
         uid, validator.miner_responses[hotkey]
     )
-    base += penalty.check_base_penalty(
+    base += penalty.check_base_penalty(validator.vector_search_validators, prompt,
         uid, validator.miner_responses[hotkey], response
     )
     duplicate += penalty.check_duplicate_penalty(
@@ -321,10 +321,10 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     )
     return similarity, base, duplicate
 
-def get_response_penalties(validator, response, hotkey):
+def get_response_penalties(prompt, validator, response, hotkey):
     """This function resolves the penalties for the response"""
 
-    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(validator,
+    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(prompt, validator,
         response, hotkey
     )
 

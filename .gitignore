@@ -168,3 +168,6 @@ llm-defender*.config.js
 
 # Wandb
 wandb
+
+# chromadb
+chroma
