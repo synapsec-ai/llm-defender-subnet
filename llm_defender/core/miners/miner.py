@@ -379,7 +379,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         prompt = self.get_prompt_from_api(
             hotkey=self.wallet.hotkey.ss58_address,
-            signature=sign_data(wallet=self.wallet, data=data),
+            signature=sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse.synapse_uuid, 
             timestamp=timestamp, 
             nonce=nonce

@@ -304,7 +304,7 @@ def get_engine_response_object(
 
 
 def get_response_object(
-    uid: str, hotkey: str, target: float, synapse_uuid: str, analyzer: str, category: str
+    uid: str, hotkey: str, target: float, synapse_uuid: str, analyzer: str, category: str, prompt: str
 ) -> dict:
     """Returns the template for the response object"""
 
@@ -312,6 +312,7 @@ def get_response_object(
         "UID": uid,
         "hotkey": hotkey,
         "target": target,
+        "prompt": prompt,
         "analyzer": analyzer,
         "category": category,
         "synapse_uuid": synapse_uuid,

@@ -25,7 +25,7 @@ def main(args, parser):
     timestamp = str(int(time.time()))
 
     data = f'{synapse_uuid}{nonce}{timestamp}'
-    signed_data = utils.sign_data(wallet=wallet, data=data)
+    signed_data = utils.sign_data(hotkey=wallet.hotkey, data=data)
     
     responses = dendrite.query(
         axon_to_query,

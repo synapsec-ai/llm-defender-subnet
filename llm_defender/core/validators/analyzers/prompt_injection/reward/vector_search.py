@@ -82,6 +82,10 @@ class VectorSearchValidation:
         # Min distance is the one the matters in determining the confidence score
         min_distances = [min(entry) for entry in distances]
 
+        # If all values in either list are the same, we cannot calculate correlation and results are invalid
+        if all(x == min_distances[0] for x in min_distances) or all(x == confidences[0] for x in confidences):
+            return 0.0
+        
         correlation,_ = spearmanr(confidences, min_distances)
 
         if np.isnan(correlation):

@@ -324,7 +324,7 @@ def validate_signature(hotkey: str, data: str, signature: str) -> bool:
         bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
         return False
 
-def sign_data(wallet: bt.wallet, data: str) -> str:
+def sign_data(hotkey: bt.Keypair, data: str) -> str:
     """Signs the given data with the wallet hotkey
     
     Arguments:
@@ -338,13 +338,13 @@ def sign_data(wallet: bt.wallet, data: str) -> str:
             Signature of the key signing for the data
     """
     try:
-        signature = wallet.hotkey.sign(data.encode()).hex()
+        signature = hotkey.sign(data.encode()).hex()
         return signature
     except TypeError as e:
-        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
         raise TypeError from e
     except AttributeError as e:
-        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {wallet.hotkey} due to error: {e}')
+        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
         raise AttributeError from e
 
 def validate_prompt(prompt_dict):

@@ -387,14 +387,14 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
 
         supported_distance_functions = ["l2", "ip", "cosine"]
 
-        # Apply max penalty for non-supported models and distance_function
+        # Apply penalty for non-supported models and distance_function
         if not response_engine_data["model"] in supported_models:
-            return 20.0
+            return 10.0
         if (
             not response_engine_data["distance_function"]
             in supported_distance_functions
         ):
-            return 20.0
+            return 10.0
 
         # Validate distances
         historical_confidences = []
@@ -428,21 +428,22 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
             response_engine_data["model"]
         ].calculate_correlation(historical_confidences, historical_distances)
 
-        bt.logging.error(f"Correlation for vector search engine: {correlation}")
+        bt.logging.debug(f"Correlation for vector search engine: {correlation}")
         if correlation < -0.90 or correlation > 0.90:
             # No penalty is added if above 0.9
-            bt.logging.error(f"Correlation penalty: 0")
+            bt.logging.debug(f"Correlation penalty: 0")
             penalty += 0
         elif correlation < -0.85 or correlation > 0.85:
             # Apply slight penalty if below 0.9 but above 0.85
-            bt.logging.error(f"Correlation penalty: 2.5")
+            bt.logging.debug(f"Correlation penalty: 2.5")
             penalty += 2.5
         elif correlation < -0.80 or correlation > 0.80:
             # Apply penalty if below 0.85 but above 0.80
-            bt.logging.error(f"Correlation penalty: 5")
+            bt.logging.debug(f"Correlation penalty: 5")
             penalty += 5
         else:
             # Either invalid response data or no correlation between the values
+            bt.logging.debug(f"Correlation penalty: 10")
             penalty += 10
 
         # Check the distances and validate the distances are correctly
@@ -464,17 +465,17 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
             response_engine_data["model"]
         ].calculate_difference(response_engine_data["distances"], calculated_distances)
 
-        bt.logging.error(f"Difference for vector search engine: {difference}")
-        if difference < 0.01 and difference > -0.01:
-            # No penalty is added if distance is within the range of [-0.01, 0.01]
-            bt.logging.error(f"Difference penalty: 0")
+        bt.logging.debug(f"Difference for vector search engine: {difference}")
+        if difference < 0.05 and difference > -0.05:
+            # No penalty is added if distance is within the range of [-0.05, 0.05]
+            bt.logging.debug(f"Difference penalty: 0")
             penalty += 0
-        elif difference < 0.02 and difference > -0.02:
-            bt.logging.error(f"Difference penalty: 5")
+        elif difference < 0.1 and difference > -0.1:
+            bt.logging.debug(f"Difference penalty: 5")
             penalty += 5
         else:
-            # Distance outside of range [-0.02, 0.02] is not expected
-            bt.logging.error(f"Difference penalty: 10")
+            # Distance outside of range [-0.1, 0.1] is not expected
+            bt.logging.debug(f"Difference penalty: 10")
             penalty += 10
 
         return penalty
@@ -647,12 +648,15 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
         )
 
         return penalty
-
+    
     if not validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
+        bt.logging.debug(f'Validation failed: {uid}, {miner_responses}, {response}')
         return 10.0
 
-    if len(miner_responses) < 0:
+    bt.logging.trace(f'Miner responses length: {len(miner_responses)}')
+    bt.logging.trace(f'Miner responses: {miner_responses}')
+    if len(miner_responses) < 30:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(
             f"Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}"

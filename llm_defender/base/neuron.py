@@ -98,16 +98,29 @@ class BaseNeuron:
 
         return config
 
-    def remote_logger(self, wallet, message: dict) -> bool:
+    def remote_logger(self, hotkey, message: dict) -> bool:
+        """This function is responsible for sending validation metrics
+        and miner response data to centralized log repository.
+        
+        The data is used to construct a dashboard to measure the
+        performance of the subnet. It is important for all validators to
+        send out the metrics towards the centralized logger.
+
+        You may opt-out from the data collection by setting the
+        --disable_remote_logging argument in the validator pm2 file.
+        """
+
         nonce = str(secrets.token_hex(24))
         timestamp = str(int(time.time()))
 
+        signature = sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
+
         headers = {
-            "X-Hotkey": wallet.hotkey.ss58_address,
-            "X-Signature": sign_data(wallet=wallet, data=f'{nonce}-{timestamp}'),
+            "X-Hotkey": hotkey.ss58_address,
+            "X-Signature": signature,
             "X-Nonce": nonce,
             "X-Timestamp": timestamp,
-            "X-API-Key": wallet.hotkey.ss58_address
+            "X-API-Key":hotkey.ss58_address
         }
 
         data = message

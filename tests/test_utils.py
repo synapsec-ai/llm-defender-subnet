@@ -126,7 +126,7 @@ def test_signatures_and_validation():
 
     # Valid combinations
     data = "foobar"
-    signature = utils.sign_data(data=data, wallet=wallet)
+    signature = utils.sign_data(data=data, hotkey=wallet.hotkey)
     assert utils.validate_signature(hotkey=wallet.hotkey.ss58_address, data=data, signature=signature) is True
 
     assert utils.validate_signature(hotkey="5EjwQEJtbhcbZmWtpTVhQV8NGbYULS6djErtLbH8EJY1v9vg", data=data, signature="524e982b34b15fc96f680878c5c7ab38b784a1f49c80316f505b1f440a2f2e121e3a5f4aa23d373b009ec85a191e2de3a3ed0c6d3355a591ed5e841803100687") is True
@@ -142,11 +142,11 @@ def test_signatures_and_validation():
         assert utils.validate_signature(hotkey=entry, data=data, signature=signature) is False
 
         with pytest.raises(AttributeError):
-            utils.sign_data(data=data, wallet=entry)
+            utils.sign_data(data=data, hotkey=entry.hotkey)
     
     for _,entry in enumerate([True, False, 1, [], {}, {"foo": "bar"}, [1,2], ["foo", "bar"]]):
         with pytest.raises(AttributeError):
-                utils.sign_data(data=entry, wallet=wallet)
+                utils.sign_data(data=entry, hotkey=wallet.hotkey)
 
 def get_wallet_params(wallet):
     hotkey = wallet.hotkey.ss58_address

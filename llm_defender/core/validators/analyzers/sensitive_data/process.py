@@ -17,7 +17,7 @@ def process_response(
 
     # Get the default response object
     response_object = scoring.get_response_object(
-        uid, hotkey, target, synapse_uuid, query["analyzer"], query["category"]
+        uid, hotkey, target, synapse_uuid, query["analyzer"], query["category"], query["prompt"]
     )
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0

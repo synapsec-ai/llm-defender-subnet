@@ -69,6 +69,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
         self.prompt = None
+        self.remote_logging = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -196,6 +197,11 @@ class LLMDefenderValidator(BaseNeuron):
             else:
                 self.max_targets = 256
 
+            if args.disable_remote_logging and args.disable_remote_logging is True:
+                self.remote_logging = False
+            else:
+                self.remote_logging = True
+
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -282,9 +288,13 @@ class LLMDefenderValidator(BaseNeuron):
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        bt.logging.trace(f'Message to log: {response_logger}')
-        if not self.remote_logger(wallet=self.wallet, message=response_logger):
-            bt.logging.warning('Unable to push miner validation results to the logger service')
+        # If remote logging is disabled, do not log to remote server
+        if self.remote_logging is False:
+            bt.logging.debug(f'Remote metrics not stored because remote logging is disabled.')
+        else:
+            bt.logging.trace(f'Message to log: {response_logger}')
+            if not self.remote_logger(hotkey=self.wallet.hotkey, message=response_logger):
+                bt.logging.warning('Unable to push miner validation results to the logger service')
         
         return response_data
 
@@ -392,7 +402,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         entry = self.get_api_prompt(
             hotkey=self.wallet.hotkey.ss58_address,
-            signature=sign_data(wallet=self.wallet, data=data),
+            signature=sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
         )
         

@@ -422,7 +422,7 @@ def test_response_validator():
 
     # Add signature
     wallet = bt.wallet(name="test_coldkey", hotkey="test_hotkey").create_if_non_existent(coldkey_use_password=False, hotkey_use_password=False)
-    valid_response["signature"] = utils.sign_data(wallet=wallet, data=valid_response["synapse_uuid"])
+    valid_response["signature"] = utils.sign_data(hotkey=wallet.hotkey, data=valid_response["synapse_uuid"])
 
     # Tests for valid responses
     assert process.validate_response(hotkey=wallet.hotkey.ss58_address, response=valid_response) is True

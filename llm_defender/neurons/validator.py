@@ -109,7 +109,7 @@ def main(validator: LLMDefenderValidator):
                     analyzer=query['analyzer'],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
-                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=data_to_sign),
+                    synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
                     synapse_nonce=nonce,
                     synapse_timestamp=timestamp
                 ),
@@ -234,6 +234,12 @@ if __name__ == "__main__":
         type=int,
         default=64,
         help="Sets the value for the number of targets to query at once",
+    )
+
+    parser.add_argument(
+        "--disable_remote_logging",
+        action='store_true',
+        help="This flag must be set if you want to disable remote logging",
     )
     
     # Disable TOKENIZERS_PARALLELISM
