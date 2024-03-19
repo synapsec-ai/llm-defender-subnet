@@ -237,8 +237,8 @@ def calculate_score(
     score_weights = {"distance": 0.85, "speed": 0.15}
 
     # Get penalty multipliers
-    distance_penalty, speed_penalty = get_response_penalties(prompt, validator,
-        response, hotkey
+    distance_penalty, speed_penalty = get_response_penalties(
+        validator,response, hotkey
     )
 
     # Apply penalties to scores
