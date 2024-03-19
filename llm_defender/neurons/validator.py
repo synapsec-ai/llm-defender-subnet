@@ -95,7 +95,6 @@ def main(validator: LLMDefenderValidator):
             # Get the query to send to the valid Axons
             synapse_uuid = str(uuid4())
             query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
-            query['analyzer'] = 'Sensitive Information'
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
