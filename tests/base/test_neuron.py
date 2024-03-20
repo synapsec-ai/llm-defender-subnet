@@ -14,3 +14,10 @@ def test_config():
         config = neuron.config(bt_classes=[bt.MockSubtensor, bt.MockWallet])
 
     assert config is not None
+
+
+def test_validate_nonce():
+    parser = ArgumentParser()
+    neuron = BaseNeuron(parser=parser, profile="test")
+    assert neuron.validate_nonce("abc")
+    assert not neuron.validate_nonce("abc")
