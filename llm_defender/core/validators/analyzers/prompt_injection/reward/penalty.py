@@ -387,24 +387,20 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
 
         supported_distance_functions = ["l2", "ip", "cosine"]
 
-        no_model = True
-        no_distance_function = True 
-
-         # Apply penalty for invalid inputs, non-supported models and distance_function
-        for key in response_engine_data:
-            if key == 'model':
-                no_model = False 
-                if not response_engine_data[key] in supported_models:
-                    return 10.0
-            elif key == 'distance_function':
-                no_distance_function = False 
-                if (
-                    not response_engine_data[key]
-                    in supported_distance_functions
-                ):
-                    return 10.0
-
-        if no_model or no_distance_function:
+        if not 'model' in response_engine_data.keys():
+            bt.logging.trace("10.0 penalty assigned for no 'model' key in engine response")
+            return 10.0
+        
+        if not 'distance_function' in response_engine_data.keys():
+            bt.logging.trace("10.0 penalty assigned for no 'distance_function' key in engine response")
+            return 10.0
+        
+        if not response_engine_data['model'] in supported_models:
+            bt.logging.trace("10.0 penalty assigned for invalid 'model' in engine response")
+            return 10.0
+        
+        if not response_engine_data['distance_function'] in supported_distance_functions:
+            bt.logging.trace("10.0 penalty assigned for invalid 'distance_function' in engine response")
             return 10.0
 
         # Validate distances
