@@ -387,6 +387,9 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
 
         supported_distance_functions = ["l2", "ip", "cosine"]
 
+        filtered_response_engine_data = []
+        for response in response_engine_data
+
         # Apply penalty for non-supported models and distance_function
         if not response_engine_data["model"] in supported_models:
             return 10.0
