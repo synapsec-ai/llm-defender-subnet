@@ -17,9 +17,9 @@ def neuron_instance() -> BaseNeuron:
 
 @pytest.fixture
 def mock_sign_data():
-    with patch("llm_defender.base.neuron.sign_data") as mock_sign:
+    with patch('llm_defender.base.neuron.sign_data') as mock_sign:
         mock_sign.return_value = "dummy_signature"
-        return mock_sign
+        yield mock_sign
 
 
 @pytest.fixture
