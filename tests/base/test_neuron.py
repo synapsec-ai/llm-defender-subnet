@@ -1,6 +1,6 @@
+import pickle
 from argparse import ArgumentParser
-from typing import List, Any
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 
 import bittensor as bt
 import pytest
@@ -32,3 +32,14 @@ def test_load_used_nonces_file_does_not_exist(neuron_instance: BaseNeuron):
         mock_exists.return_value = False
         neuron_instance.load_used_nonces()
         assert neuron_instance.used_nonces == []
+
+
+def test_load_used_nonces(neuron_instance: BaseNeuron):
+    with patch("os.path.exists") as mock_exists:
+        mock_exists.return_value = True
+        mock_pickle_data = ["test1, test2", "test3", "test4"]
+
+        with patch("builtins.open", mock_open(read_data=pickle.dumps(mock_pickle_data))) as _:
+            neuron_instance.load_used_nonces()
+
+        assert neuron_instance.used_nonces == mock_pickle_data
