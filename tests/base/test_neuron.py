@@ -11,9 +11,27 @@ from llm_defender.base.neuron import BaseNeuron
 
 @pytest.fixture
 def neuron_instance() -> BaseNeuron:
-    # Create a BaseNeuron instance for testing
     parser = ArgumentParser()
     return BaseNeuron(parser, profile="test")
+
+
+@pytest.fixture
+def mock_sign_data():
+    with patch("llm_defender.base.neuron.sign_data") as mock_sign:
+        mock_sign.return_value = "dummy_signature"
+        return mock_sign
+
+
+@pytest.fixture
+def mock_requests_post():
+    with patch("llm_defender.base.neuron.BaseNeuron.requests_post") as mock_post:
+        yield mock_post
+
+
+@pytest.fixture
+def get_mock_wallet():
+    wallet = bt.MockWallet(name="mock_wallet", hotkey="mock", path="/tmp/mock_wallet")
+    return wallet
 
 
 def test_config(neuron_instance: BaseNeuron):
@@ -88,3 +106,17 @@ def test_requests_generic_error(mock_post, mock_logging, neuron_instance):
     mock_post.side_effect = Exception("Generic Exception")
     neuron_instance.requests_post(url="https://example.com", headers={}, data={})
     mock_logging.error.assert_called_with("Generic error during request: Generic Exception")
+
+
+def test_remote_logger_successful_flow(neuron_instance, mock_sign_data, mock_requests_post, get_mock_wallet):
+    mock_requests_post.return_value = {"result": "success"}
+    hotkey = get_mock_wallet.hotkey
+    result = neuron_instance.remote_logger(hotkey, {"test": "message"})
+    assert result
+
+
+def test_remote_logger_error_flow(neuron_instance, mock_sign_data, mock_requests_post, get_mock_wallet):
+    mock_requests_post.return_value = None
+    hotkey = get_mock_wallet.hotkey
+    result = neuron_instance.remote_logger(hotkey, {"test": "message"})
+    assert not result
