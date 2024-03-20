@@ -156,7 +156,9 @@ class VectorEngine(BaseEngine):
             return {
                 "outcome": "ResultsFound",
                 "distances": results["distances"][0],
-                "documents": results["documents"][0]
+                "documents": results["documents"][0],
+                "model": "all-MiniLM-L6-v2",
+                "distance_function": "l2",
             }
         return {"outcome": "ResultsNotFound"}
 

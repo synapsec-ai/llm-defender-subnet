@@ -663,7 +663,7 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
 
     bt.logging.trace(f'Miner responses length: {len(miner_responses)}')
     bt.logging.trace(f'Miner responses: {miner_responses}')
-    if len(miner_responses) < 5:
+    if len(miner_responses) < 30:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(
             f"Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}"
