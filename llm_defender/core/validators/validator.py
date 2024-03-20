@@ -27,13 +27,13 @@ from llm_defender.base.utils import (
     timeout_decorator,
     validate_miner_blacklist,
     validate_numerical_value,
-    validate_prompt,
     sign_data,
 )
-from llm_defender.base import mock_data
-from llm_defender.core.validators import penalty
 import requests
-import llm_defender.core.validators.scoring as scoring
+from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
+from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
+from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
+
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
@@ -42,7 +42,7 @@ if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
 
 
-class PromptInjectionValidator(BaseNeuron):
+class LLMDefenderValidator(BaseNeuron):
     """Summary of the class
 
     Class description
@@ -69,6 +69,7 @@ class PromptInjectionValidator(BaseNeuron):
         self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
         self.prompt = None
+        self.remote_logging = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -76,6 +77,20 @@ class PromptInjectionValidator(BaseNeuron):
             self.wandb_handler = WandbHandler()
         else:
             self.wandb_enabled = False
+        
+        # Init vector search validators
+        supported_models = [
+            "all-mpnet-base-v2",
+            "all-distilroberta-v1",
+            "all-MiniLM-L12-v2",
+            "all-MiniLM-L6-v2",
+        ]
+
+        self.vector_search_validators = {}
+
+        for model in supported_models:
+            self.vector_search_validators[model] = VectorSearchValidation(model=model)
+
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -182,6 +197,11 @@ class PromptInjectionValidator(BaseNeuron):
             else:
                 self.max_targets = 256
 
+            if args.disable_remote_logging and args.disable_remote_logging is True:
+                self.remote_logging = False
+            else:
+                self.remote_logging = True
+
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -219,210 +239,63 @@ class PromptInjectionValidator(BaseNeuron):
 
         # Initiate the response objects
         response_data = []
+        response_logger = {
+            "logger": "validator",
+            "validator_hotkey": self.wallet.hotkey.ss58_address,
+            "timestamp": str(time.time()),
+            "miner_metrics": []
+        }
         responses_invalid_uids = []
         responses_valid_uids = []
 
         # Check each response
         for i, response in enumerate(responses):
-            # Get the hotkey for the response
-            hotkey = self.metagraph.hotkeys[processed_uids[i]]
-
-            # Get the default response object
-            response_object = scoring.process.get_response_object(
-                processed_uids[i], hotkey, target, query["prompt"], synapse_uuid
-            )
-
-            # Set the score for invalid responses to 0.0
-            if not scoring.process.validate_response(hotkey, response.output):
-                self.scores, old_score, unweighted_new_score = (
-                    scoring.process.assign_score_for_uid(
-                        self.scores,
-                        processed_uids[i],
-                        self.neuron_config.alpha,
-                        0.0,
-                        query["weight"],
-                    )
+            if query["analyzer"] == "Prompt Injection":
+                response_object, responses_invalid_uids, responses_valid_uids = prompt_injection_process.process_response(
+                    prompt=query["prompt"],
+                    response=response,
+                    uid=processed_uids[i],
+                    target=target,
+                    synapse_uuid=synapse_uuid,
+                    query=query,
+                    validator=self,
+                    responses_invalid_uids=responses_invalid_uids,
+                    responses_valid_uids=responses_valid_uids
                 )
-                responses_invalid_uids.append(processed_uids[i])
-
-            # Calculate score for valid response
+            elif query["analyzer"] == "Sensitive Information":
+                response_object, responses_invalid_uids, responses_valid_uids = sensitive_data_process.process_response(
+                    prompt=query["prompt"],
+                    response=response,
+                    uid=processed_uids[i],
+                    target=target,
+                    synapse_uuid=synapse_uuid,
+                    query=query,
+                    validator=self,
+                    responses_invalid_uids=responses_invalid_uids,
+                    responses_valid_uids=responses_valid_uids
+                )
             else:
-                response_time = response.dendrite.process_time
-
-                scored_response = self.calculate_score(
-                    response.output, target, query["prompt"], response_time, hotkey
-                )
-
-                self.scores, old_score, unweighted_new_score = (
-                    scoring.process.assign_score_for_uid(
-                        self.scores,
-                        processed_uids[i],
-                        self.neuron_config.alpha,
-                        scored_response["scores"]["total"],
-                        query["weight"],
-                    )
-                )
-
-                miner_response = {
-                    "prompt": response.output["prompt"],
-                    "confidence": response.output["confidence"],
-                    "synapse_uuid": response.output["synapse_uuid"],
-                    "signature": response.output["signature"],
-                    "nonce": response.output["nonce"],
-                    "timestamp": response.output["timestamp"],
-                }
-
-                text_class = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:text_classification"
-                ]
-
-                vector_search = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:vector_search"
-                ]
-
-                yara = [
-                    data
-                    for data in response.output["engines"]
-                    if data["name"] == "engine:yara"
-                ]
-
-                engine_data = []
-
-                if text_class:
-                    if len(text_class) > 0:
-                        engine_data.append(text_class[0])
-                if vector_search:
-                    if len(vector_search) > 0:
-                        engine_data.append(vector_search[0])
-                if yara:
-                    if len(yara) > 0:
-                        engine_data.append(yara[0])
-
-                responses_valid_uids.append(processed_uids[i])
-
-                if response.output["subnet_version"]:
-                    if response.output["subnet_version"] > self.subnet_version:
-                        bt.logging.warning(
-                            f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({self.subnet_version}). Please update the validator.'
-                        )
-
-                # Populate response data
-                response_object["response"] = miner_response
-                response_object["engine_data"] = engine_data
-                response_object["scored_response"] = scored_response
-                response_object["weight_scores"] = {
-                    "new": float(self.scores[processed_uids[i]]),
-                    "old": float(old_score),
-                    "change": float(self.scores[processed_uids[i]]) - float(old_score),
-                    "unweighted": unweighted_new_score,
-                    "weight": query["weight"],
-                }
-
-                if self.wandb_enabled:
-                    wandb_logs = [
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_confidence": response_object[
-                                "response"
-                            ][
-                                "confidence"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "total"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "distance"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                                "scored_response"
-                            ][
-                                "scores"
-                            ][
-                                "speed"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                                "scored_response"
-                            ][
-                                "raw_scores"
-                            ][
-                                "distance"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                                "scored_response"
-                            ][
-                                "raw_scores"
-                            ][
-                                "speed"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
-                                "weight_scores"
-                            ][
-                                "new"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
-                                "weight_scores"
-                            ][
-                                "old"
-                            ]
-                        },
-                        {
-                            f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
-                                "weight_scores"
-                            ][
-                                "change"
-                            ]
-                        },
-                    ]
-
-                    for entry in response_object["engine_data"]:
-                        wandb_logs.append(
-                            {
-                                f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence": entry[
-                                    "confidence"
-                                ]
-                            },
-                        )
-                    for wandb_log in wandb_logs:
-                        self.wandb_handler.log(wandb_log)
-
-                    bt.logging.trace(
-                        f"Adding wandb logs for response data: {wandb_logs} for uid: {processed_uids[i]}"
-                    )
-
-            bt.logging.debug(f"Processed response: {response_object}")
-
+                bt.logging.error(f'Received unsupported analyzer: {query}')
+                raise AttributeError(f'Received unsupported analyzer: {query}')
+            
+            # Handle response
             response_data.append(response_object)
+            if response_object["response"]:
+                response_logger["miner_metrics"].append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
+        # If remote logging is disabled, do not log to remote server
+        if self.remote_logging is False:
+            bt.logging.debug(f'Remote metrics not stored because remote logging is disabled.')
+        else:
+            bt.logging.trace(f'Message to log: {response_logger}')
+            if not self.remote_logger(hotkey=self.wallet.hotkey, message=response_logger):
+                bt.logging.warning('Unable to push miner validation results to the logger service')
+        
         return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):
@@ -441,30 +314,6 @@ class PromptInjectionValidator(BaseNeuron):
         speed_score = 1.0 - (response_time / self.timeout)
 
         return speed_score
-
-    def get_response_penalties(self, response, hotkey, prompt):
-        """This function resolves the penalties for the response"""
-
-        similarity_penalty, base_penalty, duplicate_penalty = self.apply_penalty(
-            response, hotkey, prompt
-        )
-
-        distance_penalty_multiplier = 1.0
-        speed_penalty = 1.0
-
-        if base_penalty >= 20:
-            distance_penalty_multiplier = 0.0
-        elif base_penalty > 0.0:
-            distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
-
-        if sum([similarity_penalty, duplicate_penalty]) >= 20:
-            speed_penalty = 0.0
-        elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
-            speed_penalty = 1 - (
-                ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
-            )
-
-        return distance_penalty_multiplier, speed_penalty
 
     def calculate_penalized_scores(
         self,
@@ -485,133 +334,7 @@ class PromptInjectionValidator(BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-    def calculate_score(
-        self, response, target: float, prompt: str, response_time: float, hotkey: str
-    ) -> dict:
-        """This function sets the score based on the response.
-
-        Returns:
-            score:
-                An instance of dict containing the scoring information for a response
-        """
-
-        # Calculate distance score
-        distance_score = scoring.process.calculate_subscore_distance(response, target)
-        if distance_score is None:
-            bt.logging.debug(
-                f"Received an invalid response: {response} from hotkey: {hotkey}"
-            )
-            distance_score = 0.0
-
-        # Calculate speed score
-        speed_score = scoring.process.calculate_subscore_speed(
-            self.timeout, response_time
-        )
-        if speed_score is None:
-            bt.logging.debug(
-                f"Response time {response_time} was larger than timeout {self.timeout} for response: {response} from hotkey: {hotkey}"
-            )
-            speed_score = 0.0
-
-        # Validate individual scores
-        if not validate_numerical_value(
-            distance_score, float, 0.0, 1.0
-        ) or not validate_numerical_value(speed_score, float, 0.0, 1.0):
-            bt.logging.error(
-                f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
-            )
-            return scoring.process.get_engine_response_object()
-
-        # Set weights for scores
-        score_weights = {"distance": 0.85, "speed": 0.15}
-
-        # Get penalty multipliers
-        distance_penalty, speed_penalty = self.get_response_penalties(
-            response, hotkey, prompt
-        )
-
-        # Apply penalties to scores
-        (
-            total_score,
-            final_distance_score,
-            final_speed_score,
-        ) = self.calculate_penalized_scores(
-            score_weights, distance_score, speed_score, distance_penalty, speed_penalty
-        )
-
-        # Validate individual scores
-        if (
-            not validate_numerical_value(total_score, float, 0.0, 1.0)
-            or not validate_numerical_value(final_distance_score, float, 0.0, 1.0)
-            or not validate_numerical_value(final_speed_score, float, 0.0, 1.0)
-        ):
-            bt.logging.error(
-                f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
-            )
-            return scoring.process.get_engine_response_object()
-
-        # Log the scoring data
-        score_logger = {
-            "hotkey": hotkey,
-            "prompt": prompt,
-            "target": target,
-            "synapse_uuid": response["synapse_uuid"],
-            "score_weights": score_weights,
-            "penalties": {"distance": distance_penalty, "speed": speed_penalty},
-            "raw_scores": {"distance": distance_score, "speed": speed_score},
-            "final_scores": {
-                "total": total_score,
-                "distance": final_distance_score,
-                "speed": final_speed_score,
-            },
-        }
-
-        bt.logging.debug(f"Calculated score: {score_logger}")
-
-        return scoring.process.get_engine_response_object(
-            total_score=total_score,
-            final_distance_score=final_distance_score,
-            final_speed_score=final_speed_score,
-            distance_penalty=distance_penalty,
-            speed_penalty=speed_penalty,
-            raw_distance_score=distance_score,
-            raw_speed_score=speed_score,
-        )
-
-    def apply_penalty(self, response, hotkey, prompt) -> tuple:
-        """
-        Applies a penalty score based on the response and previous
-        responses received from the miner.
-        """
-
-        # If hotkey is not found from list of responses, penalties
-        # cannot be calculated.
-        if not self.miner_responses:
-            return 5.0, 5.0, 5.0
-        if not hotkey in self.miner_responses.keys():
-            return 5.0, 5.0, 5.0
-
-        # Get UID
-        uid = self.metagraph.hotkeys.index(hotkey)
-
-        similarity = base = duplicate = 0.0
-        # penalty_score -= confidence.check_penalty(self.miner_responses["hotkey"], response)
-        similarity += penalty.similarity.check_penalty(
-            uid, self.miner_responses[hotkey]
-        )
-        base += penalty.base.check_penalty(
-            uid, self.miner_responses[hotkey], response, prompt
-        )
-        duplicate += penalty.duplicate.check_penalty(
-            uid, self.miner_responses[hotkey], response
-        )
-
-        bt.logging.trace(
-            f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
-        )
-        return similarity, base, duplicate
-
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -619,14 +342,20 @@ class PromptInjectionValidator(BaseNeuron):
             "X-Signature": signature,
             "X-SynapseUUID": synapse_uuid,
             "X-Timestamp": timestamp,
-            "X-Nonce": nonce
+            "X-Nonce": nonce,
+            "X-Version": str(self.subnet_version),
+            "X-API-Key": hotkey
+        }
+
+        data = {
+            "miner_hotkeys": miner_hotkeys
         }
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, data={}, timeout=6)
+            res = requests.post(url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output
@@ -650,17 +379,8 @@ class PromptInjectionValidator(BaseNeuron):
         except Exception as e:
             bt.logging.error(f'Generic error during request: {e}')
 
-    def get_local_prompt(self, hotkey, synapse_uuid):
-        try:
-            # Get the old dataset if the API cannot be called for some reason
-            entry = mock_data.get_prompt(hotkey, synapse_uuid)
-            return entry
-        except Exception as e:
-            raise RuntimeError(
-                f"Unable to retrieve a prompt from the API and from local database: {e}"
-            ) from e
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -674,30 +394,22 @@ class PromptInjectionValidator(BaseNeuron):
             entry:
                 A dict instance
         """
-        if self.target_group == 0:
-            # Attempt to get prompt from prompt API
-            nonce = str(secrets.token_hex(24))
-            timestamp = str(int(time.time()))
+        # Attempt to get prompt from prompt API
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
 
-            data = f'{synapse_uuid}{nonce}{timestamp}'
+        data = f'{synapse_uuid}{nonce}{timestamp}'
 
-            entry = self.get_api_prompt(
-                hotkey=self.wallet.hotkey.ss58_address,
-                signature=sign_data(wallet=self.wallet, data=data),
-                synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce
-            )
-            if not validate_prompt(entry):
-                bt.logging.warning(
-                    f"Received prompt from prompt API '{entry}' but the validation failed. Using local prompt instead."
-                )
-                self.prompt = self.get_local_prompt(
-                    hotkey = self.wallet.hotkey.ss58_address, 
-                    synapse_uuid = synapse_uuid
-                )
-            else:
-                self.prompt = entry
+        entry = self.get_api_prompt(
+            hotkey=self.wallet.hotkey.ss58_address,
+            signature=sign_data(hotkey=self.wallet.hotkey, data=data),
+            synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
+        )
+        
+        self.prompt = entry
 
         return self.prompt
+
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1057,4 +769,4 @@ class PromptInjectionValidator(BaseNeuron):
 
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys

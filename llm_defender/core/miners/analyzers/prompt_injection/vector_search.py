@@ -2,6 +2,7 @@
 This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
+
 import uuid
 from os import path, makedirs
 import chromadb
@@ -25,9 +26,9 @@ class VectorEngine(BaseEngine):
 
     Attributes:
         name (from the BaseEngine located at llm_defender/base/engine.py):
-            A str instance displaying the name of the engine. 
+            A str instance displaying the name of the engine.
         cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
-            The cache directory allocated for the engine. 
+            The cache directory allocated for the engine.
         db_path:
             An instance of str depicting the path to store the chromadb
         prompt:
@@ -47,7 +48,7 @@ class VectorEngine(BaseEngine):
             Initializes the name, prompt, collection_name and reset_on_init
             attributes.
         _calculate_confidence():
-            Determines the confidence score for a given prompt being malicious & 
+            Determines the confidence score for a given prompt being malicious &
             returns the value which ranges from 0.0 (SAFE) to 1.0 (MALICIOUS).
         _populate_data():
             Returns a dict instance that displays the outputs for the VectorEngine.
@@ -59,23 +60,23 @@ class VectorEngine(BaseEngine):
         execute():
             Gets the collection from chromadb.PersistentClient and executes the query before
             updating the output and confidence attributes for the VectorEngine.
-        get_collection(): 
+        get_collection():
             Returns the chromadb collection
     """
 
     def __init__(
         self,
         prompt: str = None,
-        name="engine:vector_search",
-        reset_on_init=False
+        name="prompt_injection:vector_search",
+        reset_on_init=False,
     ):
         """
-        Initializes the prompt, collection_name, and reset_on_init attributes 
+        Initializes the prompt, collection_name, and reset_on_init attributes
         for VectorEngine.
 
         Arguments:
             name:
-                Default is 'engine:vector_search'
+                Default is 'prompt_injection:vector_search'
             prompt:
                 A str instance depicting the prompt for the VectorEngine to analyze.
             reset_on_init:
@@ -91,9 +92,9 @@ class VectorEngine(BaseEngine):
 
     def _calculate_confidence(self):
         """
-        Returns the confidence value for the VectorEngine by analyzing the results in 
+        Returns the confidence value for the VectorEngine by analyzing the results in
         the output attribute. Values returned will be between 0.0 (SAFE) and 1.0 (MALICIOUS).
-        
+
         Arguments:
             None
 
@@ -109,13 +110,16 @@ class VectorEngine(BaseEngine):
                 return 0.0
             if any(distance <= 1.0 for distance in distances):
                 return 1.0
-            
+
             # Calculate the value between 0.0 and 1.0 based on the distance from 1.0 to 1.6
             min_distance = 1.0
             max_distance = 1.6
 
             # Normalize the distances between 1.0 and 1.6 to a range between 0 and 1
-            normalized_distances = [(distance - min_distance) / (max_distance - min_distance) for distance in distances]
+            normalized_distances = [
+                (distance - min_distance) / (max_distance - min_distance)
+                for distance in distances
+            ]
 
             # Calculate the mean of normalized distances
             if normalized_distances:
@@ -131,25 +135,30 @@ class VectorEngine(BaseEngine):
 
     def _populate_data(self, results):
         """
-        Returns a dict instance that displays the outputs for the VectorEngine.
+        Returns a dict instance that displays the outputs for the
+        VectorEngine.
 
         Arguments:
             results:
-                The results of executing the query using the collection from 
-                chromadb.PersistentClient
+                The results of executing the query using the collection
+                from chromadb.PersistentClient
 
         Returns:
-            A dict instance which contains a processed version of the inputted results.
-            The flag 'outcome' will always be outputted, and the associated value is a 
-            str instance which is either 'ResultsFound' or 'ResultsNotFound'. If the 'outcome'
-            flag yields a 'ResultsFound' str, then the flags 'distances' and 'documents' will
-            also be included in this dict.
+            A dict instance which contains a processed version of the
+            inputted results. The flag 'outcome' will always be
+            outputted, and the associated value is a str instance which
+            is either 'ResultsFound' or 'ResultsNotFound'. If the
+            'outcome' flag yields a 'ResultsFound' str, then the flags
+            'distances' and 'documents' will also be included in this
+            dict.
         """
         if results:
             return {
                 "outcome": "ResultsFound",
                 "distances": results["distances"][0],
                 "documents": results["documents"][0],
+                "model": "all-MiniLM-L6-v2",
+                "distance_function": "l2",
             }
         return {"outcome": "ResultsNotFound"}
 
@@ -170,15 +179,15 @@ class VectorEngine(BaseEngine):
             None
 
         Returns:
-            A bool instance. True is returned if the collection can 
-            be initialized and chromadb can be populated. 
+            A bool instance. True is returned if the collection can
+            be initialized and chromadb can be populated.
 
         Raises:
             OSError:
                 The OSError is raised if the cache directory is unable to be created.
             Exception:
-                This Exception is raised if the chromadb collection was unable to be 
-                obtained, or if the chromadb collection was unable to be populated. 
+                This Exception is raised if the chromadb collection was unable to be
+                obtained, or if the chromadb collection was unable to be populated.
                 This is based on try/except syntax.
         """
         # Check cache directory
@@ -187,7 +196,7 @@ class VectorEngine(BaseEngine):
                 makedirs(self.cache_dir)
             except OSError as e:
                 raise OSError(f"Unable to create cache directory: {e}") from e
-            
+
         # Client is needed to prepare the engine
         client = self.initialize()
 
@@ -244,7 +253,9 @@ class VectorEngine(BaseEngine):
         Returns:
             A chromadb.PersistentClient instance.
         """
-        client = chromadb.PersistentClient(path=f"{self.cache_dir}/chromadb2", settings=Settings(allow_reset=True))
+        client = chromadb.PersistentClient(
+            path=f"{self.cache_dir}/chromadb2", settings=Settings(allow_reset=True)
+        )
         if self.reset_on_init:
             client.reset()
 
@@ -258,7 +269,7 @@ class VectorEngine(BaseEngine):
         Arguments:
             client:
                 A chromadb.PersistentClient instance returned from the initialize() method.
-        
+
         Returns:
             True bool if no errors are raised. False will not be returned if an error is raised;
             rather None will be returned.
@@ -269,7 +280,7 @@ class VectorEngine(BaseEngine):
                 because the miner was not initiated properly, or if the ChromaDB collection could
                 not be found. This is based on try/except syntax.
             Exception:
-                The Exception error is raised if the ChromaDB collection is not found or the 
+                The Exception error is raised if the ChromaDB collection is not found or the
                 ChromaDB collection was unable to be obtained.
         """
         # Get collection

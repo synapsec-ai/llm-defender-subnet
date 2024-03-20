@@ -11,10 +11,11 @@ import torch
 import bittensor as bt
 from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.validators.validator import PromptInjectionValidator
+from llm_defender.core.validators.validator import LLMDefenderValidator
 from llm_defender import __version__ as version
+import os
 
-def main(validator: PromptInjectionValidator):
+def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
@@ -37,6 +38,10 @@ def main(validator: PromptInjectionValidator):
                 # Update local knowledge of the hotkeys
                 validator.check_hotkeys()
 
+                # Check registration status
+                if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
+                    bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
                 # Save state
                 validator.save_state()
 
@@ -49,6 +54,9 @@ def main(validator: PromptInjectionValidator):
 
                 # Update local knowledge of blacklisted miner hotkeys
                 validator.check_blacklisted_miner_hotkeys()
+
+                # Save used nonces
+                validator.save_used_nonces()
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -73,50 +81,41 @@ def main(validator: PromptInjectionValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            # Get the query to send to the valid Axons
-            synapse_uuid = str(uuid4())
-            query = validator.serve_prompt(synapse_uuid)
-
             # Get list of UIDs to query
             (
                 uids_to_query,
                 list_of_uids,
                 blacklisted_uids,
                 uids_not_to_query,
+                list_of_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
-
+            
+            # Get the query to send to the valid Axons
+            synapse_uuid = str(uuid4())
+            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
-            data_to_sign = f'{synapse_uuid}{nonce}{timestamp}'
+            data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
             
+            # query['analyzer'] = "Sensitive Information"
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    prompt=query["prompt"],
-                    analyzer=query["analyzer"],
+                    analyzer=query['analyzer'],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
-                    synapse_signature=utils.sign_data(wallet=validator.wallet, data=data_to_sign),
+                    synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
                     synapse_nonce=nonce,
                     synapse_timestamp=timestamp
                 ),
                 timeout=validator.timeout,
                 deserialize=True,
             )
-
-            # Process blacklisted UIDs (set scores to 0)
-            # for uid in blacklisted_uids:
-            #     bt.logging.debug(f'Setting score for blacklisted UID: {uid}. Old score: {validator.scores[uid]}')
-            #     validator.scores[uid] = (
-            #         validator.neuron_config.alpha * validator.scores[uid]
-            #         + (1 - validator.neuron_config.alpha) * 0.0
-            #     )
-            #     bt.logging.debug(f'Set score for blacklisted UID: {uid}. New score: {validator.scores[uid]}')
 
             # Process UIDs we did not query (set scores to 0)
             for uid in uids_not_to_query:
@@ -131,11 +130,9 @@ def main(validator: PromptInjectionValidator):
                     f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
                 )
 
-            # Log the results for monitoring purposes.
+            # Check if all responses are empty
             if all(item.output is None for item in responses):
                 bt.logging.info("Received empty response from all miners")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-                time.sleep(bt.__blocktime__)
                 # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
                 for uid in list_of_uids:
                     bt.logging.trace(
@@ -148,6 +145,8 @@ def main(validator: PromptInjectionValidator):
                     bt.logging.trace(
                         f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
                     )
+                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+                time.sleep(2 * bt.__blocktime__)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
@@ -193,8 +192,8 @@ def main(validator: PromptInjectionValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-            time.sleep(bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
+            time.sleep(2 * bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
@@ -237,8 +236,17 @@ if __name__ == "__main__":
         help="Sets the value for the number of targets to query at once",
     )
 
+    parser.add_argument(
+        "--disable_remote_logging",
+        action='store_true',
+        help="This flag must be set if you want to disable remote logging",
+    )
+    
+    # Disable TOKENIZERS_PARALLELISM
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    
     # Create a validator based on the Class definitions and initialize it
-    subnet_validator = PromptInjectionValidator(parser=parser)
+    subnet_validator = LLMDefenderValidator(parser=parser)
     if (
         not subnet_validator.apply_config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet]

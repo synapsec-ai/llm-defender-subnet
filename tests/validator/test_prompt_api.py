@@ -25,7 +25,7 @@ def get_api_prompt(hotkey, signature, synapse_uuid) -> dict:
 
     try:
         # get prompt
-        res = requests.get(url=prompt_api_url, params=request_data, timeout=6)
+        res = requests.get(url=prompt_api_url, params=request_data, timeout=12)
         # check for correct status code
         if res.status_code == 200:
             # get prompt entry from the API output 
@@ -52,7 +52,7 @@ def get_api_prompt(hotkey, signature, synapse_uuid) -> dict:
 def get_api_params(wallet):
     hotkey = wallet.hotkey.ss58_address
     synapse_uuid = str(uuid4())
-    signature = sign_data(wallet = wallet, data = synapse_uuid)
+    signature = sign_data(hotkey = wallet.hotkey, data = synapse_uuid)
     return hotkey, signature, synapse_uuid
 
 def generate_wallet(ck = "burner_test_ck", hk = "burner_test_hk"):

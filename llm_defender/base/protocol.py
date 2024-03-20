@@ -14,7 +14,6 @@ class LLMDefenderProtocol(bt.Synapse):
     """
 
     # Parse variables
-    prompt: typing.Optional[str] = None
     output: typing.Optional[dict] = None
 
     synapse_uuid: str = pydantic.Field(

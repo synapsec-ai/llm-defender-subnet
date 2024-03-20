@@ -70,7 +70,7 @@ class TextClassificationEngine(BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompt: str = None, name: str = "engine:text_classification"):
+    def __init__(self, prompt: str = None, name: str = "prompt_injection:text_classification"):
         """
         Initializes the TextClassificationEngine object with the name and prompt attributes.
 
@@ -80,7 +80,7 @@ class TextClassificationEngine(BaseEngine):
                 TextClassificationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
-                'engine:text_classification'
+                'prompt_injection:text_classification'
 
         Returns:
             None
