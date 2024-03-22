@@ -40,7 +40,10 @@ class PromptInjectionAnalyzer:
 
         # Configuration options for the analyzer
         self.chromadb_client = VectorEngine().initialize()
-        self.text_classification_engine = TextClassificationEngine()
+        self.text_classification_engine = TextClassificationEngine(
+            "prompt_injection:text_classification",
+            "http://34.245.107.67:8000/is-prompt-injection"
+        )
 
         # Enable wandb if it has been configured
         if wandb is True:
