@@ -32,7 +32,7 @@ from llm_defender.base.utils import (
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
 from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
-from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
+# from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
 
 
 # Load wandb library only if it is enabled
@@ -78,18 +78,18 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             self.wandb_enabled = False
         
-        # Init vector search validators
-        supported_models = [
-            "all-mpnet-base-v2",
-            "all-distilroberta-v1",
-            "all-MiniLM-L12-v2",
-            "all-MiniLM-L6-v2",
-        ]
-
-        self.vector_search_validators = {}
-
-        for model in supported_models:
-            self.vector_search_validators[model] = VectorSearchValidation(model=model)
+#        # Init vector search validators
+#        supported_models = [
+#            "all-mpnet-base-v2",
+#            "all-distilroberta-v1",
+#            "all-MiniLM-L12-v2",
+#            "all-MiniLM-L6-v2",
+#        ]
+#
+#        self.vector_search_validators = {}
+#
+#        for model in supported_models:
+#            self.vector_search_validators[model] = VectorSearchValidation(model=model)
 
 
     def apply_config(self, bt_classes) -> bool:

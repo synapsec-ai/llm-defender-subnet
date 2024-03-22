@@ -145,11 +145,7 @@ def check_similarity_penalty(uid, miner_responses):
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
-    for engine in [
-        "prompt_injection:text_classification",
-        "prompt_injection:vector_search",
-    ]:
-        penalty += _check_response_history(uid, miner_responses, engine)
+    penalty += _check_response_history(uid, miner_responses, "prompt_injection:text_classification")
     # penalty += _check_confidence_history(uid, miner_responses)
 
     return penalty
@@ -248,10 +244,11 @@ def check_duplicate_penalty(uid, miner_responses, response):
         if not duplicate_percentage:
             return penalty
 
-        if "vector_search" in engine:
-            if duplicate_percentage > 0.15:
-                penalty += 0.5
-        elif "text_classification" in engine:
+#        if "vector_search" in engine:
+#            if duplicate_percentage > 0.15:
+#                penalty += 0.5
+        
+        if "text_classification" in engine:
             if duplicate_percentage > 0.5:
                 if duplicate_percentage > 0.95:
                     penalty += 1.0
@@ -330,12 +327,9 @@ def check_duplicate_penalty(uid, miner_responses, response):
         return 20.0
 
     penalty = 0.0
-    for engine in [
-        "prompt_injection:text_classification",
-        "prompt_injection:vector_search",
-    ]:
-        penalty += _find_identical_reply(uid, miner_responses, response, engine)
-        penalty += _calculate_duplicate_percentage(uid, miner_responses, engine)
+
+    penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
+    penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
 
     return penalty
 
@@ -374,118 +368,118 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
             The total penalty score within the base category.
     """
 
-    def _validate_vector_search_engine(
-        vector_search_validators, prompt, response_engine_data, miner_responses
-    ) -> float:
-        """Validates the vector search engine results and returns penalty value"""
-        supported_models = [
-            "all-mpnet-base-v2",
-            "all-distilroberta-v1",
-            "all-MiniLM-L12-v2",
-            "all-MiniLM-L6-v2",
-        ]
-
-        supported_distance_functions = ["l2", "ip", "cosine"]
-
-        if not 'model' in response_engine_data.keys():
-            bt.logging.trace("10.0 penalty assigned for no 'model' key in engine response")
-            return 10.0
-        
-        if not 'distance_function' in response_engine_data.keys():
-            bt.logging.trace("10.0 penalty assigned for no 'distance_function' key in engine response")
-            return 10.0
-        
-        if not response_engine_data['model'] in supported_models:
-            bt.logging.trace("10.0 penalty assigned for invalid 'model' in engine response")
-            return 10.0
-        
-        if not response_engine_data['distance_function'] in supported_distance_functions:
-            bt.logging.trace("10.0 penalty assigned for invalid 'distance_function' in engine response")
-            return 10.0
-
-        # Validate distances
-        historical_confidences = []
-        historical_distances = []
-
-        # Get historical information
-        for entry in miner_responses:
-            for engine_data in entry["engine_data"]:
-                if (
-                    engine_data["name"] == "engine:vector_search"
-                    or engine_data["name"] == "prompt_injection:vector_search"
-                ):
-                    entry_confidence = engine_data["confidence"]
-                    if not "distances" in engine_data["data"].keys():
-                        return 20.0
-                    entry_distances = engine_data["data"]["distances"]
-
-                    if entry_confidence and entry_distances:
-                        historical_confidences.append(entry_confidence)
-                        historical_distances.append(entry_distances)
-
-        # Determine penalties
-        penalty = 0.0
-
-        # Check correlation between historical confidence and historical
-        # distances. The expectation is that there is a strong correlation
-        # between the values, as vector search engine is expected to be used
-        # such that the confidence is calculated based on the distances
-
-        correlation = vector_search_validators[
-            response_engine_data["model"]
-        ].calculate_correlation(historical_confidences, historical_distances)
-
-        bt.logging.debug(f"Correlation for vector search engine: {correlation}")
-        if correlation < -0.90 or correlation > 0.90:
-            # No penalty is added if above 0.9
-            bt.logging.debug(f"Correlation penalty: 0")
-            penalty += 0
-        elif correlation < -0.85 or correlation > 0.85:
-            # Apply slight penalty if below 0.9 but above 0.85
-            bt.logging.debug(f"Correlation penalty: 2.5")
-            penalty += 2.5
-        elif correlation < -0.80 or correlation > 0.80:
-            # Apply penalty if below 0.85 but above 0.80
-            bt.logging.debug(f"Correlation penalty: 5")
-            penalty += 5
-        else:
-            # Either invalid response data or no correlation between the values
-            bt.logging.debug(f"Correlation penalty: 10")
-            penalty += 10
-
-        # Check the distances and validate the distances are correctly
-        # calculated by the miner. If the distance values do not match the
-        # prompt, documents, model and distance function there is a strong
-        # indication the results are spoofed.
-
-        embeddings = vector_search_validators[
-            response_engine_data["model"]
-        ].generate_embeddings(
-            prompt=prompt, documents=response_engine_data["documents"]
-        )
-
-        calculated_distances = vector_search_validators[
-            response_engine_data["model"]
-        ].calculate_distance(embeddings, response_engine_data["distance_function"])
-
-        difference = vector_search_validators[
-            response_engine_data["model"]
-        ].calculate_difference(response_engine_data["distances"], calculated_distances)
-
-        bt.logging.debug(f"Difference for vector search engine: {difference}")
-        if difference < 0.05 and difference > -0.05:
-            # No penalty is added if distance is within the range of [-0.05, 0.05]
-            bt.logging.debug(f"Difference penalty: 0")
-            penalty += 0
-        elif difference < 0.1 and difference > -0.1:
-            bt.logging.debug(f"Difference penalty: 5")
-            penalty += 5
-        else:
-            # Distance outside of range [-0.1, 0.1] is not expected
-            bt.logging.debug(f"Difference penalty: 10")
-            penalty += 10
-
-        return penalty
+#    def _validate_vector_search_engine(
+#        vector_search_validators, prompt, response_engine_data, miner_responses
+#    ) -> float:
+#        """Validates the vector search engine results and returns penalty value"""
+#        supported_models = [
+#            "all-mpnet-base-v2",
+#            "all-distilroberta-v1",
+#            "all-MiniLM-L12-v2",
+#            "all-MiniLM-L6-v2",
+#        ]
+#
+#        supported_distance_functions = ["l2", "ip", "cosine"]
+#
+#        if not 'model' in response_engine_data.keys():
+#            bt.logging.trace("10.0 penalty assigned for no 'model' key in engine response")
+#            return 10.0
+#       
+#        if not 'distance_function' in response_engine_data.keys():
+#            bt.logging.trace("10.0 penalty assigned for no 'distance_function' key in engine response")
+#            return 10.0
+#        
+#        if not response_engine_data['model'] in supported_models:
+#            bt.logging.trace("10.0 penalty assigned for invalid 'model' in engine response")
+#            return 10.0
+#        
+#        if not response_engine_data['distance_function'] in supported_distance_functions:
+#            bt.logging.trace("10.0 penalty assigned for invalid 'distance_function' in engine response")
+#            return 10.0
+#
+#        # Validate distances
+#        historical_confidences = []
+#        historical_distances = []
+#
+#        # Get historical information
+#        for entry in miner_responses:
+#            for engine_data in entry["engine_data"]:
+#                if (
+#                    engine_data["name"] == "engine:vector_search"
+#                    or engine_data["name"] == "prompt_injection:vector_search"
+#                ):
+#                    entry_confidence = engine_data["confidence"]
+#                    if not "distances" in engine_data["data"].keys():
+#                        return 20.0
+#                    entry_distances = engine_data["data"]["distances"]
+#
+#                    if entry_confidence and entry_distances:
+#                        historical_confidences.append(entry_confidence)
+#                        historical_distances.append(entry_distances)
+#
+#        # Determine penalties
+#        penalty = 0.0
+#
+#        # Check correlation between historical confidence and historical
+#        # distances. The expectation is that there is a strong correlation
+#        # between the values, as vector search engine is expected to be used
+#        # such that the confidence is calculated based on the distances
+#
+#        correlation = vector_search_validators[
+#            response_engine_data["model"]
+#        ].calculate_correlation(historical_confidences, historical_distances)
+#
+#        bt.logging.debug(f"Correlation for vector search engine: {correlation}")
+#        if correlation < -0.90 or correlation > 0.90:
+#            # No penalty is added if above 0.9
+#            bt.logging.debug(f"Correlation penalty: 0")
+#            penalty += 0
+#        elif correlation < -0.85 or correlation > 0.85:
+#            # Apply slight penalty if below 0.9 but above 0.85
+#            bt.logging.debug(f"Correlation penalty: 2.5")
+#            penalty += 2.5
+#        elif correlation < -0.80 or correlation > 0.80:
+#            # Apply penalty if below 0.85 but above 0.80
+#            bt.logging.debug(f"Correlation penalty: 5")
+#            penalty += 5
+#        else:
+#            # Either invalid response data or no correlation between the values
+#            bt.logging.debug(f"Correlation penalty: 10")
+#            penalty += 10
+#
+#        # Check the distances and validate the distances are correctly
+#        # calculated by the miner. If the distance values do not match the
+#        # prompt, documents, model and distance function there is a strong
+#        # indication the results are spoofed.
+#
+#        embeddings = vector_search_validators[
+#            response_engine_data["model"]
+#        ].generate_embeddings(
+#            prompt=prompt, documents=response_engine_data["documents"]
+#        )
+#
+#        calculated_distances = vector_search_validators[
+#            response_engine_data["model"]
+#        ].calculate_distance(embeddings, response_engine_data["distance_function"])
+#
+#        difference = vector_search_validators[
+#            response_engine_data["model"]
+#        ].calculate_difference(response_engine_data["distances"], calculated_distances)
+#
+#        bt.logging.debug(f"Difference for vector search engine: {difference}")
+#        if difference < 0.05 and difference > -0.05:
+#            # No penalty is added if distance is within the range of [-0.05, 0.05]
+#            bt.logging.debug(f"Difference penalty: 0")
+#            penalty += 0
+#        elif difference < 0.1 and difference > -0.1:
+#            bt.logging.debug(f"Difference penalty: 5")
+#            penalty += 5
+#        else:
+#            # Distance outside of range [-0.1, 0.1] is not expected
+#            bt.logging.debug(f"Difference penalty: 10")
+#            penalty += 10
+#
+#        return penalty
 
     def _check_response_validity(uid, response, penalty_name="Response Validity"):
         """
@@ -524,56 +518,56 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
             for entry in response["engines"]:
 
                 # Check engine-specific confidence
-                if "confidence" not in response.keys() or (
-                    response["confidence"] > 1.0 or response["confidence"] < 0.0
+                if "confidence" not in entry.keys() or (
+                    entry["confidence"] > 1.0 or entry["confidence"] < 0.0
                 ):
                     bt.logging.trace(f"Confidence out-of-bounds or missing: {response}")
                     penalty = 20.0
                     break
 
-                # Basic checks for vector search response
-                if entry["name"] == "prompt_injection:vector_search":
-                    if "data" not in entry.keys():
-                        bt.logging.trace(f"No data key in engines entry: {response}")
-                        penalty = 20.0
-                        break
-
-                    if (
-                        "outcome" not in entry["data"].keys()
-                        or "distances" not in entry["data"].keys()
-                        or "documents" not in entry["data"].keys()
-                    ):
-                        bt.logging.trace(f"Data key has missing values: {response}")
-                        penalty = 20.0
-                        break
-
-                    if entry["data"]["outcome"] not in (
-                        "ResultsFound",
-                        "ResultsNotFound",
-                    ):
-                        bt.logging.trace(
-                            f"Outcome is not an expected value: {response}"
-                        )
-                        penalty = 20.0
-                        break
-
-                    if (
-                        response["confidence"] >= 0.6
-                        and entry["data"]["outcome"] == "ResultsNotFound"
-                    ):
-                        bt.logging.trace(
-                            f"Suspicious confidence/outcome combination: {response}"
-                        )
-                        penalty = 10.0
-                        break
-
-                    if (entry["data"]["outcome"] == "ResultsFound") and (
-                        len(entry["data"]["documents"])
-                        != len(entry["data"]["distances"])
-                    ):
-                        bt.logging.trace(f"Distances/Documents mismatch: {response}")
-                        penalty = 20.0
-                        break
+#                # Basic checks for vector search response
+#                if entry["name"] == "prompt_injection:vector_search":
+#                    if "data" not in entry.keys():
+#                        bt.logging.trace(f"No data key in engines entry: {response}")
+#                        penalty = 20.0
+#                        break
+#
+#                    if (
+#                        "outcome" not in entry["data"].keys()
+#                        or "distances" not in entry["data"].keys()
+#                        or "documents" not in entry["data"].keys()
+#                    ):
+#                        bt.logging.trace(f"Data key has missing values: {response}")
+#                        penalty = 20.0
+#                        break
+#
+#                   if entry["data"]["outcome"] not in (
+#                        "ResultsFound",
+#                        "ResultsNotFound",
+#                    ):
+#                        bt.logging.trace(
+#                            f"Outcome is not an expected value: {response}"
+#                        )
+#                        penalty = 20.0
+#                        break
+#
+#                    if (
+#                        response["confidence"] >= 0.6
+#                        and entry["data"]["outcome"] == "ResultsNotFound"
+#                    ):
+#                        bt.logging.trace(
+#                            f"Suspicious confidence/outcome combination: {response}"
+#                       )
+#                       penalty = 10.0
+#                       break
+#
+#                    if (entry["data"]["outcome"] == "ResultsFound") and (
+#                        len(entry["data"]["documents"])
+#                        != len(entry["data"]["distances"])
+#                    ):
+#                        bt.logging.trace(f"Distances/Documents mismatch: {response}")
+#                        penalty = 20.0
+#                        break
 
         bt.logging.trace(
             f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
@@ -675,21 +669,21 @@ def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, r
     penalty += _check_response_history(uid, miner_responses)
 
     # Validate vector search engine results
-    response_engine_data = None
-    bt.logging.trace(response)
-    for entry in response["engines"]:
-        if (
-            entry["name"] == "engine:vector_search"
-            or entry["name"] == "prompt_injection:vector_search"
-        ):
-            response_engine_data = entry["data"]
-    bt.logging.trace(response_engine_data)
-    if response_engine_data:
-        penalty += _validate_vector_search_engine(
-            vector_search_validators=vector_search_validators,
-            prompt=prompt,
-            response_engine_data=response_engine_data,
-            miner_responses=miner_responses,
-        )
+#    response_engine_data = None
+#    bt.logging.trace(response)
+#    for entry in response["engines"]:
+#        if (
+#            entry["name"] == "engine:vector_search"
+#            or entry["name"] == "prompt_injection:vector_search"
+#        ):
+#            response_engine_data = entry["data"]
+#    bt.logging.trace(response_engine_data)
+#    if response_engine_data:
+#        penalty += _validate_vector_search_engine(
+#            vector_search_validators=vector_search_validators,
+#            prompt=prompt,
+#            response_engine_data=response_engine_data,
+#            miner_responses=miner_responses,
+#        )
 
     return penalty
