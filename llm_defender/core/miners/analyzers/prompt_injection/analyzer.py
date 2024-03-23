@@ -70,7 +70,7 @@ class PromptInjectionAnalyzer:
 #        engine_confidences.append(vector_response["confidence"])
 
         # Calculate confidence score
-        output["confidence"] = text_classification_response["confidence"])
+        output["confidence"] = text_classification_response["confidence"]
 
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
