@@ -334,7 +334,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
     return penalty
 
 
-def check_base_penalty(vector_search_validators, prompt, uid, miner_responses, response):
+def check_base_penalty(uid, miner_responses, response):
     """
     This function checks the total penalty score within the base category, which
     contains the methods:
