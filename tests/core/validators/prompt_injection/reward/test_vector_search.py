@@ -29,7 +29,7 @@ def test_calculate_correlation():
     confidences = [0.8, 0.6]
     distances = [[0.1, 0.2], [0.3, 0.4]]
     correlation = validation.calculate_correlation(confidences, distances)
-    assert isinstance(correlation, float)  # Correlation value is float
+    assert isinstance(correlation, float)
 
 
 def test_calculate_difference():
@@ -37,4 +37,4 @@ def test_calculate_difference():
     actual_distances = [0.2, 0.4]
     calculated_distances = [0.1, 0.3]
     difference = validation.calculate_difference(actual_distances, calculated_distances)
-    assert isinstance(difference, float)  # Difference value is float
+    assert isinstance(difference, float)
