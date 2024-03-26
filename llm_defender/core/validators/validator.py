@@ -767,8 +767,6 @@ class LLMDefenderValidator(BaseNeuron):
             self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
         ]
 
-        list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
+        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
 
-        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
-
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys, list_of_all_hotkeys
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_all_hotkeys

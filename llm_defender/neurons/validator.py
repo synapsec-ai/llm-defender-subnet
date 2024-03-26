@@ -87,7 +87,6 @@ def main(validator: LLMDefenderValidator):
                 list_of_uids,
                 blacklisted_uids,
                 uids_not_to_query,
-                list_of_hotkeys,
                 list_of_all_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
@@ -95,7 +94,7 @@ def main(validator: LLMDefenderValidator):
             
             # Get the query to send to the valid Axons
             synapse_uuid = str(uuid4())
-            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
+            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
             bt.logging.debug(f"Serving query: {query}")
 
             # Broadcast query to valid Axons
