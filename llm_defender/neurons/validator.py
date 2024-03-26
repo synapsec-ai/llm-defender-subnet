@@ -87,7 +87,8 @@ def main(validator: LLMDefenderValidator):
                 list_of_uids,
                 blacklisted_uids,
                 uids_not_to_query,
-                list_of_hotkeys
+                list_of_hotkeys,
+                list_of_all_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
@@ -145,8 +146,8 @@ def main(validator: LLMDefenderValidator):
                     bt.logging.trace(
                         f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
                     )
-                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
-                time.sleep(2 * bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+                time.sleep(1.5 * bt.__blocktime__)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
@@ -192,8 +193,8 @@ def main(validator: LLMDefenderValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
-            time.sleep(2 * bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+            time.sleep(1.5 * bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:

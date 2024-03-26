@@ -737,6 +737,8 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.trace(f"Final axons to filter: {final_axons_to_filter}")
         bt.logging.debug(f"Filtered UIDs: {uids_not_to_query}")
 
+        list_of_all_hotkeys = [axon.hotkey for axon in uids_to_query]
+
         # Reduce the number of simultaneous UIDs to query
         if self.max_targets < 256:
             start_idx = self.max_targets * self.target_group
@@ -769,4 +771,4 @@ class LLMDefenderValidator(BaseNeuron):
 
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
 
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys, list_of_all_hotkeys
