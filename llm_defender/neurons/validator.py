@@ -95,8 +95,9 @@ def main(validator: LLMDefenderValidator):
             # Get the query to send to the valid Axons
             synapse_uuid = str(uuid4())
             
-            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
-            bt.logging.debug(f"Serving query: {query}")
+            if validator.query == None:
+                validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+            bt.logging.debug(f"Serving query: {validator.query}")
 
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
@@ -107,7 +108,7 @@ def main(validator: LLMDefenderValidator):
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    analyzer=query['analyzer'],
+                    analyzer=validator.query['analyzer'],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
                     synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
@@ -155,7 +156,7 @@ def main(validator: LLMDefenderValidator):
             # Process the responses
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
-                query=query,
+                query=validator.query,
                 processed_uids=list_of_uids,
                 responses=responses,
                 synapse_uuid=synapse_uuid,

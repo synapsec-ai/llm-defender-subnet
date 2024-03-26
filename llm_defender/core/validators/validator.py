@@ -70,6 +70,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.load_validator_state = None
         self.prompt = None
         self.remote_logging = None
+        self.query = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -755,6 +756,7 @@ class LLMDefenderValidator(BaseNeuron):
             if end_idx >= len(uids_to_query):
                 end_idx = len(uids_to_query)
                 self.target_group = 0
+                self.query = None
             else:
                 self.target_group += 1
 
