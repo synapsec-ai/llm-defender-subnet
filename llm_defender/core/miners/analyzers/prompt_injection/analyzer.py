@@ -40,7 +40,7 @@ class PromptInjectionAnalyzer:
 
         # Configuration options for the analyzer
         self.chromadb_client = VectorEngine().initialize()
-        self.model, self.tokenizer = TextClassificationEngine().initialize()
+        self.text_classification_engine = TextClassificationEngine()
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -54,12 +54,8 @@ class PromptInjectionAnalyzer:
         # Responses are stored in a dict
         output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
-        prompt = prompt
-
         # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=prompt)
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        text_classification_response = text_classification_engine.get_response().get_dict()
+        text_classification_response = self.text_classification_engine.execute(prompt)
         output["engines"].append(text_classification_response)
 
 #        # Execute Vector Search engine
