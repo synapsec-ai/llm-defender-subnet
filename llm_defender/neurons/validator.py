@@ -97,6 +97,8 @@ def main(validator: LLMDefenderValidator):
             if validator.query == None:
                 synapse_uuid = str(uuid4())
                 validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+                bt.logging.debug(f"Serving query: {validator.query}")
+
             
             # If we cannot get a valid prompt, sleep for a moment and retry the loop
             if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
@@ -107,8 +109,6 @@ def main(validator: LLMDefenderValidator):
                 time.sleep(1.5 * bt.__blocktime__)
                 continue
             
-            bt.logging.debug(f"Serving query: {validator.query}")
-
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
