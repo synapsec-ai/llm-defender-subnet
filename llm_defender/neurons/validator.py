@@ -244,7 +244,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_targets",
         type=int,
-        default=8,
+        default=64,
         help="Sets the value for the number of targets to query at once",
     )
 
