@@ -186,7 +186,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         return wallet, subtensor, metagraph, miner_uid
     
-    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce, validator_hotkey) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -196,7 +196,8 @@ class LLMDefenderMiner(BaseNeuron):
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
             "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey
+            "X-API-Key": hotkey,
+            "X-ValidatorHotkey": validator_hotkey
         }
 
         res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
@@ -382,7 +383,8 @@ class LLMDefenderMiner(BaseNeuron):
             signature=sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse.synapse_uuid, 
             timestamp=timestamp, 
-            nonce=nonce
+            nonce=nonce,
+            validator_hotkey=synapse.dendrite.hotkey
         )
 
         # Execute the correct analyzer

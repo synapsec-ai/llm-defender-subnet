@@ -380,6 +380,7 @@ class LLMDefenderValidator(BaseNeuron):
         except Exception as e:
             bt.logging.error(f'Generic error during request: {e}')
 
+        return {}
 
     def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
         """Generates a prompt to serve to a miner

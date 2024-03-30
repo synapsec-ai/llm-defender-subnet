@@ -92,11 +92,21 @@ def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
             
-            # Get the query to send to the valid Axons
-            synapse_uuid = str(uuid4())
+            # Get the query to send to the valid Axons)
             
             if validator.query == None:
+                synapse_uuid = str(uuid4())
                 validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+            
+            # If we cannot get a valid prompt, sleep for a moment and retry the loop
+            if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
+                bt.logging.warning(f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
+                
+                # Sleep and retry
+                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+                time.sleep(1.5 * bt.__blocktime__)
+                continue
+            
             bt.logging.debug(f"Serving query: {validator.query}")
 
             # Broadcast query to valid Axons
