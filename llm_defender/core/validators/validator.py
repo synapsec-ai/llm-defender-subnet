@@ -757,9 +757,11 @@ class LLMDefenderValidator(BaseNeuron):
             if end_idx >= len(uids_to_query):
                 end_idx = len(uids_to_query)
                 self.target_group = 0
-                self.query = None
             else:
                 self.target_group += 1
+
+            if start_idx == 0:
+                self.query = None
 
             bt.logging.debug(
                 f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'"
