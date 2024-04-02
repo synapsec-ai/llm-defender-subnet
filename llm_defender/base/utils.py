@@ -362,7 +362,7 @@ def validate_prompt(prompt_dict):
     # run checks
     if not isinstance(prompt_dict, dict):
         return False
-    if len([pd for pd in prompt_dict]) != 8:
+    if len([pd for pd in prompt_dict]) != len(key_types):
         return False
     for pd in prompt_dict:
         if pd not in ['analyzer','category','label','weight', 'created_at', 'synapse_uuid', 'hotkey']:
