@@ -413,7 +413,7 @@ def validate_miner_api_prompt_output(api_output):
     """
     good_output = True 
 
-    type_check_dict = 
+    type_check_dict = {}
 
     for key in type_check_dict:
 
