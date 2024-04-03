@@ -28,6 +28,7 @@ from llm_defender.base.utils import (
     validate_miner_blacklist,
     validate_numerical_value,
     sign_data,
+    validate_validator_api_prompt_output
 )
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
@@ -334,6 +335,7 @@ class LLMDefenderValidator(BaseNeuron):
         total_score = final_distance_score + final_speed_score
 
         return total_score, final_distance_score, final_speed_score
+    
 
     def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
@@ -365,7 +367,8 @@ class LLMDefenderValidator(BaseNeuron):
                 bt.logging.trace(
                     f"Loaded remote prompt to serve to miners: {prompt_entry}"
                 )
-                return prompt_entry
+                if validate_validator_api_prompt_output(prompt_entry):
+                    return prompt_entry
 
             else:
                 bt.logging.warning(

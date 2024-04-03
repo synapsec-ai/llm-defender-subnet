@@ -380,3 +380,44 @@ def validate_prompt(prompt_dict):
             if not (0.0 < prompt_dict[pd] <= 1.0):
                 return False
     return True
+
+def validate_validator_api_prompt_output(api_output):
+    """
+    Returns a boolean for whether or not the validator's output from the prompt API is valid
+
+  
+    """
+    good_output = True 
+
+    type_check_dict = {
+        'analyzer': str,
+        'category': str,
+        'prompt': str,
+        'label': int,
+        'weight': (int,float),
+        'hotkey': str,
+        'created_at': str,
+        'synapse_uuid': str
+    }
+
+    for key in type_check_dict:
+
+        if not isinstance(api_output[key], type_check_dict[key]):
+            good_output = False
+
+    return good_output
+
+def validate_miner_api_prompt_output(api_output):
+    """
+    Returns a boolean for whether or not the miner's output from the prompt API is valid
+    """
+    good_output = True 
+
+    type_check_dict = 
+
+    for key in type_check_dict:
+
+        if not isinstance(api_output[key], type_check_dict[key]):
+            good_output = False
+
+    return good_output

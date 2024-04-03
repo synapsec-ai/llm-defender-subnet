@@ -203,6 +203,7 @@ class LLMDefenderMiner(BaseNeuron):
         res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
         
         if res and "prompt" in res.keys():
+            bt.logging.trace(f"Obtained response from prompt API: {res}")
             return res["prompt"]
         return None
 
