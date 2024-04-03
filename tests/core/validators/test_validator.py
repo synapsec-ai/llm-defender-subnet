@@ -98,7 +98,7 @@ def test_get_api_prompt_failure(mock_post_failure, validator_instance):
         nonce='mock_nonce',
         miner_hotkeys=['mock_miner_hotkey']
     )
-    assert prompt is None
+    assert prompt == {}
 
 
 def test_save_miner_state(validator_instance):
