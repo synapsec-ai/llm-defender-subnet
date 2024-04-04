@@ -363,7 +363,6 @@ class LLMDefenderValidator(BaseNeuron):
             if res.status_code == 200:
                 # get prompt entry from the API output
                 prompt_entry = res.json()
-                prompt_entry.pop("prompt")
                 prompt_entry.pop("hotkey")
                 prompt_entry.pop("synapse_uuid")
                 prompt_entry.pop("created_at")
