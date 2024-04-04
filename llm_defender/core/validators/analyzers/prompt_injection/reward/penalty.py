@@ -328,7 +328,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
 
     penalty = 0.0
 
-    penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
+    # penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
     penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
 
     return penalty
