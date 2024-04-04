@@ -408,4 +408,6 @@ def validate_validator_api_prompt_output(api_output):
         if not isinstance(api_output[key], type_check_dict[key]):
             good_output = False
 
+    bt.logging.trace(f"Prompt API data validation: {good_output}")
+
     return good_output
