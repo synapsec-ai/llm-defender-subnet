@@ -409,6 +409,8 @@ def validate_validator_api_prompt_output(api_output):
             good_output = False
             
     if not good_output:        
-        bt.logging.trace(f"Prompt API response validation failed.")
+        bt.logging.trace("Prompt API query validation failed.")
+    else:
+        bt.logging.trace("Prompt API query validation succeeded.")
 
     return good_output
