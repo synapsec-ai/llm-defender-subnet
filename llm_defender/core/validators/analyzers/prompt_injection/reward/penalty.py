@@ -145,7 +145,7 @@ def check_similarity_penalty(uid, miner_responses):
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
-    penalty += _check_response_history(uid, miner_responses, "prompt_injection:text_classification")
+    # penalty += _check_response_history(uid, miner_responses, "prompt_injection:text_classification")
     # penalty += _check_confidence_history(uid, miner_responses)
 
     return penalty
