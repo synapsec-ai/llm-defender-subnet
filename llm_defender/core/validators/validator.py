@@ -368,7 +368,8 @@ class LLMDefenderValidator(BaseNeuron):
                     bt.logging.trace(
                         f"Loaded remote prompt to serve to miners: {prompt_entry}"
                     )
-                    return prompt_entry
+                    temp_prompt_entry = prompt_entry.pop('prompt')
+                    return temp_prompt_entry
 
             else:
                 bt.logging.warning(
