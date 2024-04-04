@@ -387,7 +387,10 @@ def validate_validator_api_prompt_output(api_output):
 
   
     """
-    good_output = True 
+    if not isinstance(api_output, dict):
+        return False 
+    
+    good_output = True
 
     type_check_dict = {
         'analyzer': str,
@@ -395,6 +398,10 @@ def validate_validator_api_prompt_output(api_output):
         'label': int,
         'weight': (int,float)
     }
+
+    for key in type_check_dict:
+        if key not in [k for k in api_output]:
+            return False
 
     for key in type_check_dict:
 
