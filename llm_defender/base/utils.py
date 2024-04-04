@@ -400,6 +400,9 @@ def validate_validator_api_prompt_output(api_output):
         'synapse_uuid': str
     }
 
+    if len([k for k in api_output]) != len([k for k in type_check_dict]):
+        good_output = False
+
     for key in type_check_dict:
 
         if not isinstance(api_output[key], type_check_dict[key]):
