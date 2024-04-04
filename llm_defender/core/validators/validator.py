@@ -370,7 +370,7 @@ class LLMDefenderValidator(BaseNeuron):
                     )
                     return prompt_entry
                 else:
-                    return {}
+                    return None
 
             else:
                 bt.logging.warning(

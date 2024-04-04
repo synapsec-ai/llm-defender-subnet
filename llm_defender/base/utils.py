@@ -392,16 +392,9 @@ def validate_validator_api_prompt_output(api_output):
     type_check_dict = {
         'analyzer': str,
         'category': str,
-        'prompt': str,
         'label': int,
-        'weight': (int,float),
-        'hotkey': str,
-        'created_at': str,
-        'synapse_uuid': str
+        'weight': (int,float)
     }
-
-    if (len([k for k in api_output]) != len([k for k in type_check_dict])):
-        good_output = False
 
     for key in type_check_dict:
 
