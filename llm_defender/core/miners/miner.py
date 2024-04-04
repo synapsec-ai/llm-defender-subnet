@@ -455,10 +455,10 @@ class LLMDefenderMiner(BaseNeuron):
                             is_blacklisted = True
 
                     self.hotkey_blacklisted = is_blacklisted
-
-                bt.logging.trace(
-                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
-                )
+                else:
+                    bt.logging.trace(
+                        f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                    )
 
             else:
                 bt.logging.warning(

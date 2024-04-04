@@ -249,12 +249,12 @@ def check_duplicate_penalty(uid, miner_responses, response):
 #                penalty += 0.5
         
         if "text_classification" in engine:
-            if duplicate_percentage > 0.7:
+            if duplicate_percentage > 0.8:
                 if duplicate_percentage > 0.95:
                     penalty += 1.0
                 elif duplicate_percentage > 0.9:
                     penalty += 0.66
-                elif duplicate_percentage > 0.8:
+                elif duplicate_percentage > 0.85:
                     penalty += 0.33
                 else:
                     penalty += 0.15
@@ -329,7 +329,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
     penalty = 0.0
 
     # penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
-    penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
+    # penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
 
     return penalty
 
@@ -537,7 +537,7 @@ def check_base_penalty(uid, miner_responses, response):
 #                        or "distances" not in entry["data"].keys()
 #                        or "documents" not in entry["data"].keys()
 #                    ):
-#                        bt.logging.trace(f"Data key has missing values: {response}")
+#                     base penalty due   bt.logging.trace(f"Data key has missing values: {response}")
 #                        penalty = 20.0
 #                        break
 #
@@ -657,7 +657,7 @@ def check_base_penalty(uid, miner_responses, response):
 
     bt.logging.trace(f'Miner responses length: {len(miner_responses)}')
     bt.logging.trace(f'Miner responses: {miner_responses}')
-    if len(miner_responses) < 30:
+    if len(miner_responses) < 15:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(
             f"Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}"
