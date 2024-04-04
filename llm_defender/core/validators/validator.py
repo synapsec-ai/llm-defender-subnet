@@ -370,6 +370,8 @@ class LLMDefenderValidator(BaseNeuron):
                         f"Loaded remote prompt to serve to miners: {temp_prompt_entry}"
                     )
                     return temp_prompt_entry
+                else:
+                    return {}
 
             else:
                 bt.logging.warning(
