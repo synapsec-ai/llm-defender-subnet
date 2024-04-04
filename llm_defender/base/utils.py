@@ -362,7 +362,7 @@ def validate_prompt(prompt_dict):
     # run checks
     if not isinstance(prompt_dict, dict):
         return False
-    if len([pd for pd in prompt_dict]) != 8:
+    if len([pd for pd in prompt_dict]) != len(key_types):
         return False
     for pd in prompt_dict:
         if pd not in ['analyzer','category','label','weight', 'created_at', 'synapse_uuid', 'hotkey']:
@@ -380,3 +380,37 @@ def validate_prompt(prompt_dict):
             if not (0.0 < prompt_dict[pd] <= 1.0):
                 return False
     return True
+
+def validate_validator_api_prompt_output(api_output):
+    """
+    Returns a boolean for whether or not the validator's output from the prompt API is valid
+
+  
+    """
+    if not isinstance(api_output, dict):
+        return False 
+    
+    good_output = True
+
+    type_check_dict = {
+        'analyzer': str,
+        'category': str,
+        'label': int,
+        'weight': (int,float)
+    }
+
+    for key in type_check_dict:
+        if key not in [k for k in api_output]:
+            return False
+
+    for key in type_check_dict:
+
+        if not isinstance(api_output[key], type_check_dict[key]):
+            good_output = False
+            
+    if not good_output:        
+        bt.logging.trace("Prompt API query validation failed.")
+    else:
+        bt.logging.trace("Prompt API query validation succeeded.")
+
+    return good_output

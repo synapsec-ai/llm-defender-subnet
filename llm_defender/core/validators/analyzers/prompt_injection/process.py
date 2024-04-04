@@ -309,7 +309,7 @@ def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     similarity += penalty.check_similarity_penalty(
         uid, validator.miner_responses[hotkey]
     )
-    base += penalty.check_base_penalty(validator.vector_search_validators, prompt,
+    base += penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
     )
     duplicate += penalty.check_duplicate_penalty(

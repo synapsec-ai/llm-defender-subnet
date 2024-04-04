@@ -186,7 +186,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         return wallet, subtensor, metagraph, miner_uid
     
-    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce, validator_hotkey) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -196,12 +196,14 @@ class LLMDefenderMiner(BaseNeuron):
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
             "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey
+            "X-API-Key": hotkey,
+            "X-ValidatorHotkey": validator_hotkey
         }
 
         res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
         
         if res and "prompt" in res.keys():
+            bt.logging.trace(f"Obtained response from prompt API: {res}")
             return res["prompt"]
         return None
 
@@ -382,7 +384,8 @@ class LLMDefenderMiner(BaseNeuron):
             signature=sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse.synapse_uuid, 
             timestamp=timestamp, 
-            nonce=nonce
+            nonce=nonce,
+            validator_hotkey=synapse.dendrite.hotkey
         )
 
         # Execute the correct analyzer
@@ -452,10 +455,10 @@ class LLMDefenderMiner(BaseNeuron):
                             is_blacklisted = True
 
                     self.hotkey_blacklisted = is_blacklisted
-
-                bt.logging.trace(
-                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
-                )
+                else:
+                    bt.logging.trace(
+                        f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                    )
 
             else:
                 bt.logging.warning(

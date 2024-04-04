@@ -28,11 +28,12 @@ from llm_defender.base.utils import (
     validate_miner_blacklist,
     validate_numerical_value,
     sign_data,
+    validate_validator_api_prompt_output
 )
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
 from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
-from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
+# from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
 
 
 # Load wandb library only if it is enabled
@@ -70,6 +71,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.load_validator_state = None
         self.prompt = None
         self.remote_logging = None
+        self.query = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -78,18 +80,18 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             self.wandb_enabled = False
         
-        # Init vector search validators
-        supported_models = [
-            "all-mpnet-base-v2",
-            "all-distilroberta-v1",
-            "all-MiniLM-L12-v2",
-            "all-MiniLM-L6-v2",
-        ]
-
-        self.vector_search_validators = {}
-
-        for model in supported_models:
-            self.vector_search_validators[model] = VectorSearchValidation(model=model)
+#        # Init vector search validators
+#        supported_models = [
+#            "all-mpnet-base-v2",
+#            "all-distilroberta-v1",
+#            "all-MiniLM-L12-v2",
+#            "all-MiniLM-L6-v2",
+#        ]
+#
+#        self.vector_search_validators = {}
+#
+#        for model in supported_models:
+#            self.vector_search_validators[model] = VectorSearchValidation(model=model)
 
 
     def apply_config(self, bt_classes) -> bool:
@@ -333,6 +335,7 @@ class LLMDefenderValidator(BaseNeuron):
         total_score = final_distance_score + final_speed_score
 
         return total_score, final_distance_score, final_speed_score
+    
 
     def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
@@ -361,10 +364,13 @@ class LLMDefenderValidator(BaseNeuron):
                 # get prompt entry from the API output
                 prompt_entry = res.json()
                 # check to make sure prompt is valid
-                bt.logging.trace(
-                    f"Loaded remote prompt to serve to miners: {prompt_entry}"
-                )
-                return prompt_entry
+                if validate_validator_api_prompt_output(prompt_entry):
+                    bt.logging.trace(
+                        f"Loaded remote prompt to serve to miners: {prompt_entry}"
+                    )
+                    return prompt_entry
+                else:
+                    return None
 
             else:
                 bt.logging.warning(
@@ -379,6 +385,7 @@ class LLMDefenderValidator(BaseNeuron):
         except Exception as e:
             bt.logging.error(f'Generic error during request: {e}')
 
+        return {}
 
     def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
         """Generates a prompt to serve to a miner
@@ -737,6 +744,8 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.trace(f"Final axons to filter: {final_axons_to_filter}")
         bt.logging.debug(f"Filtered UIDs: {uids_not_to_query}")
 
+        list_of_all_hotkeys = [axon.hotkey for axon in uids_to_query]
+
         # Reduce the number of simultaneous UIDs to query
         if self.max_targets < 256:
             start_idx = self.max_targets * self.target_group
@@ -756,6 +765,9 @@ class LLMDefenderValidator(BaseNeuron):
             else:
                 self.target_group += 1
 
+            if start_idx == 0:
+                self.query = None
+
             bt.logging.debug(
                 f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'"
             )
@@ -765,8 +777,6 @@ class LLMDefenderValidator(BaseNeuron):
             self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
         ]
 
-        list_of_hotkeys = [axon.hotkey for axon in uids_to_query]
+        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
 
-        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_hotkeys}")
-
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_hotkeys
+        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_all_hotkeys

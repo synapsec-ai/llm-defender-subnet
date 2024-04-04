@@ -244,7 +244,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
             return penalty
 
         if "token_classification" in engine:
-            if duplicate_percentage > 0.5:
+            if duplicate_percentage > 0.7:
                 if duplicate_percentage > 0.95:
                     penalty += 1.0
                 elif duplicate_percentage > 0.9:
@@ -467,7 +467,7 @@ def check_base_penalty(uid, miner_responses, response):
         # Apply penalty if invalid values are provided to the function
         return 10.0
 
-    if len(miner_responses) < 30:
+    if len(miner_responses) < 15:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(f'Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}')
         return 5.0

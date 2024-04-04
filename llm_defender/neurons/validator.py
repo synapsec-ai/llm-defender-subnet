@@ -87,16 +87,28 @@ def main(validator: LLMDefenderValidator):
                 list_of_uids,
                 blacklisted_uids,
                 uids_not_to_query,
-                list_of_hotkeys
+                list_of_all_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
             
-            # Get the query to send to the valid Axons
-            synapse_uuid = str(uuid4())
-            query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_hotkeys)
-            bt.logging.debug(f"Serving query: {query}")
+            # Get the query to send to the valid Axons)
+            
+            if validator.query == None:
+                synapse_uuid = str(uuid4())
+                validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+                
+            bt.logging.debug(f"Serving query: {validator.query}")
 
+            # If we cannot get a valid prompt, sleep for a moment and retry the loop
+            if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
+                bt.logging.warning(f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
+                
+                # Sleep and retry
+                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+                time.sleep(1.5 * bt.__blocktime__)
+                continue
+            
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
@@ -106,7 +118,7 @@ def main(validator: LLMDefenderValidator):
             responses = validator.dendrite.query(
                 uids_to_query,
                 LLMDefenderProtocol(
-                    analyzer=query['analyzer'],
+                    analyzer=validator.query['analyzer'],
                     subnet_version=validator.subnet_version,
                     synapse_uuid=synapse_uuid,
                     synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
@@ -145,8 +157,8 @@ def main(validator: LLMDefenderValidator):
                     bt.logging.trace(
                         f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
                     )
-                bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
-                time.sleep(2 * bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+                time.sleep(1.5 * bt.__blocktime__)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
@@ -154,7 +166,7 @@ def main(validator: LLMDefenderValidator):
             # Process the responses
             # processed_uids = torch.nonzero(list_of_uids).squeeze()
             response_data = validator.process_responses(
-                query=query,
+                query=validator.query,
                 processed_uids=list_of_uids,
                 responses=responses,
                 synapse_uuid=synapse_uuid,
@@ -192,8 +204,8 @@ def main(validator: LLMDefenderValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {2 * bt.__blocktime__} seconds")
-            time.sleep(2 * bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+            time.sleep(1.5 * bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
