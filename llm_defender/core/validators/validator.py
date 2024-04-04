@@ -363,12 +363,12 @@ class LLMDefenderValidator(BaseNeuron):
             if res.status_code == 200:
                 # get prompt entry from the API output
                 prompt_entry = res.json()
+                temp_prompt_entry = prompt_entry.pop('prompt')
                 # check to make sure prompt is valid
-                if validate_validator_api_prompt_output(prompt_entry):
+                if validate_validator_api_prompt_output(temp_prompt_entry):
                     bt.logging.trace(
-                        f"Loaded remote prompt to serve to miners: {prompt_entry}"
+                        f"Loaded remote prompt to serve to miners: {temp_prompt_entry}"
                     )
-                    temp_prompt_entry = prompt_entry.pop('prompt')
                     return temp_prompt_entry
 
             else:
