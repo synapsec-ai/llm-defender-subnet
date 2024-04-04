@@ -244,7 +244,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
             return penalty
 
         if "token_classification" in engine:
-            if duplicate_percentage > 0.5:
+            if duplicate_percentage > 0.7:
                 if duplicate_percentage > 0.95:
                     penalty += 1.0
                 elif duplicate_percentage > 0.9:
