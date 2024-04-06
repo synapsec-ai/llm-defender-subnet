@@ -8,4 +8,4 @@ COPY pyproject.toml .
 COPY setup.cfg .
 COPY setup.py .
 
-RUN /bin/bash -c "python3 -m venv /tmp/.venv && source /tmp/.venv/bin/activate && pip3 install -e . && pip3 uninstall -y uvloop"
+RUN /bin/bash -c "python3 -m venv /tmp/.venv && source /tmp/.venv/bin/activate && pip3 install -e .[validator,miner] && pip3 uninstall -y uvloop"
