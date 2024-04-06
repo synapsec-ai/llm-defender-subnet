@@ -17,7 +17,6 @@ from typing import Tuple
 from sys import getsizeof
 from datetime import datetime
 from os import path, rename
-from pathlib import Path
 import torch
 import secrets
 import time
@@ -25,14 +24,12 @@ import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
     timeout_decorator,
-    validate_numerical_value,
     sign_data,
     validate_validator_api_prompt_output
 )
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
 from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
-# from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
 
 
 # Load wandb library only if it is enabled
@@ -77,20 +74,6 @@ class LLMDefenderValidator(BaseNeuron):
             self.wandb_handler = WandbHandler()
         else:
             self.wandb_enabled = False
-        
-#        # Init vector search validators
-#        supported_models = [
-#            "all-mpnet-base-v2",
-#            "all-distilroberta-v1",
-#            "all-MiniLM-L12-v2",
-#            "all-MiniLM-L6-v2",
-#        ]
-#
-#        self.vector_search_validators = {}
-#
-#        for model in supported_models:
-#            self.vector_search_validators[model] = VectorSearchValidation(model=model)
-
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""

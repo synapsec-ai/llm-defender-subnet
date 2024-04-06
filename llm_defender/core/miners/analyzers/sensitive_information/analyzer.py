@@ -4,7 +4,6 @@ import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.base.utils import sign_data
 from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
-from llm_defender.core.miners.analyzers.sensitive_information.yara import YaraEngine
 
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
@@ -23,11 +22,6 @@ class SensitiveInformationAnalyzer:
             Stores the 'model' output for an engine.
         tokenizer:
             Stores the 'tokenizer' output for an engine.
-        yara_rules:
-            Stores the 'rules' output of YaraEngine.initialize() This is only when using
-            the YaraEngine, located at:
-
-            llm_defender/core/miners/engines/sensitive_information/yara.py
 
     Methods:
         execute:
@@ -42,7 +36,6 @@ class SensitiveInformationAnalyzer:
         self.miner_uid = miner_uid
 
         self.model, self.tokenizer = TokenClassificationEngine().initialize()
-        # self.yara_rules = YaraEngine().initialize()
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -55,13 +48,6 @@ class SensitiveInformationAnalyzer:
     def execute(self, synapse: LLMDefenderProtocol, prompt: str):
         output = {"analyzer": "Sensitive Information", "confidence": None, "engines": []}
         engine_confidences = []
-
-        # Execute YARA engine
-        # yara_engine = YaraEngine(prompt=prompt)
-        # yara_engine.execute(rules=self.yara_rules)
-        # yara_response = yara_engine.get_response().get_dict()
-        # output["engines"].append(yara_response)
-        # engine_confidences.append(yara_response["confidence"])
 
         # Execute Token Classification engine
         token_classification_engine = TokenClassificationEngine(prompt=prompt)
@@ -89,7 +75,6 @@ class SensitiveInformationAnalyzer:
             self.wandb_handler.set_timestamp()
 
             wandb_logs = [
-                # {f"{self.miner_uid}:{self.miner_hotkey}_YARA Confidence": yara_response['confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
                     'confidence']},
                 {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output['confidence']}

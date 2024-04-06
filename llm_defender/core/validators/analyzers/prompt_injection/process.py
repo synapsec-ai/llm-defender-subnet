@@ -64,20 +64,11 @@ def process_response(
             if "text_classification" in data["name"]
         ]
 
-        vector_search = [
-            data
-            for data in response.output["engines"]
-            if "vector_search" in data["name"]
-        ]
-
         engine_data = []
 
         if text_class:
             if len(text_class) > 0:
                 engine_data.append(text_class[0])
-        if vector_search:
-            if len(vector_search) > 0:
-                engine_data.append(vector_search[0])
 
         responses_valid_uids.append(uid)
 

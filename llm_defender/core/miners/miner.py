@@ -74,7 +74,7 @@ class LLMDefenderMiner(BaseNeuron):
     def __init__(self, parser: ArgumentParser):
         """
         Initializes the LLMDefenderMiner class with attributes neuron_config,
-        miner_set_weights, chromadb_client, model, tokenizer, yara_rules, wallet,
+        miner_set_weights, model, tokenizer, wallet,
         subtensor, metagraph, miner_uid
 
         Arguments:
