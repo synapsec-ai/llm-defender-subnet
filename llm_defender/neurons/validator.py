@@ -57,6 +57,14 @@ def save_used_nonces(validator: LLMDefenderValidator):
     validator.save_used_nonces()
 
 
+def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
+    # This could be async, serve_prompt method calls an endpoint
+    # Get the query to send to the valid Axons)
+    if validator.query is None:
+        validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+    bt.logging.debug(f"Serving query: {validator.query}")
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -112,13 +120,8 @@ def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            # Get the query to send to the valid Axons)
-
-            if validator.query == None:
-                synapse_uuid = str(uuid4())
-                validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
-
-            bt.logging.debug(f"Serving query: {validator.query}")
+            synapse_uuid = str(uuid4())
+            validate_query(list_of_all_hotkeys, synapse_uuid, validator)
 
             # If we cannot get a valid prompt, sleep for a moment and retry the loop
             if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
