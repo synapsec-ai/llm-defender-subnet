@@ -1,59 +1,197 @@
 """
 Validator docstring here
 """
+import os
+import secrets
+import sys
 import time
 import traceback
-import sys
-import secrets
 from argparse import ArgumentParser
 from uuid import uuid4
-import torch
+
 import bittensor as bt
+import torch
+
+from llm_defender import __version__ as version
 from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import LLMDefenderValidator
-from llm_defender import __version__ as version
-import os
+
+
+def update_metagraph(validator: LLMDefenderValidator) -> None:
+    try:
+        validator.metagraph = validator.sync_metagraph(validator.metagraph, validator.subtensor)
+        bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
+    except TimeoutError as e:
+        bt.logging.error(f"Metagraph sync timed out: {e}")
+
+
+def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
+    validator.check_hotkeys()
+    if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
+        bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
+
+def save_validator_state(validator: LLMDefenderValidator) -> None:
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_state()
+
+
+def save_miner_state(validator: LLMDefenderValidator):
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_miner_state()
+
+
+def truncate_miner_state(validator: LLMDefenderValidator):
+    # This could be async, as it changes the miner_responses variable which will not be used immediately
+    validator.truncate_miner_state()
+
+
+def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
+    # This could be async, it performs two actions: read from a file and execute a post call
+    validator.check_blacklisted_miner_hotkeys()
+
+
+def save_used_nonces(validator: LLMDefenderValidator):
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_used_nonces()
+
+
+def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
+    # This could be async, serve_prompt method calls an endpoint
+    # Get the query to send to the valid Axons)
+    if validator.query is None:
+        validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
+    bt.logging.debug(f"Serving query: {validator.query}")
+
+
+def query_axons(synapse_uuid, uids_to_query, validator):
+    # This could be async, the dendrite.query could take a while probably could check `async def forward` method in dendrite
+
+    #
+    # Broadcast query to valid Axons
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    # query['analyzer'] = "Sensitive Information"
+    responses = validator.dendrite.query(
+        uids_to_query,
+        LLMDefenderProtocol(
+            analyzer=validator.query['analyzer'],
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
+def score_unused_axons(validator, uids_not_to_query):
+    # This could be async
+    # Process UIDs we did not query (set scores to 0)
+    for uid in uids_not_to_query:
+        bt.logging.trace(
+            f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
+        )
+        validator.scores[uid] = (
+                validator.neuron_config.alpha * validator.scores[uid]
+                + (1 - validator.neuron_config.alpha) * 0.0
+        )
+        bt.logging.trace(
+            f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
+        )
+
+
+def handle_empty_responses(validator, list_of_uids):
+    # This must be SYNC process, because we need to wait until the subnetwork syncs
+    # Handle all responses empty
+    bt.logging.info("Received empty response from all miners")
+    # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
+    for uid in list_of_uids:
+        bt.logging.trace(
+            f"Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}"
+        )
+        validator.scores[uid] = (
+                validator.neuron_config.alpha * validator.scores[uid]
+                + (1 - validator.neuron_config.alpha) * 0.0
+        )
+        bt.logging.trace(
+            f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
+        )
+    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+    time.sleep(1.5 * bt.__blocktime__)
+
+
+def format_responses(validator, list_of_uids, responses, synapse_uuid):
+    # Process the responses
+    # processed_uids = torch.nonzero(list_of_uids).squeeze()
+    response_data = validator.process_responses(
+        query=validator.query,
+        processed_uids=list_of_uids,
+        responses=responses,
+        synapse_uuid=synapse_uuid,
+    )
+    return response_data
+
+
+def handle_invalid_prompt(validator):
+    # This must be SYNC process
+    # If we cannot get a valid prompt, sleep for a moment and retry the loop
+    bt.logging.warning(
+        f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
+
+    # Sleep and retry
+    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+    time.sleep(1.5 * bt.__blocktime__)
+
+
+def attach_response_to_validator(validator, response_data):
+    for res in response_data:
+        if validator.miner_responses:
+            if res["hotkey"] in validator.miner_responses:
+                validator.miner_responses[res["hotkey"]].append(res)
+            else:
+                validator.miner_responses[res["hotkey"]] = [res]
+        else:
+            validator.miner_responses = {}
+            validator.miner_responses[res["hotkey"]] = [res]
+
+
+def update_weights(validator):
+    # This could be async
+    # Periodically update the weights on the Bittensor blockchain.
+    try:
+        validator.set_weights()
+        # Update validators knowledge of the last updated block
+        validator.last_updated_block = validator.subtensor.block
+    except TimeoutError as e:
+        bt.logging.error(f"Setting weights timed out: {e}")
+
 
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
-    
+
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
     while True:
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                # Sync metagraph
-                try:
-                    validator.metagraph = validator.sync_metagraph(
-                        validator.metagraph, validator.subtensor
-                    )
-                    bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
-                except TimeoutError as e:
-                    bt.logging.error(f"Metagraph sync timed out: {e}")
-
-                # Update local knowledge of the hotkeys
-                validator.check_hotkeys()
-
-                # Check registration status
-                if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
-                    bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
-
-                # Save state
-                validator.save_state()
-
-                # Save miners state
-                validator.save_miner_state()
+                update_metagraph(validator)
+                update_and_check_hotkeys(validator)
+                save_validator_state(validator)
+                save_miner_state(validator)
 
             if validator.step % 20 == 0:
-                # Truncate local miner response state file
-                validator.truncate_miner_state()
-
-                # Save used nonces
-                validator.save_used_nonces()
+                truncate_miner_state(validator)
+                check_blacklisted_miner_hotkeys(validator)
+                save_used_nonces(validator)
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -82,101 +220,33 @@ def main(validator: LLMDefenderValidator):
             (
                 uids_to_query,
                 list_of_uids,
+                blacklisted_uids,
                 uids_not_to_query,
                 list_of_all_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
-            
-            # Get the query to send to the valid Axons)
-            
-            if validator.query == None:
-                synapse_uuid = str(uuid4())
-                validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
-                
-            bt.logging.debug(f"Serving query: {validator.query}")
 
-            # If we cannot get a valid prompt, sleep for a moment and retry the loop
-            if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
-                bt.logging.warning(f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
-                
-                # Sleep and retry
-                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-                time.sleep(1.5 * bt.__blocktime__)
+            synapse_uuid = str(uuid4())
+            validate_query(list_of_all_hotkeys, synapse_uuid, validator)
+            is_prompt_invalid = validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys()
+
+            if is_prompt_invalid:
+                handle_invalid_prompt(validator)
                 continue
-            
-            # Broadcast query to valid Axons
-            nonce = secrets.token_hex(24)
-            timestamp = str(int(time.time()))
-            data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
-            
-            # query['analyzer'] = "Sensitive Information"
-            responses = validator.dendrite.query(
-                uids_to_query,
-                LLMDefenderProtocol(
-                    analyzer=validator.query['analyzer'],
-                    subnet_version=validator.subnet_version,
-                    synapse_uuid=synapse_uuid,
-                    synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
-                    synapse_nonce=nonce,
-                    synapse_timestamp=timestamp
-                ),
-                timeout=validator.timeout,
-                deserialize=True,
-            )
 
-            # Process UIDs we did not query (set scores to 0)
-            for uid in uids_not_to_query:
-                bt.logging.trace(
-                    f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
-                )
-                validator.scores[uid] = (
-                    validator.neuron_config.alpha * validator.scores[uid]
-                    + (1 - validator.neuron_config.alpha) * 0.0
-                )
-                bt.logging.trace(
-                    f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
-                )
+            score_unused_axons(validator, uids_not_to_query)
+            responses = query_axons(synapse_uuid, uids_to_query, validator)
+            are_responses_empty = all(item.output is None for item in responses)
 
-            # Check if all responses are empty
-            if all(item.output is None for item in responses):
-                bt.logging.info("Received empty response from all miners")
-                # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
-                for uid in list_of_uids:
-                    bt.logging.trace(
-                        f"Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}"
-                    )
-                    validator.scores[uid] = (
-                        validator.neuron_config.alpha * validator.scores[uid]
-                        + (1 - validator.neuron_config.alpha) * 0.0
-                    )
-                    bt.logging.trace(
-                        f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
-                    )
-                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-                time.sleep(1.5 * bt.__blocktime__)
+            if are_responses_empty:
+                handle_empty_responses(validator, list_of_uids)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
 
-            # Process the responses
-            # processed_uids = torch.nonzero(list_of_uids).squeeze()
-            response_data = validator.process_responses(
-                query=validator.query,
-                processed_uids=list_of_uids,
-                responses=responses,
-                synapse_uuid=synapse_uuid,
-            )
-
-            for res in response_data:
-                if validator.miner_responses:
-                    if res["hotkey"] in validator.miner_responses:
-                        validator.miner_responses[res["hotkey"]].append(res)
-                    else:
-                        validator.miner_responses[res["hotkey"]] = [res]
-                else:
-                    validator.miner_responses = {}
-                    validator.miner_responses[res["hotkey"]] = [res]
+            response_data = format_responses(validator, list_of_uids, responses, synapse_uuid)
+            attach_response_to_validator(validator, response_data)
 
             # Print stats
             bt.logging.debug(f"Scores: {validator.scores}")
@@ -188,13 +258,7 @@ def main(validator: LLMDefenderValidator):
             )
 
             if current_block - validator.last_updated_block > 100:
-                # Periodically update the weights on the Bittensor blockchain.
-                try:
-                    validator.set_weights()
-                    # Update validators knowledge of the last updated block
-                    validator.last_updated_block = validator.subtensor.block
-                except TimeoutError as e:
-                    bt.logging.error(f"Setting weights timed out: {e}")
+                update_weights(validator)
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
@@ -249,10 +313,10 @@ if __name__ == "__main__":
         action='store_true',
         help="This flag must be set if you want to disable remote logging",
     )
-    
+
     # Disable TOKENIZERS_PARALLELISM
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    
+
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderValidator(parser=parser)
     if (
