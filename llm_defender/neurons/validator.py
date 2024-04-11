@@ -37,6 +37,11 @@ def save_validator_state(validator: LLMDefenderValidator) -> None:
     validator.save_state()
 
 
+def save_miner_state(validator: LLMDefenderValidator):
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_miner_state()
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -51,7 +56,7 @@ def main(validator: LLMDefenderValidator):
                 update_metagraph(validator)
                 update_and_check_hotkeys(validator)
                 save_validator_state(validator)
-                validator.save_miner_state()
+                save_miner_state(validator)
 
             if validator.step % 20 == 0:
                 # Truncate local miner response state file
