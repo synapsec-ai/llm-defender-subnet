@@ -1,6 +1,7 @@
 """
 Validator docstring here
 """
+import asyncio
 import time
 import traceback
 import sys
@@ -15,25 +16,27 @@ from llm_defender.core.validators.validator import LLMDefenderValidator
 from llm_defender import __version__ as version
 import os
 
+
+def update_metagraph(validator: LLMDefenderValidator) -> None:
+    try:
+        validator.metagraph = validator.sync_metagraph(validator.metagraph, validator.subtensor)
+        bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
+    except TimeoutError as e:
+        bt.logging.error(f"Metagraph sync timed out: {e}")
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
-    
+
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
     while True:
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                # Sync metagraph
-                try:
-                    validator.metagraph = validator.sync_metagraph(
-                        validator.metagraph, validator.subtensor
-                    )
-                    bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
-                except TimeoutError as e:
-                    bt.logging.error(f"Metagraph sync timed out: {e}")
+                update_metagraph(validator)
 
                 # Update local knowledge of the hotkeys
                 validator.check_hotkeys()
@@ -91,29 +94,29 @@ def main(validator: LLMDefenderValidator):
             ) = validator.get_uids_to_query(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
-            
+
             # Get the query to send to the valid Axons)
-            
+
             if validator.query == None:
                 synapse_uuid = str(uuid4())
                 validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
-                
+
             bt.logging.debug(f"Serving query: {validator.query}")
 
             # If we cannot get a valid prompt, sleep for a moment and retry the loop
             if validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys():
                 bt.logging.warning(f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
-                
+
                 # Sleep and retry
                 bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
                 time.sleep(1.5 * bt.__blocktime__)
                 continue
-            
+
             # Broadcast query to valid Axons
             nonce = secrets.token_hex(24)
             timestamp = str(int(time.time()))
             data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
-            
+
             # query['analyzer'] = "Sensitive Information"
             responses = validator.dendrite.query(
                 uids_to_query,
@@ -253,10 +256,10 @@ if __name__ == "__main__":
         action='store_true',
         help="This flag must be set if you want to disable remote logging",
     )
-    
+
     # Disable TOKENIZERS_PARALLELISM
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    
+
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderValidator(parser=parser)
     if (
