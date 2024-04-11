@@ -1,20 +1,21 @@
 """
 Validator docstring here
 """
-import asyncio
+import os
+import secrets
+import sys
 import time
 import traceback
-import sys
-import secrets
 from argparse import ArgumentParser
 from uuid import uuid4
-import torch
+
 import bittensor as bt
+import torch
+
+from llm_defender import __version__ as version
 from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import LLMDefenderValidator
-from llm_defender import __version__ as version
-import os
 
 
 def update_metagraph(validator: LLMDefenderValidator) -> None:
@@ -31,6 +32,11 @@ def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
         bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
 
 
+def save_validator_state(validator: LLMDefenderValidator) -> None:
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_state()
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -44,11 +50,7 @@ def main(validator: LLMDefenderValidator):
             if validator.step % 5 == 0:
                 update_metagraph(validator)
                 update_and_check_hotkeys(validator)
-
-                # Save state
-                validator.save_state()
-
-                # Save miners state
+                save_validator_state(validator)
                 validator.save_miner_state()
 
             if validator.step % 20 == 0:
