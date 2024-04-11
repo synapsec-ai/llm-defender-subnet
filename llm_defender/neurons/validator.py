@@ -42,6 +42,21 @@ def save_miner_state(validator: LLMDefenderValidator):
     validator.save_miner_state()
 
 
+def truncate_miner_state(validator: LLMDefenderValidator):
+    # This could be async, as it changes the miner_responses variable which will not be used immediately
+    validator.truncate_miner_state()
+
+
+def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
+    # This could be async, it performs two actions: read from a file and execute a post call
+    validator.check_blacklisted_miner_hotkeys()
+
+
+def save_used_nonces(validator: LLMDefenderValidator):
+    # This could be async, as the underlying implementation writes to a file
+    validator.save_used_nonces()
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -59,14 +74,9 @@ def main(validator: LLMDefenderValidator):
                 save_miner_state(validator)
 
             if validator.step % 20 == 0:
-                # Truncate local miner response state file
-                validator.truncate_miner_state()
-
-                # Update local knowledge of blacklisted miner hotkeys
-                validator.check_blacklisted_miner_hotkeys()
-
-                # Save used nonces
-                validator.save_used_nonces()
+                truncate_miner_state(validator)
+                check_blacklisted_miner_hotkeys(validator)
+                save_used_nonces(validator)
 
             # Get all axons
             all_axons = validator.metagraph.axons
