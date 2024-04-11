@@ -65,6 +65,47 @@ def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
     bt.logging.debug(f"Serving query: {validator.query}")
 
 
+def query_axons(synapse_uuid, uids_to_query, validator):
+    # This could be async, the dendrite.query could take a while probably could check `async def forward` method in dendrite
+
+    #
+    # Broadcast query to valid Axons
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    # query['analyzer'] = "Sensitive Information"
+    responses = validator.dendrite.query(
+        uids_to_query,
+        LLMDefenderProtocol(
+            analyzer=validator.query['analyzer'],
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
+def score_unused_axons(validator, uids_not_to_query):
+    # This could be async
+    # Process UIDs we did not query (set scores to 0)
+    for uid in uids_not_to_query:
+        bt.logging.trace(
+            f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
+        )
+        validator.scores[uid] = (
+                validator.neuron_config.alpha * validator.scores[uid]
+                + (1 - validator.neuron_config.alpha) * 0.0
+        )
+        bt.logging.trace(
+            f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
+        )
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -132,38 +173,8 @@ def main(validator: LLMDefenderValidator):
                 time.sleep(1.5 * bt.__blocktime__)
                 continue
 
-            # Broadcast query to valid Axons
-            nonce = secrets.token_hex(24)
-            timestamp = str(int(time.time()))
-            data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
-
-            # query['analyzer'] = "Sensitive Information"
-            responses = validator.dendrite.query(
-                uids_to_query,
-                LLMDefenderProtocol(
-                    analyzer=validator.query['analyzer'],
-                    subnet_version=validator.subnet_version,
-                    synapse_uuid=synapse_uuid,
-                    synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
-                    synapse_nonce=nonce,
-                    synapse_timestamp=timestamp
-                ),
-                timeout=validator.timeout,
-                deserialize=True,
-            )
-
-            # Process UIDs we did not query (set scores to 0)
-            for uid in uids_not_to_query:
-                bt.logging.trace(
-                    f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
-                )
-                validator.scores[uid] = (
-                    validator.neuron_config.alpha * validator.scores[uid]
-                    + (1 - validator.neuron_config.alpha) * 0.0
-                )
-                bt.logging.trace(
-                    f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
-                )
+            score_unused_axons(validator, uids_not_to_query)
+            responses = query_axons(synapse_uuid, uids_to_query, validator)
 
             # Check if all responses are empty
             if all(item.output is None for item in responses):
