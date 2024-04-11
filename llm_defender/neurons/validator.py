@@ -25,6 +25,12 @@ def update_metagraph(validator: LLMDefenderValidator) -> None:
         bt.logging.error(f"Metagraph sync timed out: {e}")
 
 
+def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
+    validator.check_hotkeys()
+    if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
+        bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
+
 def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -37,13 +43,7 @@ def main(validator: LLMDefenderValidator):
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
                 update_metagraph(validator)
-
-                # Update local knowledge of the hotkeys
-                validator.check_hotkeys()
-
-                # Check registration status
-                if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
-                    bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+                update_and_check_hotkeys(validator)
 
                 # Save state
                 validator.save_state()
