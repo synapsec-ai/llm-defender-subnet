@@ -229,8 +229,13 @@ def main(validator: LLMDefenderValidator):
 
             synapse_uuid = str(uuid4())
             validate_query(list_of_all_hotkeys, synapse_uuid, validator)
-            is_prompt_invalid = validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys()
 
+            is_prompt_invalid = (
+                validator.query is None
+                or "analyzer" not in validator.query.keys()
+                or "label" not in validator.query.keys()
+                or "weight" not in validator.query.keys()
+            )
             if is_prompt_invalid:
                 handle_invalid_prompt(validator)
                 continue
