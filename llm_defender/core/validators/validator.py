@@ -398,7 +398,6 @@ class LLMDefenderValidator(BaseNeuron):
 
         return self.prompt
 
-
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:
@@ -420,9 +419,7 @@ class LLMDefenderValidator(BaseNeuron):
                 )
                 self.init_default_scores()
 
-            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
-        else:
-            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+        self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
