@@ -1,6 +1,7 @@
 """
 Validator docstring here
 """
+import asyncio
 import os
 import secrets
 import sys
@@ -26,10 +27,18 @@ def update_metagraph(validator: LLMDefenderValidator) -> None:
         bt.logging.error(f"Metagraph sync timed out: {e}")
 
 
+async def update_metagraph_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(update_metagraph, validator)
+
+
 def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
     validator.check_hotkeys()
     if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
         bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
+
+
+async def update_and_check_hotkeys_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(update_and_check_hotkeys, validator)
 
 
 def save_validator_state(validator: LLMDefenderValidator) -> None:
@@ -37,9 +46,17 @@ def save_validator_state(validator: LLMDefenderValidator) -> None:
     validator.save_state()
 
 
+async def save_validator_state_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(save_validator_state, validator)
+
+
 def save_miner_state(validator: LLMDefenderValidator):
     # This could be async, as the underlying implementation writes to a file
     validator.save_miner_state()
+
+
+async def save_miner_state_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(save_miner_state, validator)
 
 
 def truncate_miner_state(validator: LLMDefenderValidator):
@@ -172,7 +189,7 @@ def update_weights(validator):
         bt.logging.error(f"Setting weights timed out: {e}")
 
 
-def main(validator: LLMDefenderValidator):
+async def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
@@ -183,11 +200,12 @@ def main(validator: LLMDefenderValidator):
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                update_metagraph(validator)
-                update_and_check_hotkeys(validator)
-                save_validator_state(validator)
-                save_miner_state(validator)
-
+                await update_metagraph_async(validator)
+                await update_and_check_hotkeys_async(validator)
+                await asyncio.gather(
+                    save_validator_state_async(validator),
+                    save_miner_state_async(validator)
+                )
             if validator.step % 20 == 0:
                 truncate_miner_state(validator)
                 check_blacklisted_miner_hotkeys(validator)
@@ -333,4 +351,4 @@ if __name__ == "__main__":
         bt.logging.error("Unable to initialize Validator. Exiting.")
         sys.exit()
 
-    main(subnet_validator)
+    asyncio.run(main(subnet_validator))
