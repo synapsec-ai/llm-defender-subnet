@@ -42,9 +42,6 @@ class LLMDefenderMiner(BaseNeuron):
         neuron_config:
             This attribute holds the configuration settings for the neuron:
             bt.subtensor, bt.wallet, bt.logging & bt.axon
-        miner_set_weights:
-            A boolean attribute that determines whether the miner sets weights.
-            This is set based on the command-line argument args.miner_set_weights.
         wallet:
             Represents an instance of bittensor.wallet returned from the setup() method.
         subtensor:
@@ -73,9 +70,9 @@ class LLMDefenderMiner(BaseNeuron):
 
     def __init__(self, parser: ArgumentParser):
         """
-        Initializes the LLMDefenderMiner class with attributes neuron_config,
-        miner_set_weights, model, tokenizer, wallet,
-        subtensor, metagraph, miner_uid
+        Initializes the LLMDefenderMiner class with attributes
+        neuron_config, model, tokenizer, wallet, subtensor, metagraph,
+        miner_uid
 
         Arguments:
             parser:
@@ -91,10 +88,6 @@ class LLMDefenderMiner(BaseNeuron):
         )
 
         args = parser.parse_args()
-        if args.miner_set_weights == "False":
-            self.miner_set_weights = False
-        else:
-            self.miner_set_weights = True
 
         self.validator_min_stake = args.validator_min_stake
 
