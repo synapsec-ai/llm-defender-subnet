@@ -196,16 +196,22 @@ async def main(validator: LLMDefenderValidator):
 
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
+
+    print(">>>>>>>>>>>>>>>>>>>validator.step", validator.step)
+
     while True:
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
+                t1_start = time.perf_counter()
                 await update_metagraph_async(validator)
                 await update_and_check_hotkeys_async(validator)
                 await asyncio.gather(
                     save_validator_state_async(validator),
                     save_miner_state_async(validator)
                 )
+                t1_stop = time.perf_counter()
+                print(f">>>>>>>>>>>>>>>>>>Finished validator loop in {t1_stop - t1_start:.2f} seconds")
             if validator.step % 20 == 0:
                 truncate_miner_state(validator)
                 check_blacklisted_miner_hotkeys(validator)
