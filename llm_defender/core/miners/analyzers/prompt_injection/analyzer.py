@@ -4,7 +4,6 @@ import secrets
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
-from llm_defender.core.miners.analyzers.prompt_injection.vector_search import VectorEngine
 from llm_defender.base.utils import sign_data
 
 # Load wandb library only if it is enabled
@@ -17,9 +16,6 @@ class PromptInjectionAnalyzer:
     to generate a confidence score for a Prompt Injection Attack.
 
     Attributes:
-        chromadb_client:
-            Stores the 'client' output from VectorEngine.initialize() This is from:
-            llm_defender/core/miners/engines/prompt_injection/vector_search.py
         model:
             Stores the 'model' output for an engine.
         tokenizer:
@@ -39,7 +35,6 @@ class PromptInjectionAnalyzer:
         self.miner_uid = miner_uid
 
         # Configuration options for the analyzer
-        self.chromadb_client = VectorEngine().initialize()
         self.model, self.tokenizer = TextClassificationEngine().initialize()
 
         # Enable wandb if it has been configured
@@ -61,13 +56,6 @@ class PromptInjectionAnalyzer:
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         text_classification_response = text_classification_engine.get_response().get_dict()
         output["engines"].append(text_classification_response)
-
-#        # Execute Vector Search engine
-#        vector_engine = VectorEngine(prompt=prompt)
-#        vector_engine.execute(client=self.chromadb_client)
-#        vector_response = vector_engine.get_response().get_dict()
-#        output["engines"].append(vector_response)
-#        engine_confidences.append(vector_response["confidence"])
 
         # Calculate confidence score
         output["confidence"] = text_classification_response["confidence"]

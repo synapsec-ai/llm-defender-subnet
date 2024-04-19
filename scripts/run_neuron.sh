@@ -181,7 +181,6 @@ generate_pm2_launch_file() {
     local wallet_path="${args['wallet.path']}"
     local name="${args['name']}"
     local max_memory_restart="${args['max_memory_restart']}"
-    local miner_set_weights="${args['miner_set_weights']}"
     local validator_min_stake="${args['validator_min_stake']}"
 
     # Construct argument list for the neuron
@@ -212,9 +211,6 @@ generate_pm2_launch_file() {
         args+=" --wallet.path $wallet_path"
     fi
 
-    if [[ -n "$miner_set_weights" ]]; then
-        args+=" --miner_set_weights $miner_set_weights"
-    fi
 
     if [[ -n "$logging_value" ]]; then
         args+=" --logging.$logging_value"

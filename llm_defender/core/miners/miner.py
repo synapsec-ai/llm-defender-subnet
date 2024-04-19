@@ -19,7 +19,7 @@ import time
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers import SupportedAnalyzers
-from llm_defender.base.utils import validate_miner_blacklist, validate_signature, sign_data
+from llm_defender.base.utils import validate_signature, sign_data
 from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
@@ -42,9 +42,6 @@ class LLMDefenderMiner(BaseNeuron):
         neuron_config:
             This attribute holds the configuration settings for the neuron:
             bt.subtensor, bt.wallet, bt.logging & bt.axon
-        miner_set_weights:
-            A boolean attribute that determines whether the miner sets weights.
-            This is set based on the command-line argument args.miner_set_weights.
         wallet:
             Represents an instance of bittensor.wallet returned from the setup() method.
         subtensor:
@@ -54,17 +51,10 @@ class LLMDefenderMiner(BaseNeuron):
         miner_uid:
             An int instance representing the unique identifier of the miner in the network returned
             from the setup() method.
-        hotkey_blacklisted:
-            A boolean flag indicating whether the miner's hotkey is blacklisted. It is initially
-            set to False and may be updated by the check_remote_blacklist() method.
 
     Methods:
         setup():
             This function initializes the neuron by registering the configuration.
-        blacklist():
-            This method blacklist requests that are not originating from valid
-            validators--insufficient hotkeys, entities which are not validators &
-            entities with insufficient stake
         priority():
             This function defines the priority based on which the validators are
             selected. Higher priority value means the input from the validator is
@@ -76,16 +66,13 @@ class LLMDefenderMiner(BaseNeuron):
         calculate_overall_confidence():
             This function calculates the overall confidence score for a prompt
             injection attack.
-        check_remote_blacklist():
-            This function retrieves the remote blacklist (from the url:
-            https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api)
     """
 
     def __init__(self, parser: ArgumentParser):
         """
-        Initializes the LLMDefenderMiner class with attributes neuron_config,
-        miner_set_weights, chromadb_client, model, tokenizer, yara_rules, wallet,
-        subtensor, metagraph, miner_uid & hotkey_blacklisted.
+        Initializes the LLMDefenderMiner class with attributes
+        neuron_config, model, tokenizer, wallet, subtensor, metagraph,
+        miner_uid
 
         Arguments:
             parser:
@@ -101,16 +88,10 @@ class LLMDefenderMiner(BaseNeuron):
         )
 
         args = parser.parse_args()
-        if args.miner_set_weights == "False":
-            self.miner_set_weights = False
-        else:
-            self.miner_set_weights = True
 
         self.validator_min_stake = args.validator_min_stake
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
-
-        self.hotkey_blacklisted = False
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -414,61 +395,3 @@ class LLMDefenderMiner(BaseNeuron):
             )
 
         return synapse
-
-    def check_remote_blacklist(self):
-        """
-        Retrieves the remote blacklist & updates the hotkey_blacklisted
-        attribute.
-
-        Arguments:
-            None
-
-        Returns:
-            None
-
-        Raises:
-            requests.exceptions.JSONDecodeError:
-                requests.exceptions.JSONDecodeError is raised if the response
-                could not be read from the blacklist API.
-            requests.exceptions.ConnectionError:
-                requests.exceptions.ConnectionError is raised if the function is
-                unable to connect to the blacklist API.
-        """
-
-        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
-
-        try:
-            res = requests.get(url=blacklist_api_url, timeout=12)
-            if res.status_code == 200:
-                miner_blacklist = res.json()
-                if validate_miner_blacklist(miner_blacklist):
-                    bt.logging.trace(
-                        f"Loaded remote miner blacklist: {miner_blacklist}"
-                    )
-
-                    is_blacklisted = False
-                    for blacklist_entry in miner_blacklist:
-                        if blacklist_entry["hotkey"] == self.wallet.hotkey.ss58_address:
-                            bt.logging.warning(
-                                f'Your hotkey has been blacklisted. Reason: {blacklist_entry["reason"]}'
-                            )
-                            is_blacklisted = True
-
-                    self.hotkey_blacklisted = is_blacklisted
-                else:
-                    bt.logging.trace(
-                        f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
-                    )
-
-            else:
-                bt.logging.warning(
-                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
-                )
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
-        except Exception as e:
-            bt.logging.error(f'Generic error during request: {e}')

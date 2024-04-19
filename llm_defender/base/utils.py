@@ -202,45 +202,6 @@ def timeout_decorator(timeout):
     return decorator
 
 
-def validate_miner_blacklist(miner_blacklist) -> bool:
-    """
-    Checks that each entry in the inputted miner_blacklist list 
-    is itself a JSON array with the flags 'hotkey' and 'reason'.
-
-    An example of a valid input:
-    [
-        {
-         "hotkey": "5FZV8fBTpEo51pxxPd5AqdpwN3BzK8rxog6VYFiGd6H7pPKY", 
-         "reason": "Exploitation"
-        },
-        {
-         "hotkey": "5FMjfXzFuW6wLYVGTrvE5Zd66T1dvgv3qKKhWeTFWXoQm3jS", 
-         "reason": "Exploitation"
-        }
-    ]
-
-    Arguments:
-        miner_blacklist:
-            A list instance representing the local miner blacklist--a 
-            JSON array where each entry is a dict containing the keys 
-            'hotkey' and 'reason'.
-    
-    Returns:
-        bool:
-            True if miner_blacklist is valid. False if not.
-    """
-    if miner_blacklist:
-        return bool(
-            isinstance(miner_blacklist, list)
-            and all(
-                isinstance(item, dict)
-                and all(key in item for key in ["hotkey", "reason"])
-                for item in miner_blacklist
-            )
-        )
-    return False
-
-
 def validate_uid(uid):
     """
     This method makes sure that a uid is an int instance between 0 and

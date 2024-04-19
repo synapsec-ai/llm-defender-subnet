@@ -54,105 +54,67 @@ def main(miner: LLMDefenderMiner):
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
-            if miner.step % 20 == 0:
-                # Periodically update the weights on the Bittensor blockchain.
-                current_block = miner.subtensor.block
-                if (
-                    current_block - miner.last_updated_block > 100
-                    and miner.miner_set_weights == True
-                ):
-                    weights = torch.Tensor([0.0] * len(miner.metagraph.uids))
-                    weights[miner.miner_uid] = 1.0
-
-                    bt.logging.warning(
-                        "DEPRECATION NOTICE: Miners do not need to set weights in this subnet. The capability to do so will be removed in a future release"
-                    )
-                    bt.logging.debug(
-                        f"Setting weights with the following parameters: netuid={miner.neuron_config.netuid}, wallet={miner.wallet}, uids={miner.metagraph.uids}, weights={weights}, version_key={miner.subnet_version}"
-                    )
-
-                    result = miner.subtensor.set_weights(
-                        netuid=miner.neuron_config.netuid,  # Subnet to set weights on.
-                        wallet=miner.wallet,  # Wallet to sign set weights using hotkey.
-                        uids=miner.metagraph.uids,  # Uids of the miners to set weights for.
-                        weights=weights,  # Weights to set for the miners.
-                        wait_for_inclusion=False,
-                        version_key=miner.subnet_version,
-                    )
-
-                    if result:
-                        bt.logging.success("Successfully set weights.")
-                    else:
-                        bt.logging.error("Failed to set weights.")
-
-                    miner.last_updated_block = miner.subtensor.block
-
-                if miner.step % 300 == 0:
-                    # Check if the miners hotkey is on the remote blacklist
-                    miner.check_remote_blacklist()
-
-                if miner.step % 600 == 0:
-                    bt.logging.debug(
-                        f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
-                    )
-
-                    miner.metagraph.sync(subtensor=miner.subtensor)
-
-                    # Check registration status
-                    if miner.wallet.hotkey.ss58_address not in miner.metagraph.hotkeys:
-                        bt.logging.error(f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}.")
-                    
-                    # Save used nonces
-                    miner.save_used_nonces()
-
-                miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
-                log = (
-                    f"Version:{version} | "
-                    f"Blacklist:{miner.hotkey_blacklisted} | "
-                    f"Step:{miner.step} | "
-                    f"Block:{miner.metagraph.block.item()} | "
-                    f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
-                    f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
-                    f"Trust:{miner.metagraph.T[miner.miner_uid]} | "
-                    f"Consensus:{miner.metagraph.C[miner.miner_uid] } | "
-                    f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
-                    f"Emission:{miner.metagraph.E[miner.miner_uid]}"
+            if miner.step % 600 == 0:
+                bt.logging.debug(
+                    f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
                 )
 
-                bt.logging.info(log)
+                miner.metagraph.sync(subtensor=miner.subtensor)
 
-                if miner.wandb_enabled:
-                    wandb_logs = [
-                        {
-                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank": miner.metagraph.R[
-                                miner.miner_uid
-                            ].item()
-                        },
-                        {
-                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust": miner.metagraph.T[
-                                miner.miner_uid
-                            ].item()
-                        },
-                        {
-                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus": miner.metagraph.C[
-                                miner.miner_uid
-                            ].item()
-                        },
-                        {
-                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive": miner.metagraph.I[
-                                miner.miner_uid
-                            ].item()
-                        },
-                        {
-                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission": miner.metagraph.E[
-                                miner.miner_uid
-                            ].item()
-                        },
-                    ]
-                    miner.wandb_handler.set_timestamp()
-                    for wandb_log in wandb_logs:
-                        miner.wandb_handler.log(data=wandb_log)
-                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                # Check registration status
+                if miner.wallet.hotkey.ss58_address not in miner.metagraph.hotkeys:
+                    bt.logging.error(f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}.")
+                
+                # Save used nonces
+                miner.save_used_nonces()
+
+            miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
+            log = (
+                f"Version:{version} | "
+                f"Step:{miner.step} | "
+                f"Block:{miner.metagraph.block.item()} | "
+                f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
+                f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
+                f"Trust:{miner.metagraph.T[miner.miner_uid]} | "
+                f"Consensus:{miner.metagraph.C[miner.miner_uid] } | "
+                f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
+                f"Emission:{miner.metagraph.E[miner.miner_uid]}"
+            )
+
+            bt.logging.info(log)
+
+            if miner.wandb_enabled:
+                wandb_logs = [
+                    {
+                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank": miner.metagraph.R[
+                            miner.miner_uid
+                        ].item()
+                    },
+                    {
+                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust": miner.metagraph.T[
+                            miner.miner_uid
+                        ].item()
+                    },
+                    {
+                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus": miner.metagraph.C[
+                            miner.miner_uid
+                        ].item()
+                    },
+                    {
+                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive": miner.metagraph.I[
+                            miner.miner_uid
+                        ].item()
+                    },
+                    {
+                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission": miner.metagraph.E[
+                            miner.miner_uid
+                        ].item()
+                    },
+                ]
+                miner.wandb_handler.set_timestamp()
+                for wandb_log in wandb_logs:
+                    miner.wandb_handler.log(data=wandb_log)
+                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)
@@ -179,13 +141,6 @@ if __name__ == "__main__":
         type=str,
         default="/var/log/bittensor",
         help="Provide the log directory",
-    )
-
-    parser.add_argument(
-        "--miner_set_weights",
-        type=str,
-        default="False",
-        help="Determines if miner should set weights or not",
     )
 
     parser.add_argument(

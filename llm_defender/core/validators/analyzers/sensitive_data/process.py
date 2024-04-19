@@ -64,20 +64,11 @@ def process_response(
             if "token_classification" in data["name"]
         ]
 
-        yara = [
-            data
-            for data in response.output["engines"]
-            if "yara" in data["name"]
-        ]
-
         engine_data = []
 
         if token_class:
             if len(token_class) > 0:
                 engine_data.append(token_class[0])
-        if yara:
-            if len(yara) > 0:
-                engine_data.append(yara[0])
 
         responses_valid_uids.append(uid)
 

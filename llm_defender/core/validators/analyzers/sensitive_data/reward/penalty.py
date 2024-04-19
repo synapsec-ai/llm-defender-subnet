@@ -115,27 +115,6 @@ def check_similarity_penalty(uid, miner_responses):
         )
         return penalty
 
-    # def _check_confidence_history(
-    #         uid, miner_responses, penalty_name = 'Confidence score similarity'
-    #     ):
-        
-    #     penalty = 0.0
-    #     similar_confidences = []
-    #     for i, first_response in enumerate(miner_responses):
-    #         first_confidence_value = first_response['response']['confidence']
-    #         for j, second_response in enumerate(miner_responses):
-    #             if i == j:
-    #                 continue
-    #             second_confidence_value = second_response['response']['confidence']
-    #             if abs(first_confidence_value - second_confidence_value) <= 0.03:
-    #                 similar_confidences.append([first_confidence_value, second_confidence_value])
-        
-    #     penalty += len(similar_confidences) * 0.05
-    #     bt.logging.trace(
-    #     f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Instances of similar confidences found within tolerance of 0.03: {len(similar_confidences)}"
-    #     )
-        
-    #     return penalty
     penalty = 0.0
 
     if not validate_uid(uid) or not miner_responses:

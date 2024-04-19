@@ -52,9 +52,6 @@ def main(validator: LLMDefenderValidator):
                 # Truncate local miner response state file
                 validator.truncate_miner_state()
 
-                # Update local knowledge of blacklisted miner hotkeys
-                validator.check_blacklisted_miner_hotkeys()
-
                 # Save used nonces
                 validator.save_used_nonces()
 
@@ -85,7 +82,6 @@ def main(validator: LLMDefenderValidator):
             (
                 uids_to_query,
                 list_of_uids,
-                blacklisted_uids,
                 uids_not_to_query,
                 list_of_all_hotkeys
             ) = validator.get_uids_to_query(all_axons=all_axons)
