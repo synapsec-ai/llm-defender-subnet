@@ -64,14 +64,22 @@ def truncate_miner_state(validator: LLMDefenderValidator):
     validator.truncate_miner_state()
 
 
-def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
-    # This could be async, it performs two actions: read from a file and execute a post call
-    validator.check_blacklisted_miner_hotkeys()
+async def truncate_miner_state_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(truncate_miner_state, validator)
+
+
+# def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
+#     # This could be async, it performs two actions: read from a file and execute a post call
+#     validator.check_blacklisted_miner_hotkeys()
 
 
 def save_used_nonces(validator: LLMDefenderValidator):
     # This could be async, as the underlying implementation writes to a file
     validator.save_used_nonces()
+
+
+async def save_used_nonces_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(save_used_nonces, validator)
 
 
 def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
@@ -197,25 +205,22 @@ async def main(validator: LLMDefenderValidator):
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
 
-    print(">>>>>>>>>>>>>>>>>>>validator.step", validator.step)
-
     while True:
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                t1_start = time.perf_counter()
                 await update_metagraph_async(validator)
                 await update_and_check_hotkeys_async(validator)
                 await asyncio.gather(
                     save_validator_state_async(validator),
                     save_miner_state_async(validator)
                 )
-                t1_stop = time.perf_counter()
-                print(f">>>>>>>>>>>>>>>>>>Finished validator loop in {t1_stop - t1_start:.2f} seconds")
             if validator.step % 20 == 0:
-                truncate_miner_state(validator)
-                check_blacklisted_miner_hotkeys(validator)
-                save_used_nonces(validator)
+                await asyncio.gather(
+                    truncate_miner_state_async(validator),
+                    save_used_nonces_async(validator),
+                    validator.check_blacklisted_miner_hotkeys()
+                )
 
             # Get all axons
             all_axons = validator.metagraph.axons
