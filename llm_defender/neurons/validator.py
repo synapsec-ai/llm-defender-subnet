@@ -252,7 +252,7 @@ async def main(validator: LLMDefenderValidator):
                 blacklisted_uids,
                 uids_not_to_query,
                 list_of_all_hotkeys
-            ) = validator.get_uids_to_query(all_axons=all_axons)
+            ) = await validator.get_uids_to_query_async(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 

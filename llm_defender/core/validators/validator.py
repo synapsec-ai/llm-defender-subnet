@@ -686,21 +686,10 @@ class LLMDefenderValidator(BaseNeuron):
         # Get UIDs with a positive stake
         uids_with_stake = self.metagraph.total_stake >= 0.0
         bt.logging.trace(f"UIDs with a positive stake: {uids_with_stake}")
+        axon_ips = [self.metagraph.neurons[uid].axon_info.ip for uid in self.metagraph.uids.tolist()]
 
         # Get UIDs with an IP address of 0.0.0.0
-        invalid_uids = torch.tensor(
-            [
-                bool(value)
-                for value in [
-                    ip != "0.0.0.0"
-                    for ip in [
-                        self.metagraph.neurons[uid].axon_info.ip
-                        for uid in self.metagraph.uids.tolist()
-                    ]
-                ]
-            ],
-            dtype=torch.bool,
-        )
+        invalid_uids = torch.tensor([ip != "0.0.0.0" for ip in axon_ips], dtype=torch.bool)
         bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
 
         # Get UIDs that have their hotkey blacklisted
@@ -788,3 +777,6 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
 
         return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_all_hotkeys
+
+    async def get_uids_to_query_async(self, all_axons):
+        return await asyncio.to_thread(self.get_uids_to_query, all_axons)
