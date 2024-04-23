@@ -68,11 +68,6 @@ async def truncate_miner_state_async(validator: LLMDefenderValidator):
     await asyncio.to_thread(truncate_miner_state, validator)
 
 
-# def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
-#     # This could be async, it performs two actions: read from a file and execute a post call
-#     validator.check_blacklisted_miner_hotkeys()
-
-
 def save_used_nonces(validator: LLMDefenderValidator):
     # This could be async, as the underlying implementation writes to a file
     validator.save_used_nonces()
@@ -90,9 +85,11 @@ def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
     bt.logging.debug(f"Serving query: {validator.query}")
 
 
-def query_axons(synapse_uuid, uids_to_query, validator):
-    # This could be async, the dendrite.query could take a while probably could check `async def forward` method in dendrite
+async def validate_query_async(list_of_all_hotkeys, synapse_uuid, validator):
+    await asyncio.to_thread(validate_query, list_of_all_hotkeys, synapse_uuid, validator)
 
+
+def query_axons(synapse_uuid, uids_to_query, validator):
     #
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
@@ -115,6 +112,29 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     return responses
 
 
+async def query_axons_async(synapse_uuid, uids_to_query, validator):
+    # Broadcast query to valid Axons
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    # query['analyzer'] = "Sensitive Information"
+    responses = await validator.dendrite.forward(
+        uids_to_query,
+        LLMDefenderProtocol(
+            analyzer=validator.query['analyzer'],
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
+
 def score_unused_axons(validator, uids_not_to_query):
     # This could be async
     # Process UIDs we did not query (set scores to 0)
@@ -129,6 +149,10 @@ def score_unused_axons(validator, uids_not_to_query):
         bt.logging.trace(
             f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
         )
+
+
+async def score_unused_axons_async(validator, uids_not_to_query):
+    await asyncio.to_thread(score_unused_axons, validator, uids_not_to_query)
 
 
 def handle_empty_responses(validator, list_of_uids):
@@ -257,7 +281,7 @@ async def main(validator: LLMDefenderValidator):
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
             synapse_uuid = str(uuid4())
-            validate_query(list_of_all_hotkeys, synapse_uuid, validator)
+            await validate_query_async(list_of_all_hotkeys, synapse_uuid, validator)
 
             is_prompt_invalid = (
                 validator.query is None
@@ -269,8 +293,8 @@ async def main(validator: LLMDefenderValidator):
                 handle_invalid_prompt(validator)
                 continue
 
-            score_unused_axons(validator, uids_not_to_query)
-            responses = query_axons(synapse_uuid, uids_to_query, validator)
+            await score_unused_axons_async(validator, uids_not_to_query)
+            responses = await query_axons_async(synapse_uuid, uids_to_query, validator)
             are_responses_empty = all(item.output is None for item in responses)
 
             if are_responses_empty:
