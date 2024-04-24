@@ -42,7 +42,6 @@ async def update_and_check_hotkeys_async(validator: LLMDefenderValidator) -> Non
 
 
 def save_validator_state(validator: LLMDefenderValidator) -> None:
-    # This could be async, as the underlying implementation writes to a file
     validator.save_state()
 
 
@@ -51,7 +50,6 @@ async def save_validator_state_async(validator: LLMDefenderValidator) -> None:
 
 
 def save_miner_state(validator: LLMDefenderValidator):
-    # This could be async, as the underlying implementation writes to a file
     validator.save_miner_state()
 
 
@@ -60,7 +58,6 @@ async def save_miner_state_async(validator: LLMDefenderValidator):
 
 
 def truncate_miner_state(validator: LLMDefenderValidator):
-    # This could be async, as it changes the miner_responses variable which will not be used immediately
     validator.truncate_miner_state()
 
 
@@ -69,7 +66,6 @@ async def truncate_miner_state_async(validator: LLMDefenderValidator):
 
 
 def save_used_nonces(validator: LLMDefenderValidator):
-    # This could be async, as the underlying implementation writes to a file
     validator.save_used_nonces()
 
 
@@ -78,7 +74,6 @@ async def save_used_nonces_async(validator: LLMDefenderValidator):
 
 
 def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
-    # This could be async, serve_prompt method calls an endpoint
     # Get the query to send to the valid Axons)
     if validator.query is None:
         validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
@@ -90,7 +85,7 @@ async def validate_query_async(list_of_all_hotkeys, synapse_uuid, validator):
 
 
 def query_axons(synapse_uuid, uids_to_query, validator):
-    #
+    # Sync implementation
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
@@ -113,6 +108,7 @@ def query_axons(synapse_uuid, uids_to_query, validator):
 
 
 async def query_axons_async(synapse_uuid, uids_to_query, validator):
+    # Async implementation
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
@@ -134,9 +130,7 @@ async def query_axons_async(synapse_uuid, uids_to_query, validator):
     return responses
 
 
-
 def score_unused_axons(validator, uids_not_to_query):
-    # This could be async
     # Process UIDs we did not query (set scores to 0)
     for uid in uids_not_to_query:
         bt.logging.trace(
@@ -206,12 +200,10 @@ def attach_response_to_validator(validator, response_data):
             else:
                 validator.miner_responses[res["hotkey"]] = [res]
         else:
-            validator.miner_responses = {}
-            validator.miner_responses[res["hotkey"]] = [res]
+            validator.miner_responses = {res["hotkey"]: [res]}
 
 
 def update_weights(validator):
-    # This could be async
     # Periodically update the weights on the Bittensor blockchain.
     try:
         validator.set_weights()
