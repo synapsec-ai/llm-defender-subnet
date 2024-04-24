@@ -154,17 +154,7 @@ def handle_empty_responses(validator, list_of_uids):
     # Handle all responses empty
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
-    for uid in list_of_uids:
-        bt.logging.trace(
-            f"Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}"
-        )
-        validator.scores[uid] = (
-                validator.neuron_config.alpha * validator.scores[uid]
-                + (1 - validator.neuron_config.alpha) * 0.0
-        )
-        bt.logging.trace(
-            f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
-        )
+    score_unused_axons(validator, list_of_uids)
     bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
     time.sleep(1.5 * bt.__blocktime__)
 
