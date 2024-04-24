@@ -221,6 +221,10 @@ def update_weights(validator):
         bt.logging.error(f"Setting weights timed out: {e}")
 
 
+async def update_weights_async(validator):
+    await asyncio.to_thread(update_weights, validator)
+
+
 async def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
@@ -316,7 +320,7 @@ async def main(validator: LLMDefenderValidator):
             )
 
             if current_block - validator.last_updated_block > 100:
-                update_weights(validator)
+                await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
