@@ -1,6 +1,7 @@
 """
 Validator docstring here
 """
+import asyncio
 import os
 import secrets
 import sys
@@ -26,49 +27,65 @@ def update_metagraph(validator: LLMDefenderValidator) -> None:
         bt.logging.error(f"Metagraph sync timed out: {e}")
 
 
+async def update_metagraph_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(update_metagraph, validator)
+
+
 def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
     validator.check_hotkeys()
     if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
         bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
 
 
+async def update_and_check_hotkeys_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(update_and_check_hotkeys, validator)
+
+
 def save_validator_state(validator: LLMDefenderValidator) -> None:
-    # This could be async, as the underlying implementation writes to a file
     validator.save_state()
 
 
+async def save_validator_state_async(validator: LLMDefenderValidator) -> None:
+    await asyncio.to_thread(save_validator_state, validator)
+
+
 def save_miner_state(validator: LLMDefenderValidator):
-    # This could be async, as the underlying implementation writes to a file
     validator.save_miner_state()
 
 
+async def save_miner_state_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(save_miner_state, validator)
+
+
 def truncate_miner_state(validator: LLMDefenderValidator):
-    # This could be async, as it changes the miner_responses variable which will not be used immediately
     validator.truncate_miner_state()
 
 
-def check_blacklisted_miner_hotkeys(validator: LLMDefenderValidator):
-    # This could be async, it performs two actions: read from a file and execute a post call
-    validator.check_blacklisted_miner_hotkeys()
+async def truncate_miner_state_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(truncate_miner_state, validator)
 
 
 def save_used_nonces(validator: LLMDefenderValidator):
-    # This could be async, as the underlying implementation writes to a file
     validator.save_used_nonces()
 
 
+async def save_used_nonces_async(validator: LLMDefenderValidator):
+    await asyncio.to_thread(save_used_nonces, validator)
+
+
 def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
-    # This could be async, serve_prompt method calls an endpoint
     # Get the query to send to the valid Axons)
     if validator.query is None:
         validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
     bt.logging.debug(f"Serving query: {validator.query}")
 
 
-def query_axons(synapse_uuid, uids_to_query, validator):
-    # This could be async, the dendrite.query could take a while probably could check `async def forward` method in dendrite
+async def validate_query_async(list_of_all_hotkeys, synapse_uuid, validator):
+    await asyncio.to_thread(validate_query, list_of_all_hotkeys, synapse_uuid, validator)
 
-    #
+
+def query_axons(synapse_uuid, uids_to_query, validator):
+    # Sync implementation
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
@@ -90,8 +107,30 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     return responses
 
 
+async def query_axons_async(synapse_uuid, uids_to_query, validator):
+    # Async implementation
+    # Broadcast query to valid Axons
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    # query['analyzer'] = "Sensitive Information"
+    responses = await validator.dendrite.forward(
+        uids_to_query,
+        LLMDefenderProtocol(
+            analyzer=validator.query['analyzer'],
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
 def score_unused_axons(validator, uids_not_to_query):
-    # This could be async
     # Process UIDs we did not query (set scores to 0)
     for uid in uids_not_to_query:
         bt.logging.trace(
@@ -106,22 +145,16 @@ def score_unused_axons(validator, uids_not_to_query):
         )
 
 
+async def score_unused_axons_async(validator, uids_not_to_query):
+    await asyncio.to_thread(score_unused_axons, validator, uids_not_to_query)
+
+
 def handle_empty_responses(validator, list_of_uids):
     # This must be SYNC process, because we need to wait until the subnetwork syncs
     # Handle all responses empty
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
-    for uid in list_of_uids:
-        bt.logging.trace(
-            f"Setting score for empty response from UID: {uid}. Old score: {validator.scores[uid]}"
-        )
-        validator.scores[uid] = (
-                validator.neuron_config.alpha * validator.scores[uid]
-                + (1 - validator.neuron_config.alpha) * 0.0
-        )
-        bt.logging.trace(
-            f"Set score for empty response from UID: {uid}. New score: {validator.scores[uid]}"
-        )
+    score_unused_axons(validator, list_of_uids)
     bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
     time.sleep(1.5 * bt.__blocktime__)
 
@@ -157,12 +190,10 @@ def attach_response_to_validator(validator, response_data):
             else:
                 validator.miner_responses[res["hotkey"]] = [res]
         else:
-            validator.miner_responses = {}
-            validator.miner_responses[res["hotkey"]] = [res]
+            validator.miner_responses = {res["hotkey"]: [res]}
 
 
 def update_weights(validator):
-    # This could be async
     # Periodically update the weights on the Bittensor blockchain.
     try:
         validator.set_weights()
@@ -172,26 +203,33 @@ def update_weights(validator):
         bt.logging.error(f"Setting weights timed out: {e}")
 
 
-def main(validator: LLMDefenderValidator):
+async def update_weights_async(validator):
+    await asyncio.to_thread(update_weights, validator)
+
+
+async def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
 
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
+
     while True:
         try:
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
-                update_metagraph(validator)
-                update_and_check_hotkeys(validator)
-                save_validator_state(validator)
-                save_miner_state(validator)
-
+                await update_metagraph_async(validator)
+                await update_and_check_hotkeys_async(validator)
+                await asyncio.gather(
+                    save_validator_state_async(validator),
+                    save_miner_state_async(validator)
+                )
             if validator.step % 20 == 0:
-                truncate_miner_state(validator)
-                check_blacklisted_miner_hotkeys(validator)
-                save_used_nonces(validator)
+                await asyncio.gather(
+                    truncate_miner_state_async(validator),
+                    save_used_nonces_async(validator)
+                )
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -220,23 +258,27 @@ def main(validator: LLMDefenderValidator):
             (
                 uids_to_query,
                 list_of_uids,
-                blacklisted_uids,
                 uids_not_to_query,
                 list_of_all_hotkeys
-            ) = validator.get_uids_to_query(all_axons=all_axons)
+            ) = await validator.get_uids_to_query_async(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
             synapse_uuid = str(uuid4())
-            validate_query(list_of_all_hotkeys, synapse_uuid, validator)
-            is_prompt_invalid = validator.query is None or "analyzer" not in validator.query.keys() or "label" not in validator.query.keys() or "weight" not in validator.query.keys()
+            await validate_query_async(list_of_all_hotkeys, synapse_uuid, validator)
 
+            is_prompt_invalid = (
+                validator.query is None
+                or "analyzer" not in validator.query.keys()
+                or "label" not in validator.query.keys()
+                or "weight" not in validator.query.keys()
+            )
             if is_prompt_invalid:
                 handle_invalid_prompt(validator)
                 continue
 
-            score_unused_axons(validator, uids_not_to_query)
-            responses = query_axons(synapse_uuid, uids_to_query, validator)
+            await score_unused_axons_async(validator, uids_not_to_query)
+            responses = await query_axons_async(synapse_uuid, uids_to_query, validator)
             are_responses_empty = all(item.output is None for item in responses)
 
             if are_responses_empty:
@@ -258,7 +300,7 @@ def main(validator: LLMDefenderValidator):
             )
 
             if current_block - validator.last_updated_block > 100:
-                update_weights(validator)
+                await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
@@ -328,4 +370,4 @@ if __name__ == "__main__":
         bt.logging.error("Unable to initialize Validator. Exiting.")
         sys.exit()
 
-    main(subnet_validator)
+    asyncio.run(main(subnet_validator))

@@ -8,7 +8,7 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
-
+import asyncio
 import copy
 import pickle
 import json
@@ -260,7 +260,7 @@ class LLMDefenderValidator(BaseNeuron):
             else:
                 bt.logging.error(f'Received unsupported analyzer: {query}')
                 raise AttributeError(f'Received unsupported analyzer: {query}')
-            
+
             # Handle response
             response_data.append(response_object)
             if response_object["response"]:
@@ -278,7 +278,7 @@ class LLMDefenderValidator(BaseNeuron):
             bt.logging.trace(f'Message to log: {response_logger}')
             if not self.remote_logger(hotkey=self.wallet.hotkey, message=response_logger):
                 bt.logging.warning('Unable to push miner validation results to the logger service')
-        
+
         return response_data
 
     def calculate_subscore_speed(self, hotkey, response_time):
@@ -316,7 +316,7 @@ class LLMDefenderValidator(BaseNeuron):
         total_score = final_distance_score + final_speed_score
 
         return total_score, final_distance_score, final_speed_score
-    
+
 
     def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
         """Retrieves a prompt from the prompt API"""
@@ -393,7 +393,7 @@ class LLMDefenderValidator(BaseNeuron):
             signature=sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
         )
-        
+
         self.prompt = entry
 
         return self.prompt
@@ -661,3 +661,6 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
 
         return uids_to_query, list_of_uids, uids_not_to_query, list_of_all_hotkeys
+
+    async def get_uids_to_query_async(self, all_axons):
+        return await asyncio.to_thread(self.get_uids_to_query, all_axons)
