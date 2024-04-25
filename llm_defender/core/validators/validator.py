@@ -80,20 +80,6 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             self.wandb_enabled = False
 
-#        # Init vector search validators
-#        supported_models = [
-#            "all-mpnet-base-v2",
-#            "all-distilroberta-v1",
-#            "all-MiniLM-L12-v2",
-#            "all-MiniLM-L6-v2",
-#        ]
-#
-#        self.vector_search_validators = {}
-#
-#        for model in supported_models:
-#            self.vector_search_validators[model] = VectorSearchValidation(model=model)
-
-
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
         try:
