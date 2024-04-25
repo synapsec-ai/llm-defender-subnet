@@ -17,7 +17,6 @@ from typing import Tuple
 from sys import getsizeof
 from datetime import datetime
 from os import path, rename
-from pathlib import Path
 import torch
 import secrets
 import time
@@ -25,15 +24,12 @@ import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
     timeout_decorator,
-    validate_miner_blacklist,
-    validate_numerical_value,
     sign_data,
     validate_validator_api_prompt_output
 )
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
 from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
-# from llm_defender.core.validators.analyzers.prompt_injection.reward.vector_search import VectorSearchValidation
 
 
 # Load wandb library only if it is enabled
@@ -67,7 +63,6 @@ class LLMDefenderValidator(BaseNeuron):
         self.miner_responses = None
         self.max_targets = None
         self.target_group = None
-        self.blacklisted_miner_hotkeys = None
         self.load_validator_state = None
         self.prompt = None
         self.remote_logging = None
@@ -403,6 +398,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return self.prompt
 
+
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
         if self.hotkeys:
@@ -424,7 +420,9 @@ class LLMDefenderValidator(BaseNeuron):
                 )
                 self.init_default_scores()
 
-        self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+        else:
+            self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
@@ -481,13 +479,12 @@ class LLMDefenderValidator(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
-                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys,
             },
             self.base_path + "/state.pt",
         )
 
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}, blacklisted_miner_hotkeys: {self.blacklisted_miner_hotkeys}"
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
         )
 
     def init_default_scores(self) -> None:
@@ -513,7 +510,6 @@ class LLMDefenderValidator(BaseNeuron):
         self.step = 0
         self.last_updated_block = 0
         self.hotkeys = None
-        self.blacklisted_miner_hotkeys = None
 
     def load_state(self):
         """Loads the state of the validator from a file."""
@@ -529,8 +525,6 @@ class LLMDefenderValidator(BaseNeuron):
                 self.scores = state["scores"]
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-                if "blacklisted_miner_hotkeys" in state.keys():
-                    self.blacklisted_miner_hotkeys = state["blacklisted_miner_hotkeys"]
 
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
@@ -580,128 +574,32 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             bt.logging.error("Failed to set weights.")
 
-    def _get_local_miner_blacklist(self) -> list:
-        """Returns the blacklisted miners hotkeys from the local file."""
-
-        # Check if local blacklist exists
-        blacklist_file = f"{self.base_path}/miner_blacklist.json"
-        if Path(blacklist_file).is_file():
-            # Load the contents of the local blaclist
-            bt.logging.trace(f"Reading local blacklist file: {blacklist_file}")
-            try:
-                with open(blacklist_file, "r", encoding="utf-8") as file:
-                    file_content = file.read()
-
-                miner_blacklist = json.loads(file_content)
-                if validate_miner_blacklist(miner_blacklist):
-                    bt.logging.trace(f"Loaded miner blacklist: {miner_blacklist}")
-                    return miner_blacklist
-
-                bt.logging.trace(
-                    f"Loaded miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
-                )
-            except OSError as e:
-                bt.logging.error(f"Unable to read blacklist file: {e}")
-            except json.JSONDecodeError as e:
-                bt.logging.error(
-                    f"Unable to parse JSON from path: {blacklist_file} with error: {e}"
-                )
-        else:
-            bt.logging.trace(f"No local miner blacklist file in path: {blacklist_file}")
-
-        return []
-
-    async def _get_local_miner_blacklist_async(self) -> list:
-        bt.logging.debug("Getting local miner blacklist")
-        loca_black_list = await asyncio.to_thread(self._get_local_miner_blacklist)
-        bt.logging.debug("Got local miner blacklist")
-        return loca_black_list
-
-    def _get_remote_miner_blacklist(self) -> list:
-        """Retrieves the remote blacklist"""
-
-        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
-
-        try:
-            res = requests.get(url=blacklist_api_url, timeout=12)
-            if res.status_code == 200:
-                miner_blacklist = res.json()
-                if validate_miner_blacklist(miner_blacklist):
-                    bt.logging.trace(
-                        f"Loaded remote miner blacklist: {miner_blacklist}"
-                    )
-                    return miner_blacklist
-                bt.logging.trace(
-                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
-                )
-
-            else:
-                bt.logging.warning(
-                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
-                )
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
-        except Exception as e:
-            bt.logging.error(f'Generic error during request: {e}')
-
-        return []
-
-    async def _get_remote_miner_blacklist_async(self):
-        bt.logging.debug("Getting remote miner blacklist")
-        remote_blacklist = await asyncio.to_thread(self._get_remote_miner_blacklist)
-        bt.logging.debug("Got remote miner blacklist")
-        return remote_blacklist
-
-    async def check_blacklisted_miner_hotkeys(self):
-        """Combines local and remote miner blacklists and returns list of hotkeys"""
-        get_local_blacklist_task = asyncio.create_task(self._get_local_miner_blacklist_async())
-        get_remote_blacklist_task = asyncio.create_task(self._get_remote_miner_blacklist_async())
-        miner_blacklist = await get_local_blacklist_task + await get_remote_blacklist_task
-
-        self.blacklisted_miner_hotkeys = [
-            item["hotkey"] for item in miner_blacklist if "hotkey" in item
-        ]
-
     def get_uids_to_query(self, all_axons) -> list:
         """Returns the list of UIDs to query"""
 
         # Get UIDs with a positive stake
         uids_with_stake = self.metagraph.total_stake >= 0.0
         bt.logging.trace(f"UIDs with a positive stake: {uids_with_stake}")
-        axon_ips = [self.metagraph.neurons[uid].axon_info.ip for uid in self.metagraph.uids.tolist()]
 
         # Get UIDs with an IP address of 0.0.0.0
-        invalid_uids = torch.tensor([ip != "0.0.0.0" for ip in axon_ips], dtype=torch.bool)
-        bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
-
-        # Get UIDs that have their hotkey blacklisted
-        blacklisted_uids = []
-        if self.blacklisted_miner_hotkeys:
-            for hotkey in self.blacklisted_miner_hotkeys:
-                if hotkey in self.metagraph.hotkeys:
-                    blacklisted_uids.append(self.metagraph.hotkeys.index(hotkey))
-                else:
-                    bt.logging.trace(
-                        f"Blacklisted hotkey {hotkey} was not found from metagraph"
-                    )
-
-            bt.logging.debug(f"Blacklisted the following UIDs: {blacklisted_uids}")
-
-        # Convert blacklisted UIDs to tensor
-        blacklisted_uids_tensor = torch.tensor(
-            [uid not in blacklisted_uids for uid in self.metagraph.uids.tolist()],
+        invalid_uids = torch.tensor(
+            [
+                bool(value)
+                for value in [
+                    ip != "0.0.0.0"
+                    for ip in [
+                        self.metagraph.neurons[uid].axon_info.ip
+                        for uid in self.metagraph.uids.tolist()
+                    ]
+                ]
+            ],
             dtype=torch.bool,
         )
-
-        bt.logging.trace(f"Blacklisted UIDs: {blacklisted_uids_tensor}")
+        bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
 
         # Determine the UIDs to filter
         uids_to_filter = torch.logical_not(
-            ~blacklisted_uids_tensor | ~invalid_uids | ~uids_with_stake
+            ~invalid_uids | ~uids_with_stake
         )
 
         bt.logging.trace(f"UIDs to filter: {uids_to_filter}")
@@ -762,7 +660,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
 
-        return uids_to_query, list_of_uids, blacklisted_uids, uids_not_to_query, list_of_all_hotkeys
+        return uids_to_query, list_of_uids, uids_not_to_query, list_of_all_hotkeys
 
     async def get_uids_to_query_async(self, all_axons):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)

@@ -228,8 +228,7 @@ async def main(validator: LLMDefenderValidator):
             if validator.step % 20 == 0:
                 await asyncio.gather(
                     truncate_miner_state_async(validator),
-                    save_used_nonces_async(validator),
-                    validator.check_blacklisted_miner_hotkeys()
+                    save_used_nonces_async(validator)
                 )
 
             # Get all axons
@@ -259,7 +258,6 @@ async def main(validator: LLMDefenderValidator):
             (
                 uids_to_query,
                 list_of_uids,
-                blacklisted_uids,
                 uids_not_to_query,
                 list_of_all_hotkeys
             ) = await validator.get_uids_to_query_async(all_axons=all_axons)
