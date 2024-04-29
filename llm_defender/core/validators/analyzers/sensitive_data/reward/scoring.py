@@ -263,8 +263,7 @@ def assign_score_for_uid(
         f"Unweighted score for UID: {uid}. Unweighted score: {unweighted_new_score}"
     )
     diff = unweighted_new_score - scores[uid]
-    decrease_multiplier = 0.1 if (response_score == 0.0) else 1.0
-    scores[uid] = scores[uid] + (prompt_weight * diff * decrease_multiplier)
+    scores[uid] = scores[uid] + (prompt_weight * diff)
     logging.trace(f"Assigned weighted score for UID: {uid}. New score: {scores[uid]}")
 
     if old_score == scores[uid]:
