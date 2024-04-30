@@ -136,9 +136,7 @@ def score_unused_axons(validator, uids_not_to_query):
         bt.logging.trace(
             f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
         )
-        validator.scores[uid] = (
-                0.99 * validator.scores[uid]
-        )
+        validator.scores[uid] = 0.99 * validator.scores[uid]
         bt.logging.trace(
             f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
         )
