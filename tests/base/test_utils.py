@@ -1,5 +1,5 @@
 from llm_defender.base.utils import (
-    EngineResponse, validate_numerical_value, normalize_list, validate_miner_blacklist,
+    EngineResponse, validate_numerical_value, normalize_list,
     validate_uid, validate_response_data, validate_prompt
 )
 
@@ -21,12 +21,6 @@ def test_normalize_list():
     assert normalize_list([1, 2, 3]) == [0.16666666666666666, 0.3333333333333333, 0.5]
     assert normalize_list([1]) == [1.0]
 
-
-def test_validate_miner_blacklist():
-    assert validate_miner_blacklist(None) is False
-    assert validate_miner_blacklist([]) is False
-    assert validate_miner_blacklist([{"hotkey": "123", "reason": "Test"}]) is True
-    assert validate_miner_blacklist([{"hotkey": "123", "reason": "Test"}, {"invalid_key": "value"}]) is False
 
 
 def test_validate_uid():

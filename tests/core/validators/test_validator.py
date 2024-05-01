@@ -31,9 +31,11 @@ def get_mock_wallet() -> bt.MockWallet:
 @pytest.fixture
 def mock_response():
     return {
-        "prompt": "Your mock prompt data"
+        'analyzer': "mock_analyzer",
+        'category': "mock_category",
+        'label': 1,
+        'weight': 3.023
     }
-
 
 @pytest.fixture
 def mock_post_success(mock_response):
@@ -86,7 +88,12 @@ def test_get_api_prompt_success(mock_post_success, validator_instance):
         nonce='mock_nonce',
         miner_hotkeys=['mock_miner_hotkey']
     )
-    assert prompt == {"prompt": "Your mock prompt data"}
+    assert prompt == {
+        'analyzer': "mock_analyzer",
+        'category': "mock_category",
+        'label': 1,
+        'weight': 3.023
+    }
 
 
 def test_get_api_prompt_failure(mock_post_failure, validator_instance):
