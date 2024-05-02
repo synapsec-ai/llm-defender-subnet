@@ -123,7 +123,8 @@ def main(miner: LLMDefenderMiner):
         except KeyboardInterrupt:
             axon.stop()
             bt.logging.success("Miner killed by keyboard interrupt.")
-            miner.wandb_handler.wandb_run.finish()
+            if miner.wandb_handler:
+                miner.wandb_handler.wandb_run.finish()
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception:
