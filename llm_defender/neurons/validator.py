@@ -261,7 +261,8 @@ async def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            synapse_uuid = str(uuid4())
+            if validator.query is None or 'synapse_uuid' not in locals():
+                synapse_uuid = str(uuid4())
             await validate_query_async(list_of_all_hotkeys, synapse_uuid, validator)
 
             is_prompt_invalid = (
