@@ -79,8 +79,6 @@ def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
         validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
     bt.logging.debug(f"Serving query: {validator.query}")
 
-    return synapse_uuid
-
 
 async def validate_query_async(list_of_all_hotkeys, synapse_uuid, validator):
     await asyncio.to_thread(validate_query, list_of_all_hotkeys, synapse_uuid, validator)
