@@ -50,7 +50,7 @@ def main(miner: LLMDefenderMiner):
     )
 
     # When we init, set last_updated_block to current_block
-    miner.last_updated_block = miner.subtensor.block
+    miner.last_updated_block = miner.subtensor.get_current_block()
     while True:
         try:
             # Below: Periodically update our knowledge of the network graph.
@@ -68,53 +68,54 @@ def main(miner: LLMDefenderMiner):
                 # Save used nonces
                 miner.save_used_nonces()
 
-            miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
-            log = (
-                f"Version:{version} | "
-                f"Step:{miner.step} | "
-                f"Block:{miner.metagraph.block.item()} | "
-                f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
-                f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
-                f"Trust:{miner.metagraph.T[miner.miner_uid]} | "
-                f"Consensus:{miner.metagraph.C[miner.miner_uid] } | "
-                f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
-                f"Emission:{miner.metagraph.E[miner.miner_uid]}"
-            )
+            if miner.step % 60 == 0:
+                miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
+                log = (
+                    f"Version:{version} | "
+                    f"Step:{miner.step} | "
+                    f"Block:{miner.metagraph.block.item()} | "
+                    f"Stake:{miner.metagraph.S[miner.miner_uid]} | "
+                    f"Rank:{miner.metagraph.R[miner.miner_uid]} | "
+                    f"Trust:{miner.metagraph.T[miner.miner_uid]} | "
+                    f"Consensus:{miner.metagraph.C[miner.miner_uid] } | "
+                    f"Incentive:{miner.metagraph.I[miner.miner_uid]} | "
+                    f"Emission:{miner.metagraph.E[miner.miner_uid]}"
+                )
 
-            bt.logging.info(log)
+                bt.logging.info(log)
 
-            if miner.wandb_enabled:
-                wandb_logs = [
-                    {
-                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank": miner.metagraph.R[
-                            miner.miner_uid
-                        ].item()
-                    },
-                    {
-                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust": miner.metagraph.T[
-                            miner.miner_uid
-                        ].item()
-                    },
-                    {
-                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus": miner.metagraph.C[
-                            miner.miner_uid
-                        ].item()
-                    },
-                    {
-                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive": miner.metagraph.I[
-                            miner.miner_uid
-                        ].item()
-                    },
-                    {
-                        f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission": miner.metagraph.E[
-                            miner.miner_uid
-                        ].item()
-                    },
-                ]
-                miner.wandb_handler.set_timestamp()
-                for wandb_log in wandb_logs:
-                    miner.wandb_handler.log(data=wandb_log)
-                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                if miner.wandb_enabled:
+                    wandb_logs = [
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_rank": miner.metagraph.R[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_trust": miner.metagraph.T[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_consensus": miner.metagraph.C[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_incentive": miner.metagraph.I[
+                                miner.miner_uid
+                            ].item()
+                        },
+                        {
+                            f"{miner.miner_uid}:{miner.wallet.hotkey.ss58_address}_emission": miner.metagraph.E[
+                                miner.miner_uid
+                            ].item()
+                        },
+                    ]
+                    miner.wandb_handler.set_timestamp()
+                    for wandb_log in wandb_logs:
+                        miner.wandb_handler.log(data=wandb_log)
+                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
             miner.step += 1
             time.sleep(1)

@@ -135,7 +135,7 @@ class LLMDefenderMiner(BaseNeuron):
             AttributeError:
                 The AttributeError is raised if wallet, subtensor & metagraph cannot be logged.
         """
-        bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
+        bt.logging(debug=True)
         bt.logging.info(
             f"Initializing miner for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
         )

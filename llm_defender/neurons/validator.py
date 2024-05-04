@@ -195,7 +195,7 @@ def update_weights(validator):
     try:
         validator.set_weights()
         # Update validators knowledge of the last updated block
-        validator.last_updated_block = validator.subtensor.block
+        validator.last_updated_block = validator.subtensor.get_current_block()
     except TimeoutError as e:
         bt.logging.error(f"Setting weights timed out: {e}")
 
@@ -292,7 +292,7 @@ async def main(validator: LLMDefenderValidator):
             bt.logging.debug(f"Scores: {validator.scores}")
             bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
 
-            current_block = validator.subtensor.block
+            current_block = validator.subtensor.get_current_block()
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
