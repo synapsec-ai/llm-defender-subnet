@@ -267,7 +267,7 @@ def assign_score_for_uid(
     logging.trace(f"Assigned weighted score for UID: {uid}. New score: {scores[uid]}")
 
     if old_score == scores[uid]:
-        logging.error(
+        logging.warning(
             f"Score for UID: {uid} did not change. Old score: {old_score}, new score: {scores[uid]}"
         )
 
