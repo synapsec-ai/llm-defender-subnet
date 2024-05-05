@@ -21,7 +21,7 @@ from llm_defender.core.validators.validator import LLMDefenderValidator
 
 def update_metagraph(validator: LLMDefenderValidator) -> None:
     try:
-        validator.metagraph = validator.sync_metagraph(validator.metagraph, validator.subtensor)
+        validator.metagraph = asyncio.run(validator.sync_metagraph(validator.metagraph, validator.subtensor))
         bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
     except TimeoutError as e:
         bt.logging.error(f"Metagraph sync timed out: {e}")
@@ -193,7 +193,7 @@ def attach_response_to_validator(validator, response_data):
 def update_weights(validator):
     # Periodically update the weights on the Bittensor blockchain.
     try:
-        validator.set_weights()
+        asyncio.run(validator.set_weights())
         # Update validators knowledge of the last updated block
         validator.last_updated_block = validator.subtensor.get_current_block()
     except TimeoutError as e:

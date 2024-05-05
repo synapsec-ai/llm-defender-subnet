@@ -537,7 +537,7 @@ class LLMDefenderValidator(BaseNeuron):
             self.init_default_scores()
 
     @timeout_decorator(timeout=30)
-    def sync_metagraph(self, metagraph, subtensor):
+    async def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
 
         bt.logging.debug(
@@ -550,7 +550,7 @@ class LLMDefenderValidator(BaseNeuron):
         return metagraph
 
     @timeout_decorator(timeout=30)
-    def set_weights(self):
+    async def set_weights(self):
         """Sets the weights for the subnet"""
 
         weights = torch.nn.functional.normalize(self.scores, p=1.0, dim=0)
