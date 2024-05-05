@@ -270,9 +270,6 @@ def assign_score_for_uid(
         logging.error(
             f"Score for UID: {uid} did not change. Old score: {old_score}, new score: {scores[uid]}"
         )
-        raise ValueError(
-            f"Score for UID: {uid} did not change. Old score: {old_score}, new score: {scores[uid]}"
-        )
 
     return scores, old_score, unweighted_new_score.item()
 
