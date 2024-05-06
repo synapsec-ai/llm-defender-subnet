@@ -133,7 +133,7 @@ class LLMDefenderValidator(BaseNeuron):
             IndexError:
                 IndexError is raised if the hotkey cannot be found from the metagraph
         """
-        bt.logging(debug=True)
+        bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
