@@ -14,23 +14,23 @@ class LLMDefenderProtocol(bt.Synapse):
     """
 
     # Parse variables
-    output: typing.Optional[dict] = None
+    output: dict | None = None
 
     synapse_uuid: str = pydantic.Field(
         ...,
-        description="Synapse UUID provides an unique identifier for the prompt send out by the validator",
+        description="Synapse UUID provides a unique identifier for the prompt sent out by the validator",
         allow_mutation=False
     )
 
     synapse_nonce: str = pydantic.Field(
         ...,
-        description="Synapse nonce provides an unique identifier for the prompt send out by the validator",
+        description="Synapse nonce provides a unique identifier for the prompt sent out by the validator",
         allow_mutation=False
     )
 
     synapse_timestamp: str = pydantic.Field(
         ...,
-        description="Synapse timestamp provides an unique identifier for the prompt send out by the validator",
+        description="Synapse timestamp provides a unique identifier for the prompt sent out by the validator",
         allow_mutation=False
     )
 
@@ -40,8 +40,8 @@ class LLMDefenderProtocol(bt.Synapse):
         allow_mutation=False,
     )
 
-    analyzer: str = pydantic.Field(
-        ...,
+    analyzer: str | None = pydantic.Field(
+        None,
         title="analyzer",
         description="The analyzer field provides instructions on which Analyzer to execute on the miner",
         allow_mutation=False,
@@ -51,6 +51,20 @@ class LLMDefenderProtocol(bt.Synapse):
         ...,
         title="synapse_signature",
         description="The synapse_signature field provides the miner means to validate the origin of the Synapse",
+        allow_mutation=False,
+    )
+
+    synapse_prompt: str | None = pydantic.Field(
+        None,
+        title="synapse_prompt",
+        description="Optional field providing additional prompt information.",
+        allow_mutation=False,
+    )
+
+    synapse_hash: str | None = pydantic.Field(
+        None,
+        title="synapse_hash",
+        description="Optional field providing hash information for the synapse.",
         allow_mutation=False,
     )
 
