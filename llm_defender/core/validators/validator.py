@@ -57,7 +57,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.wallet = None
         self.subtensor = None
         self.dendrite = None
-        self.metagraph = None
+        self.metagraph: bt.metagraph | None = None
         self.scores = None
         self.hotkeys = None
         self.miner_responses = None
@@ -596,12 +596,7 @@ class LLMDefenderValidator(BaseNeuron):
             dtype=torch.bool,
         )
         bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
-
-        # Determine the UIDs to filter
-        uids_to_filter = torch.logical_not(
-            ~invalid_uids | ~uids_with_stake
-        )
-
+        uids_to_filter = torch.logical_and(invalid_uids, uids_with_stake)
         bt.logging.trace(f"UIDs to filter: {uids_to_filter}")
 
         # Define UIDs to query
