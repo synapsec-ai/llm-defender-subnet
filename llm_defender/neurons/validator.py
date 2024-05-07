@@ -2,6 +2,7 @@
 Validator docstring here
 """
 import asyncio
+import hashlib
 import os
 import secrets
 import sys
@@ -130,6 +131,28 @@ async def query_axons_async(synapse_uuid, uids_to_query, validator):
     return responses
 
 
+async def send_notification_message_async(synapse_uuid, validator, axons_with_valid_ip):
+    prompt_text = validator.prompt.get("prompt")
+    prompt_hash = hashlib.sha256(prompt_text)
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    responses = await validator.dendrite.forward(
+        axons_with_valid_ip,
+        LLMDefenderProtocol(
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp,
+            prompt_hash=prompt_hash
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
 def score_unused_axons(validator, uids_not_to_query):
     # Process UIDs we did not query (set scores to 0)
     for uid in uids_not_to_query:
@@ -250,6 +273,23 @@ async def main(validator: LLMDefenderValidator):
                     )
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
+
+            axons_with_valid_ip = [
+                axon for axon in all_axons if axon.ip != "0.0.0.0"
+            ]
+            miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
+            synapse_uuid = str(uuid4())
+
+            prompt_to_analyze = await validator.load_prompt_to_validator_async(
+                synapse_uuid=synapse_uuid,
+                miner_hotkeys=miner_hotkeys_to_broadcast
+            )
+
+            notification_responses = await send_notification_message_async(
+                synapse_uuid=synapse_uuid,
+                validator=validator,
+                axons_with_valid_ip=axons_with_valid_ip,
+            )
 
             # Get list of UIDs to query
             (

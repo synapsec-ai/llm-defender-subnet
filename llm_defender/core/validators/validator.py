@@ -398,7 +398,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return self.prompt
 
-    async def serve_prompt_async(self, synapse_uuid, miner_hotkeys):
+    async def load_prompt_to_validator_async(self, synapse_uuid, miner_hotkeys):
         return await asyncio.to_thread(self.serve_prompt, synapse_uuid, miner_hotkeys)
 
     def check_hotkeys(self):
