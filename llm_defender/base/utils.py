@@ -3,7 +3,7 @@ This module implements common classes that are used by one or more core
 features and their engines.
 """
 import gc
-import multiprocessing
+import asyncio
 import bittensor as bt
 
 class EngineResponse:
@@ -138,64 +138,37 @@ def cleanup(variables: list = None):
 
     gc.collect()
 
-
-def _run_function(result_dict, func, args, kwargs):
-    """
-    Helper function for the timeout() function
-    
-    Arguments:
-        result_dict:
-            A dictionary to which the results of the executed func 
-            (specified by the func input) is appended.
-        func:
-            A function whose results will be appended to the inputted 
-            result_dict.
-    
-    Returns:
-        None    
-    """
-    result = func(*args, **kwargs)
-    result_dict["result"] = result
-
-
 def timeout_decorator(timeout):
     """
-    Uses multiprocessing to create an arbitrary timeout for a
+    Uses asyncio to create an arbitrary timeout for an asynchronous
     function call. This function is used for ensuring a stuck function
-    call does not block the execution of the neuron script
+    call does not block the execution indefinitely.
 
     Inputs:
         timeout:
-            The amount of seconds to allow the function call to run 
-            before timing out the execution. 
+            The amount of seconds to allow the function call to run
+            before timing out the execution.
 
     Returns:
         decorator:
-            A function instance which itself contains a subprocess wrapper().
+            A function instance which itself contains an asynchronous
+            wrapper().
 
     Raises:
         TimeoutError:
-            Function call has timed out.    
+            Function call has timed out.
     """
 
     def decorator(func):
-        def wrapper(*args, **kwargs):
-            manager = multiprocessing.Manager()
-            result = manager.dict()
-
-            process = multiprocessing.Process(
-                target=_run_function, args=(result, func, args, kwargs)
-            )
-            process.start()
-            process.join(timeout=timeout)
-
-            if process.is_alive():
-                process.terminate()
-                process.join()
+        async def wrapper(*args, **kwargs):
+            try:
+                # Schedule execution of the coroutine with a timeout
+                return await asyncio.wait_for(func(*args, **kwargs), timeout)
+            except asyncio.TimeoutError:
+                # Raise a TimeoutError with a message indicating which function timed out
                 raise TimeoutError(
                     f"Function '{func.__name__}' execution timed out after {timeout} seconds."
                 )
-            return result["result"]
 
         return wrapper
 

@@ -12,12 +12,13 @@ def process_response(
         responses_invalid_uids,
         responses_valid_uids
     ):
-    # Get the hotkey for the response
+    # Get the hotkey and coldkey for the response
     hotkey = validator.metagraph.hotkeys[uid]
+    coldkey = validator.metagraph.coldkeys[uid]
 
     # Get the default response object
     response_object = scoring.get_response_object(
-        uid, hotkey, target, synapse_uuid, query["analyzer"], query["category"], query["prompt"]
+        uid, hotkey, coldkey, target, synapse_uuid, query["analyzer"], query["category"], query["prompt"]
     )
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
@@ -55,7 +56,8 @@ def process_response(
         miner_response = {
             "confidence": response.output["confidence"],
             "timestamp": response.output["timestamp"],
-            "category": response.output["analyzer"]
+            "category": response.output["analyzer"],
+            "response_time": response_time
         }
 
         text_class = [
