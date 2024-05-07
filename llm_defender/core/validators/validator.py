@@ -398,6 +398,8 @@ class LLMDefenderValidator(BaseNeuron):
 
         return self.prompt
 
+    async def serve_prompt_async(self, synapse_uuid, miner_hotkeys):
+        return await asyncio.to_thread(self.serve_prompt, synapse_uuid, miner_hotkeys)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
