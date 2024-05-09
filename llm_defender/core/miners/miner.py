@@ -10,6 +10,7 @@ Typical example usage:
 """
 
 from argparse import ArgumentParser
+from collections import defaultdict
 from typing import Tuple
 import sys
 import requests
@@ -110,6 +111,7 @@ class LLMDefenderMiner(BaseNeuron):
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             )
         }
+        self.notification_synapses = defaultdict(lambda: {"synapse_uuid": None, "validator_hotkeys": []})
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:
         """This function setups the neuron.
@@ -324,6 +326,23 @@ class LLMDefenderMiner(BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
+        is_notification_message = (
+            synapse.synapse_prompt is None and synapse.synapse_hash is not None
+        )
+
+        if is_notification_message:
+            synapse_hash = synapse.synapse_hash
+            hotkey = synapse.dendrite.hotkey
+            synapse_uuid = synapse.synapse_uuid
+
+            if synapse_hash in self.notification_synapses:
+                self.notification_synapses[synapse_hash]["validator_hotkeys"].append(hotkey)
+            else:
+                self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
+
+            return synapse
+
+
         # Print version information and perform version checks
         bt.logging.debug(
             f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
@@ -363,11 +382,13 @@ class LLMDefenderMiner(BaseNeuron):
         prompt = self.get_prompt_from_api(
             hotkey=self.wallet.hotkey.ss58_address,
             signature=sign_data(hotkey=self.wallet.hotkey, data=data),
-            synapse_uuid=synapse.synapse_uuid, 
-            timestamp=timestamp, 
+            synapse_uuid=synapse.synapse_uuid,
+            timestamp=timestamp,
             nonce=nonce,
             validator_hotkey=synapse.dendrite.hotkey
         )
+
+        print("prompt>>>>>>>>>>>>>>>>>", prompt)
 
         # Execute the correct analyzer
         if not SupportedAnalyzers.is_valid(synapse.analyzer):
