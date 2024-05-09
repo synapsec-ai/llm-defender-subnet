@@ -108,8 +108,7 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     return responses
 
 
-async def send_payload_message(synapse_uuid, uids_to_query, validator):
-    # Async implementation
+async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to_analyze):
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
@@ -118,13 +117,13 @@ async def send_payload_message(synapse_uuid, uids_to_query, validator):
     responses = await validator.dendrite.forward(
         uids_to_query,
         LLMDefenderProtocol(
-            analyzer=validator.query['analyzer'],
+            analyzer=prompt_to_analyze['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
             synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
-            synapse_prompt=validator.query["prompt"]
+            synapse_prompt=prompt_to_analyze["prompt"]
         ),
         timeout=validator.timeout,
         deserialize=True,
@@ -295,8 +294,7 @@ async def main(validator: LLMDefenderValidator):
                 handle_invalid_prompt(validator)
                 continue
 
-            validator.query = prompt_to_analyze
-            notification_responses = await send_notification_message_async(
+            await send_notification_message_async(
                 synapse_uuid=synapse_uuid,
                 validator=validator,
                 axons_with_valid_ip=axons_with_valid_ip,
@@ -313,7 +311,12 @@ async def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            responses = await send_payload_message(synapse_uuid, uids_to_query, validator)
+            responses = await send_payload_message(
+                synapse_uuid=synapse_uuid,
+                uids_to_query=uids_to_query,
+                validator=validator,
+                prompt_to_analyze=prompt_to_analyze
+            )
             await score_unused_axons_async(validator, uids_not_to_query)
 
             are_responses_empty = all(item.output is None for item in responses)
