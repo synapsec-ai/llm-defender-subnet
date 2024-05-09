@@ -145,7 +145,7 @@ async def send_notification_message_async(synapse_uuid, validator, axons_with_va
             synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
-            prompt_hash=prompt_hash
+            synapse_hash=prompt_hash
         ),
         timeout=validator.timeout,
         deserialize=True,
