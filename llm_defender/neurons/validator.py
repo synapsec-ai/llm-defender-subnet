@@ -108,7 +108,7 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     return responses
 
 
-async def query_axons_async(synapse_uuid, uids_to_query, validator):
+async def send_payload_message(synapse_uuid, uids_to_query, validator):
     # Async implementation
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
@@ -123,7 +123,8 @@ async def query_axons_async(synapse_uuid, uids_to_query, validator):
             synapse_uuid=synapse_uuid,
             synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
-            synapse_timestamp=timestamp
+            synapse_timestamp=timestamp,
+            synapse_prompt=validator.query["prompt"]
         ),
         timeout=validator.timeout,
         deserialize=True,
@@ -131,9 +132,9 @@ async def query_axons_async(synapse_uuid, uids_to_query, validator):
     return responses
 
 
-async def send_notification_message_async(synapse_uuid, validator, axons_with_valid_ip):
-    prompt_text = validator.prompt.get("prompt")
-    prompt_hash = hashlib.sha256(prompt_text)
+async def send_notification_message_async(synapse_uuid, validator, axons_with_valid_ip, prompt_to_analyze):
+    encoded_prompt = prompt_to_analyze.get("prompt").encode('utf-8')
+    prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
@@ -279,19 +280,30 @@ async def main(validator: LLMDefenderValidator):
             ]
             miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
             synapse_uuid = str(uuid4())
-
             prompt_to_analyze = await validator.load_prompt_to_validator_async(
                 synapse_uuid=synapse_uuid,
                 miner_hotkeys=miner_hotkeys_to_broadcast
             )
 
+            is_prompt_invalid = (
+                prompt_to_analyze is None
+                or "analyzer" not in prompt_to_analyze.keys()
+                or "label" not in prompt_to_analyze.keys()
+                or "weight" not in prompt_to_analyze.keys()
+            )
+            if is_prompt_invalid:
+                handle_invalid_prompt(validator)
+                continue
+
+            validator.query = prompt_to_analyze
             notification_responses = await send_notification_message_async(
                 synapse_uuid=synapse_uuid,
                 validator=validator,
                 axons_with_valid_ip=axons_with_valid_ip,
+                prompt_to_analyze=prompt_to_analyze
             )
 
-            # Get list of UIDs to query
+            # Get list of UIDs to send the payload synapse
             (
                 uids_to_query,
                 list_of_uids,
@@ -301,24 +313,10 @@ async def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            if validator.query is None or 'synapse_uuid' not in locals():
-                synapse_uuid = str(uuid4())
-            await validate_query_async(list_of_all_hotkeys, synapse_uuid, validator)
-
-            is_prompt_invalid = (
-                validator.query is None
-                or "analyzer" not in validator.query.keys()
-                or "label" not in validator.query.keys()
-                or "weight" not in validator.query.keys()
-            )
-            if is_prompt_invalid:
-                handle_invalid_prompt(validator)
-                continue
-
+            responses = await send_payload_message(synapse_uuid, uids_to_query, validator)
             await score_unused_axons_async(validator, uids_not_to_query)
-            responses = await query_axons_async(synapse_uuid, uids_to_query, validator)
-            are_responses_empty = all(item.output is None for item in responses)
 
+            are_responses_empty = all(item.output is None for item in responses)
             if are_responses_empty:
                 handle_empty_responses(validator, list_of_uids)
                 continue
