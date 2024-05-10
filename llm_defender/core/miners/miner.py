@@ -168,27 +168,7 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
-    
-    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce, validator_hotkey) -> dict:
-        """Retrieves a prompt from the prompt API"""
 
-        headers = {
-            "X-Hotkey": hotkey,
-            "X-Signature": signature,
-            "X-SynapseUUID": synapse_uuid,
-            "X-Timestamp": timestamp,
-            "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey,
-            "X-ValidatorHotkey": validator_hotkey
-        }
-
-        res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
-        
-        if res and "prompt" in res.keys():
-            bt.logging.trace(f"Obtained response from prompt API: {res}")
-            return res["prompt"]
-        return None
 
     def check_whitelist(self, hotkey):
         """
