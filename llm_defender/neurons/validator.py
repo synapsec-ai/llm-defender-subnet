@@ -179,11 +179,11 @@ def handle_empty_responses(validator, list_of_uids):
     time.sleep(1.5 * bt.__blocktime__)
 
 
-def format_responses(validator, list_of_uids, responses, synapse_uuid):
+def format_responses(validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze):
     # Process the responses
     # processed_uids = torch.nonzero(list_of_uids).squeeze()
     response_data = validator.process_responses(
-        query=validator.query,
+        query=prompt_to_analyze,
         processed_uids=list_of_uids,
         responses=responses,
         synapse_uuid=synapse_uuid,
@@ -278,6 +278,13 @@ async def main(validator: LLMDefenderValidator):
                 axon for axon in all_axons if axon.ip != "0.0.0.0"
             ]
             miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
+
+            if not miner_hotkeys_to_broadcast:
+                bt.logging.warning("No axons with valid IPs found")
+                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
+                time.sleep(1.5 * bt.__blocktime__)
+                continue
+
             synapse_uuid = str(uuid4())
             prompt_to_analyze = await validator.load_prompt_to_validator_async(
                 synapse_uuid=synapse_uuid,
@@ -326,7 +333,7 @@ async def main(validator: LLMDefenderValidator):
 
             bt.logging.trace(f"Received responses: {responses}")
 
-            response_data = format_responses(validator, list_of_uids, responses, synapse_uuid)
+            response_data = format_responses(validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze)
             attach_response_to_validator(validator, response_data)
 
             # Print stats
