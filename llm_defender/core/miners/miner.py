@@ -8,8 +8,9 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
-
+import hashlib
 from argparse import ArgumentParser
+from collections import defaultdict
 from typing import Tuple
 import sys
 import requests
@@ -110,6 +111,7 @@ class LLMDefenderMiner(BaseNeuron):
                 wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
             )
         }
+        self.notification_synapses = defaultdict(lambda: {"synapse_uuid": None, "validator_hotkeys": []})
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:
         """This function setups the neuron.
@@ -166,27 +168,7 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
-    
-    def get_prompt_from_api(self, hotkey, signature, synapse_uuid, timestamp, nonce, validator_hotkey) -> dict:
-        """Retrieves a prompt from the prompt API"""
 
-        headers = {
-            "X-Hotkey": hotkey,
-            "X-Signature": signature,
-            "X-SynapseUUID": synapse_uuid,
-            "X-Timestamp": timestamp,
-            "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey,
-            "X-ValidatorHotkey": validator_hotkey
-        }
-
-        res = self.requests_post(url="https://fetch-api.synapsec.ai/fetch", headers=headers, data={}, timeout=12)
-        
-        if res and "prompt" in res.keys():
-            bt.logging.trace(f"Obtained response from prompt API: {res}")
-            return res["prompt"]
-        return None
 
     def check_whitelist(self, hotkey):
         """
@@ -324,6 +306,24 @@ class LLMDefenderMiner(BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
+        is_notification_message = (
+            synapse.synapse_prompt is None and synapse.synapse_hash is not None
+        )
+
+        if is_notification_message:
+            synapse_hash = synapse.synapse_hash
+            hotkey = synapse.dendrite.hotkey
+            synapse_uuid = synapse.synapse_uuid
+            bt.logging.debug(f"Processing notification message: {synapse}")
+
+            if synapse_hash in self.notification_synapses:
+                self.notification_synapses[synapse_hash]["validator_hotkeys"].append(hotkey)
+            else:
+                self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
+
+            return synapse
+
+
         # Print version information and perform version checks
         bt.logging.debug(
             f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
@@ -354,20 +354,33 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
 
-        # Get the prompt to be analyzed
-        nonce = str(secrets.token_hex(24))
-        timestamp = str(int(time.time()))
+        if not (prompt := synapse.synapse_prompt):
+            bt.logging.warning(f"Received a synapse empty prompt: {synapse}")
+            return synapse
 
-        data = f'{synapse.synapse_uuid}{nonce}{timestamp}'
+        encoded_prompt = prompt.encode("utf-8")
+        prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
 
-        prompt = self.get_prompt_from_api(
-            hotkey=self.wallet.hotkey.ss58_address,
-            signature=sign_data(hotkey=self.wallet.hotkey, data=data),
-            synapse_uuid=synapse.synapse_uuid, 
-            timestamp=timestamp, 
-            nonce=nonce,
-            validator_hotkey=synapse.dendrite.hotkey
-        )
+        if (
+            self.notification_synapses.get(prompt_hash) is None
+            or self.notification_synapses[prompt_hash]["synapse_uuid"] != synapse.synapse_uuid
+        ):
+            bt.logging.warning(f"synapse: {synapse} with invalid uuid or not found in the notified messages")
+            return synapse
+
+        validator_hotkey_to_reply = synapse.dendrite.hotkey
+        registered_hotkeys = self.notification_synapses[prompt_hash]["validator_hotkeys"]
+        if len(registered_hotkeys) > 1:
+            bt.logging.warning(f"The same prompt: {prompt} was sent by different validators: {registered_hotkeys}")
+            # Find the validator with the highest amount of stake
+            duplicated_neurons = [neuron for neuron in self.metagraph.neurons if neuron.hotkey in registered_hotkeys]
+            max_stake_neuron = max(duplicated_neurons, key=lambda neuron: neuron.stake)
+            validator_hotkey_to_reply = max_stake_neuron.hotkey
+
+        # If this validator doesn't have the highest amount fo stake, discard the message
+        if validator_hotkey_to_reply != synapse.dendrite.hotkey:
+            bt.logging.warning(f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt")
+            return synapse
 
         # Execute the correct analyzer
         if not SupportedAnalyzers.is_valid(synapse.analyzer):
@@ -379,6 +392,8 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
         output = self.analyzers[synapse.analyzer].execute(synapse=synapse, prompt=prompt)
 
+        # Remove the message from the notification field
+        self.notification_synapses.pop(prompt_hash, None)
         bt.logging.debug(
             f'Processed prompt "{prompt}" with analyzer: {output["analyzer"]}'
         )
