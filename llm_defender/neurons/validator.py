@@ -114,6 +114,7 @@ async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
     # query['analyzer'] = "Sensitive Information"
+    bt.logging.trace(f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}.")
     responses = await validator.dendrite.forward(
         uids_to_query,
         LLMDefenderProtocol(
@@ -137,6 +138,7 @@ async def send_notification_message_async(synapse_uuid, validator, axons_with_va
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    bt.logging.trace(f"Sent payload synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
     responses = await validator.dendrite.forward(
         axons_with_valid_ip,
         LLMDefenderProtocol(
