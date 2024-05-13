@@ -175,8 +175,8 @@ def handle_empty_responses(validator, list_of_uids):
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-    time.sleep(1.5 * bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+    time.sleep(bt.__blocktime__)
 
 
 def format_responses(validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze):
@@ -198,8 +198,8 @@ def handle_invalid_prompt(validator):
         f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-    time.sleep(1.5 * bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+    time.sleep(bt.__blocktime__)
 
 
 def attach_response_to_validator(validator, response_data):
@@ -281,8 +281,8 @@ async def main(validator: LLMDefenderValidator):
 
             if not miner_hotkeys_to_broadcast:
                 bt.logging.warning("No axons with valid IPs found")
-                bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-                time.sleep(1.5 * bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+                time.sleep(bt.__blocktime__)
                 continue
 
             synapse_uuid = str(uuid4())
@@ -352,8 +352,8 @@ async def main(validator: LLMDefenderValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-            time.sleep(1.5 * bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+            time.sleep(bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:

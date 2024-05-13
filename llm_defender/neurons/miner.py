@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--validator_min_stake",
         type=float,
-        default=20000.0,
+        default=10000.0,
         help="Determine the minimum stake the validator should have to accept requests",
     )
 
