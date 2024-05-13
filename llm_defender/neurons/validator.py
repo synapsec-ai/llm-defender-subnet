@@ -138,7 +138,7 @@ async def send_notification_message_async(synapse_uuid, validator, axons_with_va
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
-    bt.logging.trace(f"Sent payload synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
+    bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
     responses = await validator.dendrite.forward(
         axons_with_valid_ip,
         LLMDefenderProtocol(
