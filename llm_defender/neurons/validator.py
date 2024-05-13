@@ -285,29 +285,31 @@ async def main(validator: LLMDefenderValidator):
                 bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
                 time.sleep(bt.__blocktime__)
                 continue
+            
+            if validator.target_group == 0:
 
-            synapse_uuid = str(uuid4())
-            prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                synapse_uuid=synapse_uuid,
-                miner_hotkeys=miner_hotkeys_to_broadcast
-            )
+                synapse_uuid = str(uuid4())
+                prompt_to_analyze = await validator.load_prompt_to_validator_async(
+                    synapse_uuid=synapse_uuid,
+                    miner_hotkeys=miner_hotkeys_to_broadcast
+                )
 
-            is_prompt_invalid = (
-                prompt_to_analyze is None
-                or "analyzer" not in prompt_to_analyze.keys()
-                or "label" not in prompt_to_analyze.keys()
-                or "weight" not in prompt_to_analyze.keys()
-            )
-            if is_prompt_invalid:
-                handle_invalid_prompt(validator)
-                continue
+                is_prompt_invalid = (
+                    prompt_to_analyze is None
+                    or "analyzer" not in prompt_to_analyze.keys()
+                    or "label" not in prompt_to_analyze.keys()
+                    or "weight" not in prompt_to_analyze.keys()
+                )
+                if is_prompt_invalid:
+                    handle_invalid_prompt(validator)
+                    continue
 
-            await send_notification_message_async(
-                synapse_uuid=synapse_uuid,
-                validator=validator,
-                axons_with_valid_ip=axons_with_valid_ip,
-                prompt_to_analyze=prompt_to_analyze
-            )
+                await send_notification_message_async(
+                    synapse_uuid=synapse_uuid,
+                    validator=validator,
+                    axons_with_valid_ip=axons_with_valid_ip,
+                    prompt_to_analyze=prompt_to_analyze
+                )
 
             # Get list of UIDs to send the payload synapse
             (
