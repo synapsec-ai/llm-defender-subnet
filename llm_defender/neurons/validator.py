@@ -19,8 +19,6 @@ from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import LLMDefenderValidator
 
-import time
-
 def update_metagraph(validator: LLMDefenderValidator) -> None:
     try:
         validator.metagraph = asyncio.run(validator.sync_metagraph(validator.metagraph, validator.subtensor))
@@ -310,9 +308,6 @@ async def main(validator: LLMDefenderValidator):
                 axons_with_valid_ip=axons_with_valid_ip,
                 prompt_to_analyze=prompt_to_analyze
             )
-
-            time.sleep(2)
-            bt.logging.trace("Sleeping for 2s")
 
             # Get list of UIDs to send the payload synapse
             (
