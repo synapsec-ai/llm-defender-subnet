@@ -2,6 +2,7 @@
 Validator docstring here
 """
 import asyncio
+import hashlib
 import os
 import secrets
 import sys
@@ -17,7 +18,6 @@ from llm_defender import __version__ as version
 from llm_defender.base import utils
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.validators.validator import LLMDefenderValidator
-
 
 def update_metagraph(validator: LLMDefenderValidator) -> None:
     try:
@@ -107,22 +107,46 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     return responses
 
 
-async def query_axons_async(synapse_uuid, uids_to_query, validator):
-    # Async implementation
+async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to_analyze):
     # Broadcast query to valid Axons
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
     # query['analyzer'] = "Sensitive Information"
+    bt.logging.trace(f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}.")
     responses = await validator.dendrite.forward(
         uids_to_query,
         LLMDefenderProtocol(
-            analyzer=validator.query['analyzer'],
+            analyzer=prompt_to_analyze['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
             synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
-            synapse_timestamp=timestamp
+            synapse_timestamp=timestamp,
+            synapse_prompt=prompt_to_analyze["prompt"]
+        ),
+        timeout=validator.timeout,
+        deserialize=True,
+    )
+    return responses
+
+
+async def send_notification_message_async(synapse_uuid, validator, axons_with_valid_ip, prompt_to_analyze):
+    encoded_prompt = prompt_to_analyze.get("prompt").encode('utf-8')
+    prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
+    nonce = secrets.token_hex(24)
+    timestamp = str(int(time.time()))
+    data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
+    bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
+    responses = await validator.dendrite.forward(
+        axons_with_valid_ip,
+        LLMDefenderProtocol(
+            subnet_version=validator.subnet_version,
+            synapse_uuid=synapse_uuid,
+            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp,
+            synapse_hash=prompt_hash
         ),
         timeout=validator.timeout,
         deserialize=True,
@@ -152,15 +176,15 @@ def handle_empty_responses(validator, list_of_uids):
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-    time.sleep(1.5 * bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+    time.sleep(bt.__blocktime__)
 
 
-def format_responses(validator, list_of_uids, responses, synapse_uuid):
+def format_responses(validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze):
     # Process the responses
     # processed_uids = torch.nonzero(list_of_uids).squeeze()
     response_data = validator.process_responses(
-        query=validator.query,
+        query=prompt_to_analyze,
         processed_uids=list_of_uids,
         responses=responses,
         synapse_uuid=synapse_uuid,
@@ -175,8 +199,8 @@ def handle_invalid_prompt(validator):
         f'Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists.')
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-    time.sleep(1.5 * bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+    time.sleep(bt.__blocktime__)
 
 
 def attach_response_to_validator(validator, response_data):
@@ -251,7 +275,43 @@ async def main(validator: LLMDefenderValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            # Get list of UIDs to query
+            axons_with_valid_ip = [
+                axon for axon in all_axons if axon.ip != "0.0.0.0"
+            ]
+            miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
+
+            if not miner_hotkeys_to_broadcast:
+                bt.logging.warning("No axons with valid IPs found")
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+                time.sleep(bt.__blocktime__)
+                continue
+            
+            if validator.target_group == 0:
+
+                synapse_uuid = str(uuid4())
+                prompt_to_analyze = await validator.load_prompt_to_validator_async(
+                    synapse_uuid=synapse_uuid,
+                    miner_hotkeys=miner_hotkeys_to_broadcast
+                )
+
+                is_prompt_invalid = (
+                    prompt_to_analyze is None
+                    or "analyzer" not in prompt_to_analyze.keys()
+                    or "label" not in prompt_to_analyze.keys()
+                    or "weight" not in prompt_to_analyze.keys()
+                )
+                if is_prompt_invalid:
+                    handle_invalid_prompt(validator)
+                    continue
+
+                await send_notification_message_async(
+                    synapse_uuid=synapse_uuid,
+                    validator=validator,
+                    axons_with_valid_ip=axons_with_valid_ip,
+                    prompt_to_analyze=prompt_to_analyze
+                )
+
+            # Get list of UIDs to send the payload synapse
             (
                 uids_to_query,
                 list_of_uids,
@@ -261,31 +321,22 @@ async def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            if validator.query is None or 'synapse_uuid' not in locals():
-                synapse_uuid = str(uuid4())
-            await validate_query_async(list_of_all_hotkeys, synapse_uuid, validator)
-
-            is_prompt_invalid = (
-                validator.query is None
-                or "analyzer" not in validator.query.keys()
-                or "label" not in validator.query.keys()
-                or "weight" not in validator.query.keys()
+            responses = await send_payload_message(
+                synapse_uuid=synapse_uuid,
+                uids_to_query=uids_to_query,
+                validator=validator,
+                prompt_to_analyze=prompt_to_analyze
             )
-            if is_prompt_invalid:
-                handle_invalid_prompt(validator)
-                continue
-
             await score_unused_axons_async(validator, uids_not_to_query)
-            responses = await query_axons_async(synapse_uuid, uids_to_query, validator)
-            are_responses_empty = all(item.output is None for item in responses)
 
+            are_responses_empty = all(item.output is None for item in responses)
             if are_responses_empty:
                 handle_empty_responses(validator, list_of_uids)
                 continue
 
             bt.logging.trace(f"Received responses: {responses}")
 
-            response_data = format_responses(validator, list_of_uids, responses, synapse_uuid)
+            response_data = format_responses(validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze)
             attach_response_to_validator(validator, response_data)
 
             # Print stats
@@ -304,8 +355,8 @@ async def main(validator: LLMDefenderValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {1.5 * bt.__blocktime__} seconds")
-            time.sleep(1.5 * bt.__blocktime__)
+            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
+            time.sleep(bt.__blocktime__)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
