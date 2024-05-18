@@ -303,6 +303,10 @@ async def main(validator: LLMDefenderValidator):
                 if is_prompt_invalid:
                     handle_invalid_prompt(validator)
                     continue
+                
+                bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
+                bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
+                bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
 
                 notification_responses = await send_notification_message_async(
                     synapse_uuid=synapse_uuid,
@@ -310,7 +314,8 @@ async def main(validator: LLMDefenderValidator):
                     axons_with_valid_ip=axons_with_valid_ip,
                     prompt_to_analyze=prompt_to_analyze
                 )
-                valid_r, invalid_r = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not entry.output]
+                valid_r, invalid_r = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
+
 
                 bt.logging.debug(f'Response to notification synapse received from: {valid_r}')
                 bt.logging.debug(f'Response to notification synapse not received from: {invalid_r}')
@@ -324,6 +329,8 @@ async def main(validator: LLMDefenderValidator):
             ) = await validator.get_uids_to_query_async(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
+
+            bt.logging.info(f'Sending Payload Synapse to {len(uids_to_query)} targets')
 
             responses = await send_payload_message(
                 synapse_uuid=synapse_uuid,

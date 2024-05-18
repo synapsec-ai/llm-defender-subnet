@@ -321,7 +321,7 @@ class LLMDefenderMiner(BaseNeuron):
             else:
                 self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
 
-            synapse.output = True
+            synapse.output = {"outcome": True}
             return synapse
 
 
