@@ -304,12 +304,16 @@ async def main(validator: LLMDefenderValidator):
                     handle_invalid_prompt(validator)
                     continue
 
-                await send_notification_message_async(
+                notification_responses = await send_notification_message_async(
                     synapse_uuid=synapse_uuid,
                     validator=validator,
                     axons_with_valid_ip=axons_with_valid_ip,
                     prompt_to_analyze=prompt_to_analyze
                 )
+                valid_r, invalid_r = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not entry.output]
+
+                bt.logging.debug(f'Response to notification synapse received from: {valid_r}')
+                bt.logging.debug(f'Response to notification synapse not received from: {invalid_r}')
 
             # Get list of UIDs to send the payload synapse
             (

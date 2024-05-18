@@ -321,6 +321,7 @@ class LLMDefenderMiner(BaseNeuron):
             else:
                 self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
 
+            synapse.output = True
             return synapse
 
 
@@ -391,6 +392,9 @@ class LLMDefenderMiner(BaseNeuron):
 
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
         output = self.analyzers[synapse.analyzer].execute(synapse=synapse, prompt=prompt)
+        
+        bt.logging.debug(f'Setting synapse.output to: {output}')
+        synapse.output = output
 
         # Remove the message from the notification field
         self.notification_synapses.pop(prompt_hash, None)
