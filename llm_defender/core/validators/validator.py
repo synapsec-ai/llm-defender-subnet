@@ -428,14 +428,14 @@ class LLMDefenderValidator(BaseNeuron):
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
-        with open(f"{self.base_path}/miners.pickle", "wb") as pickle_file:
+        with open(f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle", "wb") as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
         bt.logging.debug("Saved miner states to a file")
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
-        state_path = f"{self.base_path}/miners.pickle"
+        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
@@ -482,7 +482,7 @@ class LLMDefenderValidator(BaseNeuron):
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
             },
-            self.base_path + "/state.pt",
+            f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt",
         )
 
         bt.logging.debug(
@@ -517,7 +517,7 @@ class LLMDefenderValidator(BaseNeuron):
         """Loads the state of the validator from a file."""
 
         # Load the state of the validator from file.
-        state_path = self.base_path + "/state.pt"
+        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt"
         if path.exists(state_path):
             try:
                 bt.logging.info("Loading validator state.")
