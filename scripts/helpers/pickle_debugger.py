@@ -3,9 +3,9 @@ import json
 from os import path
 import argparse
 
-def load_miner_state():
+def load_miner_state(validator_hotkey):
     """Loads the miner state from a file"""
-    state_path = f"{path.expanduser('~')}/.llm-defender-subnet/miners.pickle"
+    state_path = f"{path.expanduser('~')}/.llm-defender-subnet/{validator_hotkey}_validator_miners.pickle"
     with open(state_path, "rb") as pickle_file:
         miner_responses = pickle.load(pickle_file)
 
@@ -30,9 +30,10 @@ def calculate_statistics(data):
 # Args
 parser = argparse.ArgumentParser()
 parser.add_argument("--hotkey", type=str, required=True)
+parser.add_argument("--validator_hotkey", type=str, required=True)
 args = parser.parse_args()
 
-pickle_data = load_miner_state()
+pickle_data = load_miner_state(args.validator_hotkey)
 
 print(json.dumps(pickle_data[args.hotkey], indent=2))
 

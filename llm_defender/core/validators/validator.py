@@ -436,6 +436,7 @@ class LLMDefenderValidator(BaseNeuron):
     def load_miner_state(self):
         """Loads the miner state from a file"""
         state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle"
+        old_state_path = f"{self.base_path}/miners.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
@@ -452,6 +453,25 @@ class LLMDefenderValidator(BaseNeuron):
                 rename(
                     state_path,
                     f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                )
+                self.miner_responses = None
+        
+        elif path.exists(old_state_path):
+            try:
+                with open(old_state_path, "rb") as pickle_file:
+                    self.miner_responses = pickle.load(pickle_file)
+
+                bt.logging.debug("Loaded miner state from a file")
+            except Exception as e:
+                bt.logging.error(
+                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
+                )
+
+                # Rename the current miner state file if exception
+                # occurs and reset the default state
+                rename(
+                    old_state_path,
+                    f"{old_state_path}-{int(datetime.now().timestamp())}.autorecovery",
                 )
                 self.miner_responses = None
 
@@ -518,6 +538,8 @@ class LLMDefenderValidator(BaseNeuron):
 
         # Load the state of the validator from file.
         state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt"
+        old_state_path = f"{self.base_path}/state.pt"
+
         if path.exists(state_path):
             try:
                 bt.logging.info("Loading validator state.")
@@ -534,7 +556,23 @@ class LLMDefenderValidator(BaseNeuron):
                     f"Validator state reset because an exception occurred: {e}"
                 )
                 self.reset_validator_state(state_path=state_path)
+        # Load old state file if it exists if new path does not exists
+        elif path.exists(old_state_path):
+            try:
+                bt.logging.info("Loading validator state.")
+                state = torch.load(old_state_path)
+                bt.logging.debug(f"Loaded the following state from file: {state}")
+                self.step = state["step"]
+                self.scores = state["scores"]
+                self.hotkeys = state["hotkeys"]
+                self.last_updated_block = state["last_updated_block"]
 
+                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+            except Exception as e:
+                bt.logging.error(
+                    f"Validator state reset because an exception occurred: {e}"
+                )
+                self.reset_validator_state(state_path=state_path)  
         else:
             self.init_default_scores()
 
