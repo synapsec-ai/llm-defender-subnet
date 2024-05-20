@@ -314,13 +314,14 @@ class LLMDefenderMiner(BaseNeuron):
             synapse_hash = synapse.synapse_hash
             hotkey = synapse.dendrite.hotkey
             synapse_uuid = synapse.synapse_uuid
-            bt.logging.debug(f"Processing notification message: {synapse}")
+            bt.logging.debug(f"Processing notification synapse: {synapse}")
 
             if synapse_hash in self.notification_synapses:
                 self.notification_synapses[synapse_hash]["validator_hotkeys"].append(hotkey)
             else:
                 self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
 
+            bt.logging.success(f'Processed notification synapse from hotkey: {synapse.dendrite.hotkey} with UUID: {synapse.dendrite.synapse_uuid}')
             synapse.output = {"outcome": True}
             return synapse
 
