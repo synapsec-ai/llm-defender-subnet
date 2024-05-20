@@ -321,7 +321,7 @@ class LLMDefenderMiner(BaseNeuron):
             else:
                 self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
 
-            bt.logging.success(f'Processed notification synapse from hotkey: {synapse.dendrite.hotkey} with UUID: {synapse.synapse_uuid}')
+            bt.logging.success(f'Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}')
             synapse.output = {"outcome": True}
             return synapse
 
@@ -367,7 +367,8 @@ class LLMDefenderMiner(BaseNeuron):
             self.notification_synapses.get(prompt_hash) is None
             or self.notification_synapses[prompt_hash]["synapse_uuid"] != synapse.synapse_uuid
         ):
-            bt.logging.warning(f"synapse: {synapse} with invalid uuid or not found in the notified messages")
+            bt.logging.warning(f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}")
+            bt.logging.debug(f'Notification synapses: {self.notification_synapses}')
             return synapse
 
         validator_hotkey_to_reply = synapse.dendrite.hotkey
