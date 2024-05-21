@@ -124,21 +124,27 @@ class LLMDefenderMiner(BaseNeuron):
     def _clean_prompt_hashes(self):
         """Truncates the local hash list to latest 100 prompts"""
 
-        bt.logging.debug(
-            f"Cleaning up local knowledge of used hashes. Old length: {len(self.used_prompt_hashes)}"
-        )
-        bt.logging.trace(
-            f"First known hash before truncate: {self.used_prompt_hashes[0]}"
-        )
+        if self.used_prompt_hashes:
 
-        self.used_prompt_hashes = self.used_prompt_hashes[-100:]
+            bt.logging.debug(
+                f"Cleaning up local knowledge of used hashes. Old length: {len(self.used_prompt_hashes)}"
+            )
+            bt.logging.trace(
+                f"First known hash before truncate: {self.used_prompt_hashes[0]}"
+            )
 
-        bt.logging.debug(
-            f"Cleaned up local knowledge of used hashes. New length: {len(self.used_prompt_hashes)}"
-        )
-        bt.logging.trace(
-            f"First known hash after truncate: {self.used_prompt_hashes[0]}"
-        )
+            self.used_prompt_hashes = self.used_prompt_hashes[-100:]
+
+            bt.logging.debug(
+                f"Cleaned up local knowledge of used hashes. New length: {len(self.used_prompt_hashes)}"
+            )
+            bt.logging.trace(
+                f"First known hash after truncate: {self.used_prompt_hashes[0]}"
+            )
+        else:
+            bt.logging.debug(
+                f"No hashes in local database to clean: {self.used_prompt_hashes}"
+            )
 
     def clean_local_storage(self):
         """This method cleans the local miner storage"""
