@@ -8,19 +8,17 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+
 import hashlib
 from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Tuple
 import sys
-import requests
 import bittensor as bt
-import secrets
-import time
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers import SupportedAnalyzers
-from llm_defender.base.utils import validate_signature, sign_data
+from llm_defender.base.utils import validate_signature
 from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
     PromptInjectionAnalyzer,
 )
@@ -28,11 +26,12 @@ from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
 # Load wandb library only if it is enabled
 from llm_defender import __wandb__ as wandb
 from llm_defender.core.miners.analyzers.sensitive_information.analyzer import (
-    SensitiveInformationAnalyzer
+    SensitiveInformationAnalyzer,
 )
 
 if wandb is True:
     from llm_defender.base.wandb_handler import WandbHandler
+
 
 class LLMDefenderMiner(BaseNeuron):
     """LLMDefenderMiner class for LLM Defender Subnet
@@ -105,13 +104,46 @@ class LLMDefenderMiner(BaseNeuron):
         # Initialize the analyzers
         self.analyzers = {
             str(SupportedAnalyzers.PROMPT_INJECTION): PromptInjectionAnalyzer(
-                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
+                wallet=self.wallet,
+                subnet_version=self.subnet_version,
+                wandb_handler=self.wandb_handler,
+                miner_uid=self.miner_uid,
             ),
             str(SupportedAnalyzers.SENSITIVE_INFORMATION): SensitiveInformationAnalyzer(
-                wallet=self.wallet, subnet_version=self.subnet_version, wandb_handler=self.wandb_handler, miner_uid=self.miner_uid
-            )
+                wallet=self.wallet,
+                subnet_version=self.subnet_version,
+                wandb_handler=self.wandb_handler,
+                miner_uid=self.miner_uid,
+            ),
         }
-        self.notification_synapses = defaultdict(lambda: {"synapse_uuid": None, "validator_hotkeys": []})
+        self.notification_synapses = defaultdict(
+            lambda: {"synapse_uuid": None, "validator_hotkeys": []}
+        )
+        self.used_prompt_hashes = []
+
+    def _clean_prompt_hashes(self):
+        """Truncates the local hash list to latest 100 prompts"""
+
+        bt.logging.debug(
+            f"Cleaning up local knowledge of used hashes. Old length: {len(self.used_prompt_hashes)}"
+        )
+        bt.logging.trace(
+            f"First known hash before truncate: {self.used_prompt_hashes[0]}"
+        )
+
+        self.used_prompt_hashes = self.used_prompt_hashes[-100:]
+
+        bt.logging.debug(
+            f"Cleaned up local knowledge of used hashes. New length: {len(self.used_prompt_hashes)}"
+        )
+        bt.logging.trace(
+            f"First known hash after truncate: {self.used_prompt_hashes[0]}"
+        )
+
+    def clean_local_storage(self):
+        """This method cleans the local miner storage"""
+
+        self._clean_prompt_hashes()
 
     def setup(self) -> Tuple[bt.wallet, bt.subtensor, bt.metagraph, str]:
         """This function setups the neuron.
@@ -168,7 +200,6 @@ class LLMDefenderMiner(BaseNeuron):
         bt.logging.info(f"Miner is running with UID: {miner_uid}")
 
         return wallet, subtensor, metagraph, miner_uid
-
 
     def check_whitelist(self, hotkey):
         """
@@ -317,14 +348,20 @@ class LLMDefenderMiner(BaseNeuron):
             bt.logging.debug(f"Processing notification synapse: {synapse}")
 
             if synapse_hash in self.notification_synapses:
-                self.notification_synapses[synapse_hash]["validator_hotkeys"].append(hotkey)
+                self.notification_synapses[synapse_hash]["validator_hotkeys"].append(
+                    hotkey
+                )
             else:
-                self.notification_synapses[synapse_hash] = {"synapse_uuid": synapse_uuid, "validator_hotkeys": [hotkey]}
+                self.notification_synapses[synapse_hash] = {
+                    "synapse_uuid": synapse_uuid,
+                    "validator_hotkeys": [hotkey],
+                }
 
-            bt.logging.success(f'Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}')
+            bt.logging.success(
+                f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
+            )
             synapse.output = {"outcome": True}
             return synapse
-
 
         # Print version information and perform version checks
         bt.logging.debug(
@@ -337,11 +374,13 @@ class LLMDefenderMiner(BaseNeuron):
 
         # Validate that nonce has not been reused
         if not self.validate_nonce(synapse.synapse_nonce):
-            bt.logging.warning(f'Received a synapse with previous used nonce: {synapse}')
+            bt.logging.warning(
+                f"Received a synapse with previous used nonce: {synapse}"
+            )
             return synapse
-        
+
         # Synapse signature verification
-        data = f'{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}'
+        data = f"{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}"
         if not validate_signature(
             hotkey=synapse.dendrite.hotkey,
             data=data,
@@ -351,10 +390,9 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
             return synapse
-        else:
-            bt.logging.debug(
-                f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
-            )
+        bt.logging.debug(
+            f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
+        )
 
         if not (prompt := synapse.synapse_prompt):
             bt.logging.warning(f"Received a synapse empty prompt: {synapse}")
@@ -365,25 +403,48 @@ class LLMDefenderMiner(BaseNeuron):
 
         if (
             self.notification_synapses.get(prompt_hash) is None
-            or self.notification_synapses[prompt_hash]["synapse_uuid"] != synapse.synapse_uuid
+            or self.notification_synapses[prompt_hash]["synapse_uuid"]
+            != synapse.synapse_uuid
         ):
-            bt.logging.warning(f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}")
-            bt.logging.debug(f'Notification synapses: {self.notification_synapses}')
+            bt.logging.warning(
+                f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}"
+            )
+            bt.logging.debug(f"Notification synapses: {self.notification_synapses}")
+            return synapse
+
+        if prompt_hash in self.used_prompt_hashes:
+            bt.logging.warning(
+                f"Received a prompt with recently used hash: {prompt_hash} originating from hotkey: {synapse.dendrite.hotkey}"
+            )
+            bt.logging.debug(f"List of recent hashes: {self.used_prompt_hashes}")
             return synapse
 
         validator_hotkey_to_reply = synapse.dendrite.hotkey
-        registered_hotkeys = self.notification_synapses[prompt_hash]["validator_hotkeys"]
+        registered_hotkeys = self.notification_synapses[prompt_hash][
+            "validator_hotkeys"
+        ]
         if len(registered_hotkeys) > 1:
-            bt.logging.warning(f"The same prompt: {prompt} was sent by different validators: {registered_hotkeys}")
+            bt.logging.warning(
+                f"The same prompt: {prompt} was sent by different validators: {registered_hotkeys}"
+            )
             # Find the validator with the highest amount of stake
-            duplicated_neurons = [neuron for neuron in self.metagraph.neurons if neuron.hotkey in registered_hotkeys]
+            duplicated_neurons = [
+                neuron
+                for neuron in self.metagraph.neurons
+                if neuron.hotkey in registered_hotkeys
+            ]
             max_stake_neuron = max(duplicated_neurons, key=lambda neuron: neuron.stake)
             validator_hotkey_to_reply = max_stake_neuron.hotkey
 
         # If this validator doesn't have the highest amount fo stake, discard the message
         if validator_hotkey_to_reply != synapse.dendrite.hotkey:
-            bt.logging.warning(f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt")
+            bt.logging.warning(
+                f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt"
+            )
             return synapse
+
+        # Add to list of known hashes
+        self.used_prompt_hashes.append(prompt_hash)
 
         # Execute the correct analyzer
         if not SupportedAnalyzers.is_valid(synapse.analyzer):
@@ -393,9 +454,11 @@ class LLMDefenderMiner(BaseNeuron):
             return synapse
 
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
-        output = self.analyzers[synapse.analyzer].execute(synapse=synapse, prompt=prompt)
-        
-        bt.logging.debug(f'Setting synapse.output to: {output}')
+        output = self.analyzers[synapse.analyzer].execute(
+            synapse=synapse, prompt=prompt
+        )
+
+        bt.logging.debug(f"Setting synapse.output to: {output}")
         synapse.output = output
 
         # Remove the message from the notification field

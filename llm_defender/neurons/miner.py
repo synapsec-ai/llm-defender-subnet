@@ -7,7 +7,6 @@ import time
 from argparse import ArgumentParser
 import traceback
 import bittensor as bt
-import torch
 import time
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
@@ -67,6 +66,9 @@ def main(miner: LLMDefenderMiner):
                 
                 # Save used nonces
                 miner.save_used_nonces()
+
+                # Clean local data
+                miner.clean_local_storage()
 
             if miner.step % 60 == 0:
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
