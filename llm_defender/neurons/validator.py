@@ -326,7 +326,7 @@ async def main(validator: LLMDefenderValidator):
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
 
-            bt.logging.info(f'Sending Payload Synapse to {len(uids_to_query)} targets starting with UID: {uids_to_query[0]} and ending with UID: {uids_to_query[-1]}')
+            bt.logging.info(f'Sending Payload Synapse to {len(uids_to_query)} targets starting with UID: {list_of_uids[0]} and ending with UID: {list_of_uids[-1]}')
 
             responses = await send_payload_message(
                 synapse_uuid=synapse_uuid,
