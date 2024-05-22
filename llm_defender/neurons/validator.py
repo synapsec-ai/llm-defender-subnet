@@ -131,14 +131,14 @@ async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to
     return responses
 
 
-def send_notification_synapse(synapse_uuid, validator, axons_with_valid_ip, prompt_to_analyze):
+async def send_notification_synapse(synapse_uuid, validator, axons_with_valid_ip, prompt_to_analyze):
     encoded_prompt = prompt_to_analyze.get("prompt").encode('utf-8')
     prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}'
     bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
-    responses = validator.dendrite.query(
+    responses = await validator.dendrite.forward(
         axons_with_valid_ip,
         LLMDefenderProtocol(
             subnet_version=validator.subnet_version,
@@ -308,7 +308,7 @@ async def main(validator: LLMDefenderValidator):
                 bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
                 bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
 
-                notification_responses = send_notification_synapse(
+                notification_responses = await send_notification_synapse(
                     synapse_uuid=synapse_uuid,
                     validator=validator,
                     axons_with_valid_ip=axons_with_valid_ip,
