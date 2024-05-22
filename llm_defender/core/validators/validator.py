@@ -683,11 +683,11 @@ class LLMDefenderValidator(BaseNeuron):
         if self.target_group == 0:
             # Determine start and end indices if target_group is zero
             start_index = 0
-            end_index = (self.max_targets - 1)
+            end_index = (self.max_targets)
         else:
             # Determine start and end indices for non-zero target groups
-            start_index = self.target_group * (self.max_targets)
-            end_index = start_index + (self.max_targets - 1)
+            start_index = self.target_group * (self.max_targets + 1)
+            end_index = start_index + (self.max_targets)
         
         # Increment the target group
         if end_index > len(valid_axons):
