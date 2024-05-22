@@ -679,14 +679,15 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.debug(f'Valid UIDs to be queried: {valid_uids}')
         bt.logging.debug(f'Invalid UIDs not queried: {invalid_uids}')
 
+        bt.logging.debug(f'Selecting UIDs for target group: {self.target_group}')
         if self.target_group == 0:
             # Determine start and end indices if target_group is zero
             start_index = 0
             end_index = (self.max_targets - 1)
         else:
-            # Determine start and end indices fo rnon-zero target groups
-            start_index = self.target_group * (self.max_targets + 1)
-            end_index = start_index + (self.max_targets)
+            # Determine start and end indices for non-zero target groups
+            start_index = self.target_group * (self.max_targets)
+            end_index = start_index + (self.max_targets - 1)
         
         # Increment the target group
         if end_index > len(valid_axons):
@@ -702,9 +703,10 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.debug(f'Start index: {start_index}, end index: {end_index}')
         
         # Determine the UIDs to query based on the start and end index
-        uids_to_query = valid_axons[start_index:end_index]
+        axons_to_query = valid_axons[start_index:end_index]
+        uids_to_query = [self.metagraph.hotkeys.index(axon.hotkey) for axon in valid_axons]
 
-        return uids_to_query, valid_uids, invalid_uids
+        return axons_to_query, uids_to_query, invalid_uids
 
     async def get_uids_to_query_async(self, all_axons):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)
