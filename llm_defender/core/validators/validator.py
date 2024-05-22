@@ -67,6 +67,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.prompt = None
         self.remote_logging = None
         self.query = None
+        self.debug_mode = True
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -133,6 +134,9 @@ class LLMDefenderValidator(BaseNeuron):
             IndexError:
                 IndexError is raised if the hotkey cannot be found from the metagraph
         """
+        # Read command line arguments and perform actions based on them
+        args = self._parse_args(parser=self.parser)
+
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
@@ -147,21 +151,23 @@ class LLMDefenderValidator(BaseNeuron):
             f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
         )
 
-        # Validate that the validator has registered to the metagraph correctly
-        if not self.validator_validation(metagraph, wallet, subtensor):
-            raise IndexError("Unable to find validator key from metagraph")
+        if not args or not args.debug_mode:
+            # Validate that the validator has registered to the metagraph correctly
+            if not self.validator_validation(metagraph, wallet, subtensor):
+                raise IndexError("Unable to find validator key from metagraph")
 
-        # Get the unique identity (UID) from the network
-        validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
-        bt.logging.info(f"Validator is running with UID: {validator_uid}")
+            # Get the unique identity (UID) from the network
+            validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+            bt.logging.info(f"Validator is running with UID: {validator_uid}")
+
+            # Disable debug mode
+            self.debug_mode = False
+    
 
         self.wallet = wallet
         self.subtensor = subtensor
         self.dendrite = dendrite
         self.metagraph = metagraph
-
-        # Read command line arguments and perform actions based on them
-        args = self._parse_args(parser=self.parser)
 
         if args:
             if args.load_state == "False":

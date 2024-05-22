@@ -359,7 +359,7 @@ async def main(validator: LLMDefenderValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
-            if current_block - validator.last_updated_block > 100:
+            if (current_block - validator.last_updated_block > 100) and not validator.debug_mode:
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
@@ -414,6 +414,12 @@ if __name__ == "__main__":
         "--disable_remote_logging",
         action='store_true',
         help="This flag must be set if you want to disable remote logging",
+    )
+    
+    parser.add_argument(
+        "--debug_mode",
+        action='store_true',
+        help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
     )
 
     # Disable TOKENIZERS_PARALLELISM
