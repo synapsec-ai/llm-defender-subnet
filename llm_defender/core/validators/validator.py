@@ -705,10 +705,6 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             self.target_group += 1
 
-        # Reset the query if the starting index is zero (to fetch new prompt)
-        if start_index == 0:
-            self.query = None
-
         bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
 
         # Determine the UIDs to query based on the start and end index

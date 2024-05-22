@@ -72,18 +72,6 @@ def save_used_nonces(validator: LLMDefenderValidator):
 async def save_used_nonces_async(validator: LLMDefenderValidator):
     await asyncio.to_thread(save_used_nonces, validator)
 
-
-def validate_query(list_of_all_hotkeys, synapse_uuid, validator):
-    # Get the query to send to the valid Axons)
-    if validator.query is None:
-        validator.query = validator.serve_prompt(synapse_uuid=synapse_uuid, miner_hotkeys=list_of_all_hotkeys)
-    bt.logging.debug(f"Serving query: {validator.query}")
-
-
-async def validate_query_async(list_of_all_hotkeys, synapse_uuid, validator):
-    await asyncio.to_thread(validate_query, list_of_all_hotkeys, synapse_uuid, validator)
-
-
 def query_axons(synapse_uuid, uids_to_query, validator):
     # Sync implementation
     # Broadcast query to valid Axons
