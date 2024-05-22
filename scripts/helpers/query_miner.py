@@ -11,14 +11,14 @@ import hashlib
 import time
 import asyncio
 
-async def send_notification_message_async(synapse_uuid, wallet, dendrite, axons_with_valid_ip, prompt_to_analyze):
+def send_notification_synapse(synapse_uuid, wallet, dendrite, axons_with_valid_ip, prompt_to_analyze):
     encoded_prompt = prompt_to_analyze.get("prompt").encode('utf-8')
     prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
     nonce = secrets.token_hex(24)
     timestamp = str(int(time.time()))
     data_to_sign = f'{synapse_uuid}{nonce}{wallet.hotkey.ss58_address}{timestamp}'
     bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
-    responses = await dendrite.forward(
+    responses = dendrite.query(
         axons_with_valid_ip,
         LLMDefenderProtocol(
             subnet_version=subnet_version,
@@ -28,7 +28,7 @@ async def send_notification_message_async(synapse_uuid, wallet, dendrite, axons_
             synapse_timestamp=timestamp,
             synapse_hash=prompt_hash
         ),
-        timeout=12.0,
+        timeout=6.0,
         deserialize=True,
     )
     return responses
@@ -69,7 +69,7 @@ async def main(args, parser):
     synapse_uuid = str(uuid.uuid4())
     prompt_to_analyze = {"prompt": args.prompt, "analyzer": "Prompt Injection"}
 
-    await send_notification_message_async(
+    send_notification_synapse(
         synapse_uuid=synapse_uuid,
         dendrite=dendrite,
         wallet=wallet,
