@@ -213,7 +213,6 @@ def attach_response_to_validator(validator, response_data):
         else:
             validator.miner_responses = {res["hotkey"]: [res]}
 
-
 def update_weights(validator):
     # Periodically update the weights on the Bittensor blockchain.
     try:
@@ -275,9 +274,7 @@ async def main(validator: LLMDefenderValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            axons_with_valid_ip = [
-                axon for axon in all_axons if axon.ip != "0.0.0.0"
-            ]
+            axons_with_valid_ip = validator.determine_valid_axon_ips(all_axons)
             miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
             if not miner_hotkeys_to_broadcast:
@@ -324,8 +321,7 @@ async def main(validator: LLMDefenderValidator):
             (
                 uids_to_query,
                 list_of_uids,
-                uids_not_to_query,
-                list_of_all_hotkeys
+                uids_not_to_query
             ) = await validator.get_uids_to_query_async(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
