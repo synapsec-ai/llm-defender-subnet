@@ -291,6 +291,8 @@ async def main(validator: LLMDefenderValidator):
                     miner_hotkeys=miner_hotkeys_to_broadcast
                 )
 
+                bt.logging.debug(f'Serving prompt: {prompt_to_analyze}')
+
                 is_prompt_invalid = (
                     prompt_to_analyze is None
                     or "analyzer" not in prompt_to_analyze.keys()
