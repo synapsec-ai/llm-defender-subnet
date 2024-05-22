@@ -120,7 +120,18 @@ class LLMDefenderMiner(BaseNeuron):
             lambda: {"synapse_uuid": None, "validator_hotkeys": []}
         )
         self.used_prompt_hashes = []
+        self.validator_stats = {}
 
+    def _update_validator_stats(self, hotkey, stat_type):
+        """Helper function to update the validator stats"""
+        if hotkey in self.validator_stats:
+            if stat_type in self.validator_stats[hotkey]:
+                self.validator_stats[hotkey][stat_type] += 1
+            else:
+                self.validator_stats[hotkey][stat_type] = 1
+        else:
+            self.validator_stats[hotkey] = {}
+    
     def _clean_prompt_hashes(self):
         """Truncates the local hash list to latest 100 prompts"""
 
@@ -348,6 +359,7 @@ class LLMDefenderMiner(BaseNeuron):
         )
 
         if is_notification_message:
+            self._update_validator_stats(hotkey, "received_notification_synapse_count")
             synapse_hash = synapse.synapse_hash
             hotkey = synapse.dendrite.hotkey
             synapse_uuid = synapse.synapse_uuid
@@ -366,8 +378,12 @@ class LLMDefenderMiner(BaseNeuron):
             bt.logging.success(
                 f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
             )
+
+            self._update_validator_stats(hotkey, "notification_synapse_count")
             synapse.output = {"outcome": True}
             return synapse
+
+        self._update_validator_stats(hotkey, "received_payload_synapse_count")
 
         # Print version information and perform version checks
         bt.logging.debug(
@@ -431,7 +447,7 @@ class LLMDefenderMiner(BaseNeuron):
         ]
         if len(registered_hotkeys) > 1:
             bt.logging.warning(
-                f"The same prompt: {prompt} was sent by different validators: {registered_hotkeys}"
+                f"The same prompt: {prompt_hash} was sent by different validators: {registered_hotkeys}"
             )
             # Find the validator with the highest amount of stake
             duplicated_neurons = [
@@ -483,5 +499,7 @@ class LLMDefenderMiner(BaseNeuron):
             bt.logging.success(
                 f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
             )
+
+        self._update_validator_stats(hotkey, "processed_payload_synapse_count")
 
         return synapse

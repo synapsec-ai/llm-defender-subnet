@@ -7,7 +7,6 @@ import time
 from argparse import ArgumentParser
 import traceback
 import bittensor as bt
-import time
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
@@ -86,6 +85,8 @@ def main(miner: LLMDefenderMiner):
 
                 bt.logging.info(log)
 
+                # Print validator stats
+                bt.logging.debug(miner.validator_stats)
                 if miner.wandb_enabled:
                     wandb_logs = [
                         {
