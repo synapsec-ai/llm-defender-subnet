@@ -676,14 +676,18 @@ class LLMDefenderValidator(BaseNeuron):
             [self.metagraph.hotkeys.index(axon.hotkey) for axon in invalid_axons],
         )
 
-        bt.logging.debug(f'Valid UIDs to be queried: {valid_uids}')
-        bt.logging.debug(f'Invalid UIDs not queried: {invalid_uids}')
+        bt.logging.debug(f"Valid UIDs to be queried: {valid_uids}")
+        bt.logging.debug(f"Invalid UIDs not queried: {invalid_uids}")
 
-        bt.logging.debug(f'Selecting UIDs for target group: {self.target_group}')
-        
+        bt.logging.debug(f"Selecting UIDs for target group: {self.target_group}")
+
         # Determine how many axons must be included in one query group
-        query_group_count = int(len(valid_axons)/self.max_targets) + (len(valid_axons)/self.max_targets % 1 > 0)
-        targets_per_group = int(len(valid_axons)/query_group_count) + (len(valid_axons)/query_group_count % 1 > 0)
+        query_group_count = int(len(valid_axons) / self.max_targets) + (
+            len(valid_axons) / self.max_targets % 1 > 0
+        )
+        targets_per_group = int(len(valid_axons) / query_group_count) + (
+            len(valid_axons) / query_group_count % 1 > 0
+        )
 
         if self.target_group == 0:
             # Determine start and end indices if target_group is zero
@@ -693,7 +697,7 @@ class LLMDefenderValidator(BaseNeuron):
             # Determine start and end indices for non-zero target groups
             start_index = self.target_group * targets_per_group
             end_index = start_index + targets_per_group
-        
+
         # Increment the target group
         if end_index > len(valid_axons):
             end_index = len(valid_axons)
@@ -705,11 +709,13 @@ class LLMDefenderValidator(BaseNeuron):
         if start_index == 0:
             self.query = None
 
-        bt.logging.debug(f'Start index: {start_index}, end index: {end_index}')
-        
+        bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
+
         # Determine the UIDs to query based on the start and end index
         axons_to_query = valid_axons[start_index:end_index]
-        uids_to_query = [self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query]
+        uids_to_query = [
+            self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
+        ]
 
         return axons_to_query, uids_to_query, invalid_uids
 
