@@ -494,11 +494,11 @@ class LLMDefenderMiner(BaseNeuron):
         )
         if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
             bt.logging.success(
-                f'Processed synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+                f'Processed payload synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
             )
         else:
             bt.logging.success(
-                f'Processed synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+                f'Processed payload synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
             )
 
         self._update_validator_stats(hotkey, "processed_payload_synapse_count")
