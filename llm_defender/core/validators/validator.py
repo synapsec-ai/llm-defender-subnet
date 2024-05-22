@@ -704,7 +704,7 @@ class LLMDefenderValidator(BaseNeuron):
         
         # Determine the UIDs to query based on the start and end index
         axons_to_query = valid_axons[start_index:end_index]
-        uids_to_query = [self.metagraph.hotkeys.index(axon.hotkey) for axon in valid_axons]
+        uids_to_query = [self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query]
 
         return axons_to_query, uids_to_query, invalid_uids
 
