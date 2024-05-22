@@ -379,7 +379,7 @@ class LLMDefenderMiner(BaseNeuron):
                 f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
             )
 
-            self._update_validator_stats(hotkey, "notification_synapse_count")
+            self._update_validator_stats(hotkey, "processed_notification_synapse_count")
             synapse.output = {"outcome": True}
             return synapse
 
