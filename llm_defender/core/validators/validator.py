@@ -686,7 +686,7 @@ class LLMDefenderValidator(BaseNeuron):
             end_index = (self.max_targets)
         else:
             # Determine start and end indices for non-zero target groups
-            start_index = self.target_group * (self.max_targets - 1)
+            start_index = self.target_group * (self.max_targets)
             end_index = start_index + (self.max_targets)
         
         # Increment the target group
