@@ -131,6 +131,7 @@ class LLMDefenderMiner(BaseNeuron):
                 self.validator_stats[hotkey][stat_type] = 1
         else:
             self.validator_stats[hotkey] = {}
+            self.validator_stats[hotkey][stat_type] = 1
     
     def _clean_prompt_hashes(self):
         """Truncates the local hash list to latest 100 prompts"""
