@@ -682,9 +682,9 @@ class LLMDefenderValidator(BaseNeuron):
         bt.logging.debug(f'Selecting UIDs for target group: {self.target_group}')
         
         # Determine how many axons must be included in one query group
-        query_group_count = int(round(len(valid_axons)/self.max_targets))
-        targets_per_group = int(round(len(valid_axons)/query_group_count))
-        
+        query_group_count = int(len(valid_axons)/self.max_targets) + (len(valid_axons)/self.max_targets % 1 > 0)
+        targets_per_group = int(len(valid_axons)/query_group_count) + (len(valid_axons)/query_group_count % 1 > 0)
+
         if self.target_group == 0:
             # Determine start and end indices if target_group is zero
             start_index = 0
