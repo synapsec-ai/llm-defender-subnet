@@ -262,7 +262,45 @@ async def main(validator: LLMDefenderValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            axons_with_valid_ip = validator.determine_valid_axons(all_axons)
+            # if there are more axons than prompt_injection_scores, append the prompt_injection_scores list
+            if len(validator.metagraph.uids.tolist()) > len(validator.prompt_injection_scores):
+                bt.logging.info(
+                    f"Discovered new Axons, current prompt_injection_scores: {validator.prompt_injection_scores}"
+                )
+                validator.prompt_injection_scores = torch.cat(
+                    (
+                        validator.prompt_injection_scores,
+                        torch.zeros(
+                            (
+                                len(validator.metagraph.uids.tolist())
+                                - len(validator.prompt_injection_scores)
+                            ),
+                            dtype=torch.float32,
+                        ),
+                    )
+                )
+                bt.logging.info(f"Updated prompt_injection_scores, new prompt_injection_scores: {validator.prompt_injection_scores}")
+
+            # if there are more axons than sensitive_information_socres, append the sensitive_information_scores list
+            if len(validator.metagraph.uids.tolist()) > len(validator.sensitive_information_scores):
+                bt.logging.info(
+                    f"Discovered new Axons, current scores: {validator.scores}"
+                )
+                validator.sensitive_information_scores = torch.cat(
+                    (
+                        validator.sensitive_information_scores,
+                        torch.zeros(
+                            (
+                                len(validator.metagraph.uids.tolist())
+                                - len(validator.sensitive_information_scores)
+                            ),
+                            dtype=torch.float32,
+                        ),
+                    )
+                )
+                bt.logging.info(f"Updated sensitive_information_scores, new sensitive_information_scores: {validator.sensitive_information_scores}")
+
+            axons_with_valid_ip = validator.determine_valid_axon_ips(all_axons)
             # miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
             if not axons_with_valid_ip:
