@@ -8,6 +8,7 @@ Typical example usage:
     foo = bar()
     foo.bar()
 """
+
 import asyncio
 import copy
 import pickle
@@ -25,11 +26,15 @@ from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
     timeout_decorator,
     sign_data,
-    validate_validator_api_prompt_output
+    validate_validator_api_prompt_output,
 )
 import requests
-from llm_defender.core.validators.analyzers.prompt_injection import process as prompt_injection_process
-from llm_defender.core.validators.analyzers.sensitive_data import process as sensitive_data_process
+from llm_defender.core.validators.analyzers.prompt_injection import (
+    process as prompt_injection_process,
+)
+from llm_defender.core.validators.analyzers.sensitive_data import (
+    process as sensitive_data_process,
+)
 
 
 # Load wandb library only if it is enabled
@@ -67,6 +72,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.prompt = None
         self.remote_logging = None
         self.query = None
+        self.debug_mode = True
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -133,6 +139,9 @@ class LLMDefenderValidator(BaseNeuron):
             IndexError:
                 IndexError is raised if the hotkey cannot be found from the metagraph
         """
+        # Read command line arguments and perform actions based on them
+        args = self._parse_args(parser=self.parser)
+
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
@@ -147,21 +156,22 @@ class LLMDefenderValidator(BaseNeuron):
             f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
         )
 
-        # Validate that the validator has registered to the metagraph correctly
-        if not self.validator_validation(metagraph, wallet, subtensor):
-            raise IndexError("Unable to find validator key from metagraph")
+        if not args or not args.debug_mode:
+            # Validate that the validator has registered to the metagraph correctly
+            if not self.validator_validation(metagraph, wallet, subtensor):
+                raise IndexError("Unable to find validator key from metagraph")
 
-        # Get the unique identity (UID) from the network
-        validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
-        bt.logging.info(f"Validator is running with UID: {validator_uid}")
+            # Get the unique identity (UID) from the network
+            validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+            bt.logging.info(f"Validator is running with UID: {validator_uid}")
+
+            # Disable debug mode
+            self.debug_mode = False
 
         self.wallet = wallet
         self.subtensor = subtensor
         self.dendrite = dendrite
         self.metagraph = metagraph
-
-        # Read command line arguments and perform actions based on them
-        args = self._parse_args(parser=self.parser)
 
         if args:
             if args.load_state == "False":
@@ -226,7 +236,7 @@ class LLMDefenderValidator(BaseNeuron):
             "logger": "validator",
             "validator_hotkey": self.wallet.hotkey.ss58_address,
             "timestamp": str(time.time()),
-            "miner_metrics": []
+            "miner_metrics": [],
         }
         responses_invalid_uids = []
         responses_valid_uids = []
@@ -234,32 +244,36 @@ class LLMDefenderValidator(BaseNeuron):
         # Check each response
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
-                response_object, responses_invalid_uids, responses_valid_uids = prompt_injection_process.process_response(
-                    prompt=query["prompt"],
-                    response=response,
-                    uid=processed_uids[i],
-                    target=target,
-                    synapse_uuid=synapse_uuid,
-                    query=query,
-                    validator=self,
-                    responses_invalid_uids=responses_invalid_uids,
-                    responses_valid_uids=responses_valid_uids
+                response_object, responses_invalid_uids, responses_valid_uids = (
+                    prompt_injection_process.process_response(
+                        prompt=query["prompt"],
+                        response=response,
+                        uid=processed_uids[i],
+                        target=target,
+                        synapse_uuid=synapse_uuid,
+                        query=query,
+                        validator=self,
+                        responses_invalid_uids=responses_invalid_uids,
+                        responses_valid_uids=responses_valid_uids,
+                    )
                 )
             elif query["analyzer"] == "Sensitive Information":
-                response_object, responses_invalid_uids, responses_valid_uids = sensitive_data_process.process_response(
-                    prompt=query["prompt"],
-                    response=response,
-                    uid=processed_uids[i],
-                    target=target,
-                    synapse_uuid=synapse_uuid,
-                    query=query,
-                    validator=self,
-                    responses_invalid_uids=responses_invalid_uids,
-                    responses_valid_uids=responses_valid_uids
+                response_object, responses_invalid_uids, responses_valid_uids = (
+                    sensitive_data_process.process_response(
+                        prompt=query["prompt"],
+                        response=response,
+                        uid=processed_uids[i],
+                        target=target,
+                        synapse_uuid=synapse_uuid,
+                        query=query,
+                        validator=self,
+                        responses_invalid_uids=responses_invalid_uids,
+                        responses_valid_uids=responses_valid_uids,
+                    )
                 )
             else:
-                bt.logging.error(f'Received unsupported analyzer: {query}')
-                raise AttributeError(f'Received unsupported analyzer: {query}')
+                bt.logging.error(f"Received unsupported analyzer: {query}")
+                raise AttributeError(f"Received unsupported analyzer: {query}")
 
             # Handle response
             response_data.append(response_object)
@@ -273,11 +287,17 @@ class LLMDefenderValidator(BaseNeuron):
 
         # If remote logging is disabled, do not log to remote server
         if self.remote_logging is False:
-            bt.logging.debug(f'Remote metrics not stored because remote logging is disabled.')
+            bt.logging.debug(
+                f"Remote metrics not stored because remote logging is disabled."
+            )
         else:
-            bt.logging.trace(f'Message to log: {response_logger}')
-            if not self.remote_logger(hotkey=self.wallet.hotkey, message=response_logger):
-                bt.logging.warning('Unable to push miner validation results to the logger service')
+            bt.logging.trace(f"Message to log: {response_logger}")
+            if not self.remote_logger(
+                hotkey=self.wallet.hotkey, message=response_logger
+            ):
+                bt.logging.warning(
+                    "Unable to push miner validation results to the logger service"
+                )
 
         return response_data
 
@@ -317,8 +337,9 @@ class LLMDefenderValidator(BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list) -> dict:
+    def get_api_prompt(
+        self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list
+    ) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -328,18 +349,18 @@ class LLMDefenderValidator(BaseNeuron):
             "X-Timestamp": timestamp,
             "X-Nonce": nonce,
             "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey
+            "X-API-Key": hotkey,
         }
 
-        data = {
-            "miner_hotkeys": miner_hotkeys
-        }
+        data = {"miner_hotkeys": miner_hotkeys}
 
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12)
+            res = requests.post(
+                url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12
+            )
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output
@@ -364,7 +385,7 @@ class LLMDefenderValidator(BaseNeuron):
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the prompt API: {e}")
         except Exception as e:
-            bt.logging.error(f'Generic error during request: {e}')
+            bt.logging.error(f"Generic error during request: {e}")
 
         return {}
 
@@ -386,12 +407,15 @@ class LLMDefenderValidator(BaseNeuron):
         nonce = str(secrets.token_hex(24))
         timestamp = str(int(time.time()))
 
-        data = f'{synapse_uuid}{nonce}{timestamp}'
+        data = f"{synapse_uuid}{nonce}{timestamp}"
 
         entry = self.get_api_prompt(
             hotkey=self.wallet.hotkey.ss58_address,
             signature=sign_data(hotkey=self.wallet.hotkey, data=data),
-            synapse_uuid=synapse_uuid, timestamp=timestamp, nonce=nonce,miner_hotkeys=miner_hotkeys
+            synapse_uuid=synapse_uuid,
+            timestamp=timestamp,
+            nonce=nonce,
+            miner_hotkeys=miner_hotkeys,
         )
 
         self.prompt = entry
@@ -428,14 +452,17 @@ class LLMDefenderValidator(BaseNeuron):
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
-        with open(f"{self.base_path}/miners.pickle", "wb") as pickle_file:
+        with open(
+            f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle", "wb"
+        ) as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
         bt.logging.debug("Saved miner states to a file")
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
-        state_path = f"{self.base_path}/miners.pickle"
+        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle"
+        old_state_path = f"{self.base_path}/miners.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
@@ -452,6 +479,25 @@ class LLMDefenderValidator(BaseNeuron):
                 rename(
                     state_path,
                     f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                )
+                self.miner_responses = None
+
+        elif path.exists(old_state_path):
+            try:
+                with open(old_state_path, "rb") as pickle_file:
+                    self.miner_responses = pickle.load(pickle_file)
+
+                bt.logging.debug("Loaded miner state from a file")
+            except Exception as e:
+                bt.logging.error(
+                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
+                )
+
+                # Rename the current miner state file if exception
+                # occurs and reset the default state
+                rename(
+                    old_state_path,
+                    f"{old_state_path}-{int(datetime.now().timestamp())}.autorecovery",
                 )
                 self.miner_responses = None
 
@@ -482,7 +528,7 @@ class LLMDefenderValidator(BaseNeuron):
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
             },
-            self.base_path + "/state.pt",
+            f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt",
         )
 
         bt.logging.debug(
@@ -517,7 +563,9 @@ class LLMDefenderValidator(BaseNeuron):
         """Loads the state of the validator from a file."""
 
         # Load the state of the validator from file.
-        state_path = self.base_path + "/state.pt"
+        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt"
+        old_state_path = f"{self.base_path}/state.pt"
+
         if path.exists(state_path):
             try:
                 bt.logging.info("Loading validator state.")
@@ -534,7 +582,23 @@ class LLMDefenderValidator(BaseNeuron):
                     f"Validator state reset because an exception occurred: {e}"
                 )
                 self.reset_validator_state(state_path=state_path)
+        # Load old state file if it exists if new path does not exists
+        elif path.exists(old_state_path):
+            try:
+                bt.logging.info("Loading validator state.")
+                state = torch.load(old_state_path)
+                bt.logging.debug(f"Loaded the following state from file: {state}")
+                self.step = state["step"]
+                self.scores = state["scores"]
+                self.hotkeys = state["hotkeys"]
+                self.last_updated_block = state["last_updated_block"]
 
+                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+            except Exception as e:
+                bt.logging.error(
+                    f"Validator state reset because an exception occurred: {e}"
+                )
+                self.reset_validator_state(state_path=state_path)
         else:
             self.init_default_scores()
 
@@ -576,88 +640,80 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             bt.logging.error("Failed to set weights.")
 
+    def determine_valid_axon_ips(self, axons):
+        """This function determines valid axon IPs to send the query to"""
+        # Clear axons that do not have an IP
+        axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
+
+        # Clear axons with duplicate IP/Port
+        axon_ips = set()
+        filtered_axons = [
+            axon
+            for axon in axons_with_valid_ip
+            if axon.ip_str() not in axon_ips and not axon_ips.add(axon.ip_str())
+        ]
+
+        bt.logging.debug(
+            f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
+        )
+
+        return filtered_axons
+
     def get_uids_to_query(self, all_axons) -> list:
         """Returns the list of UIDs to query"""
 
-        # Get UIDs with a positive stake
-        uids_with_stake = self.metagraph.total_stake >= 0.0
-        bt.logging.trace(f"UIDs with a positive stake: {uids_with_stake}")
+        # Filter Axons with invalid IPs
+        valid_axons = self.determine_valid_axon_ips(all_axons)
 
-        # Get UIDs with an IP address of 0.0.0.0
-        invalid_uids = torch.tensor(
-            [
-                bool(value)
-                for value in [
-                    ip != "0.0.0.0"
-                    for ip in [
-                        self.metagraph.neurons[uid].axon_info.ip
-                        for uid in self.metagraph.uids.tolist()
-                    ]
-                ]
-            ],
-            dtype=torch.bool,
+        # Determine list of Axons to not query
+        invalid_axons = [axon for axon in all_axons if axon not in valid_axons]
+
+        bt.logging.trace(f"Axons to query: {valid_axons}")
+        bt.logging.trace(f"Axons not to query: {invalid_axons}")
+
+        valid_uids, invalid_uids = (
+            [self.metagraph.hotkeys.index(axon.hotkey) for axon in valid_axons],
+            [self.metagraph.hotkeys.index(axon.hotkey) for axon in invalid_axons],
         )
-        bt.logging.trace(f"UIDs with 0.0.0.0 as an IP address: {invalid_uids}")
-        uids_to_filter = torch.logical_and(invalid_uids, uids_with_stake)
-        bt.logging.trace(f"UIDs to filter: {uids_to_filter}")
 
-        # Define UIDs to query
+        bt.logging.debug(f"Valid UIDs to be queried: {valid_uids}")
+        bt.logging.debug(f"Invalid UIDs not queried: {invalid_uids}")
+
+        bt.logging.debug(f"Selecting UIDs for target group: {self.target_group}")
+
+        # Determine how many axons must be included in one query group
+        query_group_count = int(len(valid_axons) / self.max_targets) + (
+            len(valid_axons) / self.max_targets % 1 > 0
+        )
+        targets_per_group = int(len(valid_axons) / query_group_count) + (
+            len(valid_axons) / query_group_count % 1 > 0
+        )
+
+        if self.target_group == 0:
+            # Determine start and end indices if target_group is zero
+            start_index = 0
+            end_index = targets_per_group
+        else:
+            # Determine start and end indices for non-zero target groups
+            start_index = self.target_group * targets_per_group
+            end_index = start_index + targets_per_group
+
+        # Increment the target group
+        if end_index > len(valid_axons):
+            end_index = len(valid_axons)
+            self.target_group = 0
+        else:
+            self.target_group += 1
+
+        bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
+
+        # Determine the UIDs to query based on the start and end index
+        axons_to_query = valid_axons[start_index:end_index]
         uids_to_query = [
-            axon
-            for axon, keep_flag in zip(all_axons, uids_to_filter)
-            if keep_flag.item()
+            self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
         ]
 
-        # Define UIDs to filter
-        final_axons_to_filter = [
-            axon
-            for axon, keep_flag in zip(all_axons, uids_to_filter)
-            if not keep_flag.item()
-        ]
-
-        uids_not_to_query = [
-            self.metagraph.hotkeys.index(axon.hotkey) for axon in final_axons_to_filter
-        ]
-
-        bt.logging.trace(f"Final axons to filter: {final_axons_to_filter}")
-        bt.logging.debug(f"Filtered UIDs: {uids_not_to_query}")
-
-        list_of_all_hotkeys = [axon.hotkey for axon in uids_to_query]
-
-        # Reduce the number of simultaneous UIDs to query
-        if self.max_targets < 256:
-            start_idx = self.max_targets * self.target_group
-            end_idx = min(
-                len(uids_to_query), self.max_targets * (self.target_group + 1)
-            )
-            if start_idx == end_idx:
-                return [], []
-            if start_idx >= len(uids_to_query):
-                raise IndexError(
-                    "Starting index for querying the miners is out-of-bounds"
-                )
-
-            if end_idx >= len(uids_to_query):
-                end_idx = len(uids_to_query)
-                self.target_group = 0
-            else:
-                self.target_group += 1
-
-            if start_idx == 0:
-                self.query = None
-
-            bt.logging.debug(
-                f"List indices for UIDs to query starting from: '{start_idx}' ending with: '{end_idx}'"
-            )
-            uids_to_query = uids_to_query[start_idx:end_idx]
-
-        list_of_uids = [
-            self.metagraph.hotkeys.index(axon.hotkey) for axon in uids_to_query
-        ]
-
-        bt.logging.trace(f"Sending query to the following hotkeys: {list_of_all_hotkeys}")
-
-        return uids_to_query, list_of_uids, uids_not_to_query, list_of_all_hotkeys
+        return axons_to_query, uids_to_query, invalid_uids
 
     async def get_uids_to_query_async(self, all_axons):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)

@@ -7,8 +7,6 @@ import time
 from argparse import ArgumentParser
 import traceback
 import bittensor as bt
-import torch
-import time
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
 from llm_defender import __version__ as version
@@ -63,10 +61,15 @@ def main(miner: LLMDefenderMiner):
 
                 # Check registration status
                 if miner.wallet.hotkey.ss58_address not in miner.metagraph.hotkeys:
-                    bt.logging.error(f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}.")
-                
+                    bt.logging.error(
+                        f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}."
+                    )
+
                 # Save used nonces
                 miner.save_used_nonces()
+
+                # Clean local data
+                miner.clean_local_storage()
 
             if miner.step % 60 == 0:
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
@@ -84,6 +87,8 @@ def main(miner: LLMDefenderMiner):
 
                 bt.logging.info(log)
 
+                # Print validator stats
+                bt.logging.debug(f"Validator stats: {miner.validator_stats}")
                 if miner.wandb_enabled:
                     wandb_logs = [
                         {
