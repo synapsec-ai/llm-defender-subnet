@@ -6,7 +6,6 @@ from copy import deepcopy
 import llm_defender.base.utils as utils
 from numpy import cbrt
 
-
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
 
@@ -157,9 +156,7 @@ def validate_response(hotkey, response) -> bool:
             return False
 
     # Check signature
-    data = (
-        f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
-    )
+    data = f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     if not utils.validate_signature(
         hotkey=hotkey, data=data, signature=response["signature"]
     ):
@@ -304,14 +301,7 @@ def get_engine_response_object(
 
 
 def get_response_object(
-    uid: str,
-    hotkey: str,
-    coldkey: str,
-    target: float,
-    synapse_uuid: str,
-    analyzer: str,
-    category: str,
-    prompt: str,
+    uid: str, hotkey: str, coldkey: str, target: float, synapse_uuid: str, analyzer: str, category: str, prompt: str
 ) -> dict:
     """Returns the template for the response object"""
 
