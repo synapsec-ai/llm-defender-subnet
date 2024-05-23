@@ -595,7 +595,7 @@ class LLMDefenderValidator(BaseNeuron):
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
-                bt.logging.info(f"Scores loaded from saved file: {self.scores} and prompt_injection_scores")
+                bt.logging.info(f"Scores loaded from saved file: {self.scores} The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}")
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
