@@ -64,6 +64,8 @@ class LLMDefenderValidator(BaseNeuron):
         self.dendrite = None
         self.metagraph: bt.metagraph | None = None
         self.scores = None
+        self.prompt_injection_scores = None
+        self.sensitive_information_scores = None
         self.hotkeys = None
         self.miner_responses = None
         self.max_targets = None
@@ -508,6 +510,8 @@ class LLMDefenderValidator(BaseNeuron):
             {
                 "step": self.step,
                 "scores": self.scores,
+                "prompt_injection_scores": self.prompt_injection_scores,
+                "sensitive_information_scores": self.sensitive_information_scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
             },
@@ -515,7 +519,7 @@ class LLMDefenderValidator(BaseNeuron):
         )
 
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
         )
 
     def init_default_scores(self) -> None:
@@ -523,9 +527,17 @@ class LLMDefenderValidator(BaseNeuron):
         with default score of 0.0 for each UID. The method can also be
         used to reset the scores in case of an internal error"""
 
-        bt.logging.info("Initiating validator with default scores for each UID")
+        bt.logging.info("Initiating validator with default Prompt Injection Analyzer scores for each UID")
+        self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        bt.logging.info(f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}")
+
+        bt.logging.info("Initiating validator with default Sensiive Information Analyzer scores for each UID")
+        self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        bt.logging.info(f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}")
+
+        bt.logging.info("Initiating validator with default overall scores for each UID")
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        bt.logging.info(f"Validation weights have been initialized: {self.scores}")
+        bt.logging.info(f"Overall weights for validation have been initialized: {self.scores}")
 
     def reset_validator_state(self, state_path):
         """Inits the default validator state. Should be invoked only
@@ -556,6 +568,8 @@ class LLMDefenderValidator(BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
+                self.prompt_injection_scores = state['prompt_injection_scores']
+                self.sensitive_information_scores = state['sensitive_information_scores']
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
@@ -573,6 +587,8 @@ class LLMDefenderValidator(BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
+                self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+                self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
