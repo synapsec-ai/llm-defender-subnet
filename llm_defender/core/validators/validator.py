@@ -301,23 +301,6 @@ class LLMDefenderValidator(BaseNeuron):
 
         return response_data
 
-    def calculate_subscore_speed(self, hotkey, response_time):
-        """Calculates the speed subscore for the response"""
-
-        # Calculate score for the speed of the response
-        bt.logging.trace(
-            f"Calculating speed_score for {hotkey} with response_time: {response_time} and timeout {self.timeout}"
-        )
-        if response_time > self.timeout:
-            bt.logging.debug(
-                f"Received response time {response_time} larger than timeout {self.timeout}, setting response_time to timeout value"
-            )
-            response_time = self.timeout
-
-        speed_score = 1.0 - (response_time / self.timeout)
-
-        return speed_score
-
     def calculate_penalized_scores(
         self,
         score_weights,
