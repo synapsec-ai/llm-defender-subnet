@@ -568,12 +568,21 @@ class LLMDefenderValidator(BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
-                self.prompt_injection_scores = state['prompt_injection_scores']
-                self.sensitive_information_scores = state['sensitive_information_scores']
+                analyzer_scores_loaded = False
+                try: 
+                    self.prompt_injection_scores = state['prompt_injection_scores']
+                    self.sensitive_information_scores = state['sensitive_information_scores']
+                    analyzer_scores_loaded = True
+                except: 
+                    self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+                    self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
-                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+                if analyzer_scores_loaded:
+                    bt.logging.info(f"Loaded the following from saved file: prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, scores: {self.scores}")
+                else: 
+                    bt.logging.info(f"Scores loaded from saved file: {self.scores}. The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}")
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
@@ -592,7 +601,7 @@ class LLMDefenderValidator(BaseNeuron):
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
-                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+                bt.logging.info(f"Scores loaded from saved file: {self.scores} and prompt_injection_scores")
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
