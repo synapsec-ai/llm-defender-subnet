@@ -4,8 +4,7 @@ from bittensor import logging
 from torch import Tensor
 from copy import deepcopy
 import llm_defender.base.utils as utils
-from numpy import cbrt
-
+from numpy import cbrt, log
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
@@ -276,11 +275,56 @@ def assign_score_for_uid(
 
     return scores, old_score, unweighted_new_score.item()
 
+def get_normalized_and_binned_scores(total_analyzer_raw_score):
+    """
+    This function normalizes the analyzer's score using the abs(ln(x)) curve,
+    and then bins this normalized value.
+
+    Inputs:
+        total_analyzer_raw_score: float
+            - The score obtained from the summation of distance/speed scores with
+            penalties applied.= 
+
+    Outputs:
+        normalized_analyzer_score: float
+            - The output of abs(ln(total_analyzer_raw_score))
+        binned_analyzer_score: float
+            - The binned output of normalized_analyzer_score
+
+    """
+
+    if float(total_analyzer_raw_score) == 0.0:
+        normalized_analyzer_score = 10.0
+    else:
+        normalized_analyzer_score = abs(log(total_analyzer_raw_score))
+
+    score_bins = [ # [range_low, range_high, binned_score]
+        [0, 0.03, 1],
+        [0.03, 0.11, 0.9],
+        [0.11, 0.22, 0.8],
+        [0.22, 0.35, 0.7],
+        [0.35, 0.51, 0.6],
+        [0.51, 0.69, 0.5],
+        [0.69, 0.91, 0.4],
+        [0.91, 1.2, 0.3],
+        [1.2, 1.6, 0.2],
+        [1.6, 2.3, 0.1]
+    ]
+    binned_analyzer_score = 0.0
+
+    for score_bin in score_bins:
+        if score_bin[0] <= normalized_analyzer_score <= score_bin[1]:
+            binned_analyzer_score = score_bin[2]
+            break
+
+    return normalized_analyzer_score, binned_analyzer_score
 
 def get_engine_response_object(
-    total_score: float = 0.0,
-    final_distance_score: float = 0.0,
-    final_speed_score: float = 0.0,
+    normalized_analyzer_score: float = 0.0,
+    binned_analyzer_score: float = 0.0,
+    total_analyzer_raw_score: float = 0.0, 
+    final_analyzer_distance_score: float = 0.0,
+    final_analyzer_speed_score: float = 0.0,
     distance_penalty: float = 0.0,
     speed_penalty: float = 0.0,
     raw_distance_score: float = 0.0,
@@ -292,9 +336,11 @@ def get_engine_response_object(
 
     res = {
         "scores": {
-            "total": total_score,
-            "distance": final_distance_score,
-            "speed": final_speed_score,
+            "binned_analyzer_score": binned_analyzer_score,
+            "normalized_analyzer_score": normalized_analyzer_score,
+            "total_analyzer_raw": total_analyzer_raw_score,
+            "distance": final_analyzer_distance_score,
+            "speed": final_analyzer_speed_score,
         },
         "raw_scores": {"distance": raw_distance_score, "speed": raw_speed_score},
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
