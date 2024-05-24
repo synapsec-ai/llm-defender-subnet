@@ -275,6 +275,8 @@ def calculate_analyzer_score(
 
     bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
+    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+
     return scoring.get_engine_response_object(
         normalized_analyzer_score=normalized_analyzer_score,
         binned_analyzer_score=binned_analyzer_score,
