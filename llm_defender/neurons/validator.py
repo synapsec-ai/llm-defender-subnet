@@ -341,7 +341,6 @@ async def main(validator: LLMDefenderValidator):
                 )
                 valid_response, invalid_response = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
 
-
                 bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
                 bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')
 

@@ -24,9 +24,9 @@ def process_response(
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
     if not scoring.validate_response(hotkey, response.output) or not validator.validate_nonce(response.output["nonce"]):
         bt.logging.debug(f'Empty response or nonce validation failed: {response}')
-        validator.scores, old_score, unweighted_new_score = (
+        validator.prompt_injection_scores, old_score, unweighted_new_score = (
             scoring.assign_score_for_uid(
-                validator.scores,
+                validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
                 0.0,
@@ -39,16 +39,16 @@ def process_response(
     else:
         response_time = response.dendrite.process_time
 
-        scored_response = calculate_score(prompt, validator,
+        scored_response = calculate_analyzer_score(prompt, validator,
             response.output, target, response_time, hotkey
         )
 
-        validator.scores, old_score, unweighted_new_score = (
+        validator.prompt_injection_scores, old_score, unweighted_new_score = (
             scoring.assign_score_for_uid(
-                validator.scores,
+                validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
-                scored_response["scores"]["total"],
+                scored_response["scores"]["binned_analyzer_score"],
                 query["weight"],
             )
         )
@@ -83,11 +83,11 @@ def process_response(
         # Populate response data
         response_object["response"] = miner_response
         response_object["engine_data"] = engine_data
-        response_object["scored_response"] = scored_response
-        response_object["weight_scores"] = {
-            "new": float(validator.scores[uid]),
+        response_object["analyzer_scored_response"] = scored_response
+        response_object["analyzer_weight_scores"] = {
+            "new": float(validator.prompt_injection_scores[uid]),
             "old": float(old_score),
-            "change": float(validator.scores[uid]) - float(old_score),
+            "change": float(validator.prompt_injection_scores[uid]) - float(old_score),
             "unweighted": unweighted_new_score,
             "weight": query["weight"],
         }
@@ -103,7 +103,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -112,7 +112,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -121,7 +121,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -130,7 +130,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "raw_scores"
                     ][
@@ -139,7 +139,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "raw_scores"
                     ][
@@ -148,21 +148,21 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "new"
                     ]
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "old"
                     ]
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "change"
                     ]
@@ -189,7 +189,7 @@ def process_response(
 
     return response_object, responses_invalid_uids, responses_valid_uids
 
-def calculate_score(
+def calculate_analyzer_score(
         prompt, validator, response, target: float, response_time: float, hotkey: str
     ) -> dict:
     """This function sets the score based on the response.
@@ -236,7 +236,7 @@ def calculate_score(
 
     # Apply penalties to scores
     (
-        total_score,
+        total_analyzer_raw_score,
         final_distance_score,
         final_speed_score,
     ) = validator.calculate_penalized_scores(
@@ -245,15 +245,15 @@ def calculate_score(
 
     # Validate individual scores
     if (
-        not utils.validate_numerical_value(total_score, float, 0.0, 1.0)
+        not utils.validate_numerical_value(total_analyzer_raw_score, float, 0.0, 1.0)
         or not utils.validate_numerical_value(final_distance_score, float, 0.0, 1.0)
         or not utils.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
-            f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
+            f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
         return scoring.get_engine_response_object()
-
+    
     # Log the scoring data
     score_logger = {
         "hotkey": hotkey,
@@ -263,7 +263,9 @@ def calculate_score(
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
         "raw_scores": {"distance": distance_score, "speed": speed_score},
         "final_scores": {
-            "total": total_score,
+            "binned_analyzer_score": binned_analyzer_score,
+            "normalized_analyzer_score": normalized_analyzer_score,
+            "total_analyzer_raw": total_analyzer_raw_score,
             "distance": final_distance_score,
             "speed": final_speed_score,
         },
@@ -271,8 +273,12 @@ def calculate_score(
 
     bt.logging.debug(f"Calculated score: {score_logger}")
 
+    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+
     return scoring.get_engine_response_object(
-        total_score=total_score,
+        normalized_analyzer_score=normalized_analyzer_score,
+        binned_analyzer_score=binned_analyzer_score,
+        total_analyzer_raw_score=total_analyzer_raw_score,
         final_distance_score=final_distance_score,
         final_speed_score=final_speed_score,
         distance_penalty=distance_penalty,
