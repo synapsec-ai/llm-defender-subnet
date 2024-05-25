@@ -323,19 +323,18 @@ class LLMDefenderValidator(BaseNeuron):
 
             self.scores[uid] = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid]) / 2
             
+            top_prompt_injection_uid = False 
+            top_sensitive_informaiton_uid = False
+
             if uid in top_prompt_injection_uids:
                 top_prompt_injection_uid = True
                 if self.prompt_injection_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.prompt_injection_scores[uid]
-            else:
-                top_prompt_injection_uid = False 
 
             if uid in top_sensitive_information_uids:
                 top_sensitive_informaiton_uid = True 
                 if self.sensitive_information_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.sensitive_information_scores[uid]
-            else:
-                top_sensitive_informaiton_uid = False
                     
             response_data[uid]['total_scored_response'] = {
                 'top_prompt_injection_uid': top_prompt_injection_uid,
