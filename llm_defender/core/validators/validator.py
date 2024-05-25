@@ -282,7 +282,7 @@ class LLMDefenderValidator(BaseNeuron):
             if response_object["response"]:
                 response_logger["miner_metrics"].append(response_object)
 
-        self.determine_overall_scores(response_data, responses)
+        final_response_data = self.determine_overall_scores(response_data, responses)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
@@ -303,7 +303,7 @@ class LLMDefenderValidator(BaseNeuron):
                     "Unable to push miner validation results to the logger service"
                 )
 
-        return response_data
+        return final_response_data
 
     def determine_overall_scores(self, response_data, responses, specialization_bonus_n = 5):
 
@@ -342,6 +342,8 @@ class LLMDefenderValidator(BaseNeuron):
                 'top_sensitive_information_uid': top_sensitive_informaiton_uid,
                 'total_score': self.scores[uid]
             }
+
+        return response_data
 
     def calculate_penalized_scores(
         self,
