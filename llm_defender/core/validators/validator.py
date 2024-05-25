@@ -282,6 +282,8 @@ class LLMDefenderValidator(BaseNeuron):
             if response_object["response"]:
                 response_logger["miner_metrics"].append(response_object)
 
+        self.determine_overall_scores(response_data, responses)
+
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
@@ -302,6 +304,44 @@ class LLMDefenderValidator(BaseNeuron):
                 )
 
         return response_data
+
+    def determine_overall_scores(self, response_data, responses, specialization_bonus_n = 5):
+
+        _, top_prompt_injection_uids = torch.topk(
+            input = self.prompt_injection_scores,
+            k = specialization_bonus_n,
+            largest = True
+        )
+
+        _, top_sensitive_information_uids = torch.topk(
+            input = self.sensitive_information_scores,
+            k = specialization_bonus_n,
+            largest = True
+        )
+
+        for uid, _ in enumerate(responses):
+
+            self.scores[uid] = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid]) / 2
+            
+            if uid in top_prompt_injection_uids:
+                top_prompt_injection_uid = True
+                if self.prompt_injection_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.prompt_injection_scores[uid]
+            else:
+                top_prompt_injection_uid = False 
+
+            if uid in top_sensitive_information_uids:
+                top_sensitive_informaiton_uid = True 
+                if self.sensitive_information_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.sensitive_information_scores[uid]
+            else:
+                top_sensitive_informaiton_uid = False
+                    
+            response_data[uid]['total_scored_response'] = {
+                'top_prompt_injection_uid': top_prompt_injection_uid,
+                'top_sensitive_information_uid': top_sensitive_informaiton_uid,
+                'total_score': self.scores[uid]
+            }
 
     def calculate_penalized_scores(
         self,
