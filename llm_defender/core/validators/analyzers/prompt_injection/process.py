@@ -253,7 +253,9 @@ def calculate_analyzer_score(
             f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
         return scoring.get_engine_response_object()
-    
+
+    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+
     # Log the scoring data
     score_logger = {
         "hotkey": hotkey,
@@ -262,7 +264,7 @@ def calculate_analyzer_score(
         "score_weights": score_weights,
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
         "raw_scores": {"distance": distance_score, "speed": speed_score},
-        "final_scores": {
+        "analyzer_scores": {
             "binned_analyzer_score": binned_analyzer_score,
             "normalized_analyzer_score": normalized_analyzer_score,
             "total_analyzer_raw": total_analyzer_raw_score,
@@ -271,9 +273,7 @@ def calculate_analyzer_score(
         },
     }
 
-    bt.logging.debug(f"Calculated score: {score_logger}")
-
-    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+    bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
     return scoring.get_engine_response_object(
         normalized_analyzer_score=normalized_analyzer_score,
