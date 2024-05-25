@@ -324,24 +324,42 @@ class LLMDefenderValidator(BaseNeuron):
             analyzer_avg = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid])
             self.scores[uid] = analyzer_avg / 2
             
-            top_prompt_injection_uid = False 
-            top_sensitive_informaiton_uid = False
+            top_prompt_injection_uid = 0 
+            top_sensitive_informaiton_uid = 0
 
             if uid in top_prompt_injection_uids:
-                top_prompt_injection_uid = True
+                top_prompt_injection_uid = 1
                 if self.prompt_injection_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.prompt_injection_scores[uid]
 
             if uid in top_sensitive_information_uids:
-                top_sensitive_informaiton_uid = True 
+                top_sensitive_informaiton_uid = 1
                 if self.sensitive_information_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.sensitive_information_scores[uid]
                     
             response_data[uid]['total_scored_response'] = {
-                'top_prompt_injection_uid': top_prompt_injection_uid,
-                'top_sensitive_information_uid': top_sensitive_informaiton_uid,
+                'top_prompt_injection_uid': True if top_prompt_injection_uid == 1 else False,
+                'top_sensitive_information_uid': True if top_sensitive_informaiton_uid == 1 else False,
                 'total_score': self.scores[uid]
             }
+
+            miner_hotkey = response_data[uid]['hotkey']
+
+            if self.wandb_enabled:
+                wandb_logs = [
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid":top_prompt_injection_uid
+                    },
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_sensitive_information_uid": top_sensitive_informaiton_uid
+                    },
+                    {
+                        f"{uid}:{miner_hotkey}_total_score":self.scores[uid]
+                    }
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(wandb_log)
 
         return response_data
 
