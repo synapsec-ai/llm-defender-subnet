@@ -321,7 +321,8 @@ class LLMDefenderValidator(BaseNeuron):
 
         for uid, _ in enumerate(responses):
 
-            self.scores[uid] = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid]) / 2
+            analyzer_avg = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid])
+            self.scores[uid] = analyzer_avg / 2
             
             top_prompt_injection_uid = False 
             top_sensitive_informaiton_uid = False
