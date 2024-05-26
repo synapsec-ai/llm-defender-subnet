@@ -389,7 +389,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return {}
 
-    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
+    def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -415,15 +415,14 @@ class LLMDefenderValidator(BaseNeuron):
             synapse_uuid=synapse_uuid,
             timestamp=timestamp,
             nonce=nonce,
-            miner_hotkeys=miner_hotkeys,
         )
 
         self.prompt = entry
 
         return self.prompt
 
-    async def load_prompt_to_validator_async(self, synapse_uuid, miner_hotkeys):
-        return await asyncio.to_thread(self.serve_prompt, synapse_uuid, miner_hotkeys)
+    async def load_prompt_to_validator_async(self, synapse_uuid):
+        return await asyncio.to_thread(self.serve_prompt, synapse_uuid)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""

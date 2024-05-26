@@ -355,34 +355,34 @@ class LLMDefenderMiner(BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
-        is_notification_message = (
-            synapse.synapse_prompt is None and synapse.synapse_hash is not None
-        )
+        # is_notification_message = (
+        #     synapse.synapse_prompt is None and synapse.synapse_hash is not None
+        # )
 
-        synapse_hash = synapse.synapse_hash
+        # synapse_hash = synapse.synapse_hash
         hotkey = synapse.dendrite.hotkey
-        synapse_uuid = synapse.synapse_uuid
+        # synapse_uuid = synapse.synapse_uuid
 
-        if is_notification_message:
-            bt.logging.debug(f"Processing notification synapse: {synapse}")
-            self._update_validator_stats(hotkey, "received_notification_synapse_count")
-            if synapse_hash in self.notification_synapses:
-                self.notification_synapses[synapse_hash]["validator_hotkeys"].append(
-                    hotkey
-                )
-            else:
-                self.notification_synapses[synapse_hash] = {
-                    "synapse_uuid": synapse_uuid,
-                    "validator_hotkeys": [hotkey],
-                }
+        # if is_notification_message:
+        #     bt.logging.debug(f"Processing notification synapse: {synapse}")
+        #     self._update_validator_stats(hotkey, "received_notification_synapse_count")
+        #     if synapse_hash in self.notification_synapses:
+        #         self.notification_synapses[synapse_hash]["validator_hotkeys"].append(
+        #             hotkey
+        #         )
+        #     else:
+        #         self.notification_synapses[synapse_hash] = {
+        #             "synapse_uuid": synapse_uuid,
+        #             "validator_hotkeys": [hotkey],
+        #         }
 
-            bt.logging.success(
-                f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
-            )
+        #     bt.logging.success(
+        #         f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
+        #     )
 
-            self._update_validator_stats(hotkey, "processed_notification_synapse_count")
-            synapse.output = {"outcome": True}
-            return synapse
+        #     self._update_validator_stats(hotkey, "processed_notification_synapse_count")
+        #     synapse.output = {"outcome": True}
+        #     return synapse
 
         self._update_validator_stats(hotkey, "received_payload_synapse_count")
 
@@ -421,53 +421,53 @@ class LLMDefenderMiner(BaseNeuron):
             bt.logging.warning(f"Received a synapse empty prompt: {synapse}")
             return synapse
 
-        encoded_prompt = prompt.encode("utf-8")
-        prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
+        # encoded_prompt = prompt.encode("utf-8")
+        # prompt_hash = hashlib.sha256(encoded_prompt).hexdigest()
 
-        if (
-            self.notification_synapses.get(prompt_hash) is None
-            or self.notification_synapses[prompt_hash]["synapse_uuid"]
-            != synapse.synapse_uuid
-        ):
-            bt.logging.warning(
-                f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}"
-            )
-            bt.logging.debug(f"Notification synapses: {self.notification_synapses}")
-            return synapse
+        # if (
+        #     self.notification_synapses.get(prompt_hash) is None
+        #     or self.notification_synapses[prompt_hash]["synapse_uuid"]
+        #     != synapse.synapse_uuid
+        # ):
+        #     bt.logging.warning(
+        #         f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}"
+        #     )
+        #     bt.logging.debug(f"Notification synapses: {self.notification_synapses}")
+        #     return synapse
 
-        if prompt_hash in self.used_prompt_hashes:
-            bt.logging.warning(
-                f"Received a prompt with recently used hash: {prompt_hash} originating from hotkey: {synapse.dendrite.hotkey}"
-            )
-            bt.logging.debug(f"List of recent hashes: {self.used_prompt_hashes}")
-            return synapse
+        # if prompt_hash in self.used_prompt_hashes:
+        #     bt.logging.warning(
+        #         f"Received a prompt with recently used hash: {prompt_hash} originating from hotkey: {synapse.dendrite.hotkey}"
+        #     )
+        #     bt.logging.debug(f"List of recent hashes: {self.used_prompt_hashes}")
+        #     return synapse
 
-        validator_hotkey_to_reply = synapse.dendrite.hotkey
-        registered_hotkeys = self.notification_synapses[prompt_hash][
-            "validator_hotkeys"
-        ]
-        if len(registered_hotkeys) > 1:
-            bt.logging.warning(
-                f"The same prompt: {prompt_hash} was sent by different validators: {registered_hotkeys}"
-            )
-            # Find the validator with the highest amount of stake
-            duplicated_neurons = [
-                neuron
-                for neuron in self.metagraph.neurons
-                if neuron.hotkey in registered_hotkeys
-            ]
-            max_stake_neuron = max(duplicated_neurons, key=lambda neuron: neuron.stake)
-            validator_hotkey_to_reply = max_stake_neuron.hotkey
+        # validator_hotkey_to_reply = synapse.dendrite.hotkey
+        # registered_hotkeys = self.notification_synapses[prompt_hash][
+        #     "validator_hotkeys"
+        # ]
+        # if len(registered_hotkeys) > 1:
+        #     bt.logging.warning(
+        #         f"The same prompt: {prompt_hash} was sent by different validators: {registered_hotkeys}"
+        #     )
+        #     # Find the validator with the highest amount of stake
+        #     duplicated_neurons = [
+        #         neuron
+        #         for neuron in self.metagraph.neurons
+        #         if neuron.hotkey in registered_hotkeys
+        #     ]
+        #     max_stake_neuron = max(duplicated_neurons, key=lambda neuron: neuron.stake)
+        #     validator_hotkey_to_reply = max_stake_neuron.hotkey
 
-        # If this validator doesn't have the highest amount fo stake, discard the message
-        if validator_hotkey_to_reply != synapse.dendrite.hotkey:
-            bt.logging.warning(
-                f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt"
-            )
-            return synapse
+        # # If this validator doesn't have the highest amount fo stake, discard the message
+        # if validator_hotkey_to_reply != synapse.dendrite.hotkey:
+        #     bt.logging.warning(
+        #         f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt"
+        #     )
+        #     return synapse
 
-        # Add to list of known hashes
-        self.used_prompt_hashes.append(prompt_hash)
+        # # Add to list of known hashes
+        # self.used_prompt_hashes.append(prompt_hash)
 
         # Execute the correct analyzer
         if not SupportedAnalyzers.is_valid(synapse.analyzer):
@@ -485,7 +485,7 @@ class LLMDefenderMiner(BaseNeuron):
         synapse.output = output
 
         # Remove the message from the notification field
-        self.notification_synapses.pop(prompt_hash, None)
+        # self.notification_synapses.pop(prompt_hash, None)
         bt.logging.debug(
             f'Processed prompt "{prompt}" with analyzer: {output["analyzer"]}'
         )
