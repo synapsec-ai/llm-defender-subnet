@@ -338,7 +338,7 @@ class LLMDefenderValidator(BaseNeuron):
         return total_score, final_distance_score, final_speed_score
 
     def get_api_prompt(
-        self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list
+        self, hotkey, signature, synapse_uuid, timestamp, nonce
     ) -> dict:
         """Retrieves a prompt from the prompt API"""
 
@@ -352,14 +352,12 @@ class LLMDefenderValidator(BaseNeuron):
             "X-API-Key": hotkey,
         }
 
-        data = {"miner_hotkeys": miner_hotkeys}
-
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
             res = requests.post(
-                url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12
+                url=prompt_api_url, headers=headers, timeout=12
             )
             # check for correct status code
             if res.status_code == 200:
