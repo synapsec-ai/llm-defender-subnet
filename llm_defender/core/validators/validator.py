@@ -12,7 +12,6 @@ Typical example usage:
 import asyncio
 import copy
 import pickle
-import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
