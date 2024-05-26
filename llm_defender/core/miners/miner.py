@@ -355,15 +355,18 @@ class LLMDefenderMiner(BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
-        # is_notification_message = (
-        #     synapse.synapse_prompt is None and synapse.synapse_hash is not None
-        # )
+        is_notification_message = (
+            synapse.synapse_prompt is None and synapse.synapse_hash is not None
+        )
 
         # synapse_hash = synapse.synapse_hash
         hotkey = synapse.dendrite.hotkey
         # synapse_uuid = synapse.synapse_uuid
 
-        # if is_notification_message:
+        if is_notification_message:
+            # If it's a notification synapse we can just ignore it 
+            bt.logging.debug("Received notification synapse. Ignoring.")
+            return synapse
         #     bt.logging.debug(f"Processing notification synapse: {synapse}")
         #     self._update_validator_stats(hotkey, "received_notification_synapse_count")
         #     if synapse_hash in self.notification_synapses:
