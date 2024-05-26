@@ -4,7 +4,7 @@ from bittensor import logging
 from torch import Tensor
 from copy import deepcopy
 import llm_defender.base.utils as utils
-
+from numpy import cbrt
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
@@ -104,7 +104,7 @@ def calculate_subscore_speed(timeout, response_time):
     if response_time > timeout or response_time <= 0.0 or timeout <= 0.0:
         return None
 
-    speed_score = 1.0 - (response_time / timeout)
+    speed_score = 1.0 - (cbrt(response_time) / cbrt(timeout))
 
     return speed_score
 
