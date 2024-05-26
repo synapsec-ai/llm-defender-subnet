@@ -104,7 +104,7 @@ def calculate_subscore_speed(timeout, response_time):
     if response_time > timeout or response_time <= 0.0 or timeout <= 0.0:
         return None
 
-    speed_score = 1.0 - (response_time / timeout)
+    speed_score = 1.0 - (cbrt(response_time) / cbrt(timeout))
 
     return speed_score
 
