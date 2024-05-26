@@ -4,7 +4,7 @@ from bittensor import logging
 from torch import Tensor
 from copy import deepcopy
 import llm_defender.base.utils as utils
-
+from numpy import cbrt
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
