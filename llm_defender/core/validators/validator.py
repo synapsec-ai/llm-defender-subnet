@@ -72,6 +72,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
+        self.blacklisted_miner_hotkeys = None
 
         # Enable wandb if it has been configured
         if wandb is True:
@@ -506,12 +507,13 @@ class LLMDefenderValidator(BaseNeuron):
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
                 "last_updated_block": self.last_updated_block,
+                "blacklisted_miner_hotkeys": self.blacklisted_miner_hotkeys
             },
             f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt",
         )
 
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}, blacklisted_miner_hotkeys: {self.blacklisted_miner_hotkeys}"
         )
 
     def init_default_scores(self) -> None:
@@ -554,7 +556,8 @@ class LLMDefenderValidator(BaseNeuron):
                 self.scores = state["scores"]
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-
+                if "blacklisted_miner_hotkeys" in state.keys():
+                    self.blacklisted_miner_hotkeys = state['blacklisted_miner_hotkeys']
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
@@ -571,7 +574,8 @@ class LLMDefenderValidator(BaseNeuron):
                 self.scores = state["scores"]
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-
+                if "blacklisted_miner_hotkeys" in state.keys():
+                    self.blacklisted_miner_hotkeys = state['blacklisted_miner_hotkeys']
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
@@ -696,3 +700,78 @@ class LLMDefenderValidator(BaseNeuron):
 
     async def get_uids_to_query_async(self, all_axons):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)
+
+    def _get_local_miner_blacklist(self) -> list:
+        """Returns the blacklisted miners hotkeys from the local file."""
+
+        # Check if local blacklist exists
+        blacklist_file = f"{self.base_path}/miner_blacklist.json"
+        if Path(blacklist_file).is_file():
+            # Load the contents of the local blaclist
+            bt.logging.trace(f"Reading local blacklist file: {blacklist_file}")
+            try:
+                with open(blacklist_file, "r", encoding="utf-8") as file:
+                    file_content = file.read()
+
+                miner_blacklist = json.loads(file_content)
+                if validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(f"Loaded miner blacklist: {miner_blacklist}")
+                    return miner_blacklist
+
+                bt.logging.trace(
+                    f"Loaded miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+            except OSError as e:
+                bt.logging.error(f"Unable to read blacklist file: {e}")
+            except json.JSONDecodeError as e:
+                bt.logging.error(
+                    f"Unable to parse JSON from path: {blacklist_file} with error: {e}"
+                )
+        else:
+            bt.logging.trace(f"No local miner blacklist file in path: {blacklist_file}")
+
+        return []
+
+    def _get_remote_miner_blacklist(self) -> list:
+        """Retrieves the remote blacklist"""
+
+        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
+
+        try:
+            res = requests.get(url=blacklist_api_url, timeout=12)
+            if res.status_code == 200:
+                miner_blacklist = res.json()
+                if validate_miner_blacklist(miner_blacklist):
+                    bt.logging.trace(
+                        f"Loaded remote miner blacklist: {miner_blacklist}"
+                    )
+                    return miner_blacklist
+                bt.logging.trace(
+                    f"Remote miner blacklist was formatted incorrectly or was empty: {miner_blacklist}"
+                )
+
+            else:
+                bt.logging.warning(
+                    f"Miner blacklist API returned unexpected status code: {res.status_code}"
+                )
+        except requests.exceptions.ReadTimeout as e:
+            bt.logging.error(f"Request timed out: {e}")
+        except requests.exceptions.JSONDecodeError as e:
+            bt.logging.error(f"Unable to read the response from the API: {e}")
+        except requests.exceptions.ConnectionError as e:
+            bt.logging.error(f"Unable to connect to the blacklist API: {e}")
+        except Exception as e:
+            bt.logging.error(f'Generic error during request: {e}')
+
+        return []
+
+    def check_blacklisted_miner_hotkeys(self):
+        """Combines local and remote miner blacklists and returns list of hotkeys"""
+
+        miner_blacklist = (
+            self._get_local_miner_blacklist() + self._get_remote_miner_blacklist()
+        )
+
+        self.blacklisted_miner_hotkeys = [
+            item["hotkey"] for item in miner_blacklist if "hotkey" in item
+        ]
