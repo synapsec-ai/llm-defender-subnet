@@ -254,7 +254,7 @@ def calculate_analyzer_score(
         )
         return scoring.get_engine_response_object()
 
-    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
 
     # Log the scoring data
     score_logger = {
@@ -279,8 +279,8 @@ def calculate_analyzer_score(
         normalized_analyzer_score=normalized_analyzer_score,
         binned_analyzer_score=binned_analyzer_score,
         total_analyzer_raw_score=total_analyzer_raw_score,
-        final_distance_score=final_distance_score,
-        final_speed_score=final_speed_score,
+        final_analyzer_distance_score=final_distance_score,
+        final_analyzer_speed_score=final_speed_score,
         distance_penalty=distance_penalty,
         speed_penalty=speed_penalty,
         raw_distance_score=distance_score,
