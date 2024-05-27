@@ -238,6 +238,7 @@ async def main(validator: LLMDefenderValidator):
                     truncate_miner_state_async(validator),
                     save_used_nonces_async(validator)
                 )
+                validator.check_blacklisted_miner_hotkeys()
 
             # Get all axons
             all_axons = validator.metagraph.axons
@@ -262,7 +263,7 @@ async def main(validator: LLMDefenderValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            axons_with_valid_ip = validator.determine_valid_axon_ips(all_axons)
+            axons_with_valid_ip = validator.determine_valid_axons(all_axons)
             # miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
             if not axons_with_valid_ip:
