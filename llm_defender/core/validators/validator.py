@@ -638,19 +638,14 @@ class LLMDefenderValidator(BaseNeuron):
         filtered_axons = [
             axon
             for axon in axons_with_valid_ip
-            if axon.ip_str() not in axon_ips and not axon_ips.add(axon.ip_str())
+            if axon.ip_str() not in axon_ips and not axon_ips.add(axon.ip_str()) and axon.hotkey not in self.blacklisted_miner_hotkeys
         ]
 
         bt.logging.debug(
             f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
         )
 
-        blacklist_filtered_axons = [
-            axon for axon in filtered_axons
-            if axon.hotkey not in self.blacklisted_miner_hotkeys
-        ]
-
-        return blacklist_filtered_axons
+        return filtered_axons
 
     def get_uids_to_query(self, all_axons) -> list:
         """Returns the list of UIDs to query"""
