@@ -633,7 +633,7 @@ class LLMDefenderValidator(BaseNeuron):
         # Clear axons that do not have an IP
         axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
 
-        # Clear axons with duplicate IP/Port
+        # Clear axons with duplicate IP/Port and blacklisted axons
         axon_ips = set()
         filtered_axons = [
             axon
@@ -740,7 +740,7 @@ class LLMDefenderValidator(BaseNeuron):
     def _get_remote_miner_blacklist(self) -> list:
         """Retrieves the remote blacklist"""
 
-        blacklist_api_url = "https://ujetecvbvi.execute-api.eu-west-1.amazonaws.com/default/sn14-blacklist-api"
+        blacklist_api_url = ""
 
         try:
             res = requests.get(url=blacklist_api_url, timeout=12)
