@@ -17,15 +17,18 @@ from typing import Tuple
 from sys import getsizeof
 from datetime import datetime
 from os import path, rename
+from pathlib import Path
 import torch
 import secrets
 import time
+import json
 import bittensor as bt
 from llm_defender.base.neuron import BaseNeuron
 from llm_defender.base.utils import (
     timeout_decorator,
     sign_data,
     validate_validator_api_prompt_output,
+    validate_miner_blacklist
 )
 import requests
 from llm_defender.core.validators.analyzers.prompt_injection import (
@@ -539,6 +542,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.step = 0
         self.last_updated_block = 0
         self.hotkeys = None
+        self.blacklisted_miner_hotkeys = None
 
     def load_state(self):
         """Loads the state of the validator from a file."""
@@ -623,8 +627,9 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             bt.logging.error("Failed to set weights.")
 
-    def determine_valid_axon_ips(self, axons):
-        """This function determines valid axon IPs to send the query to"""
+    def determine_valid_axons(self, axons):
+        """This function determines valid axon to send the query to--
+        they must have valid ips and not be blacklisted."""
         # Clear axons that do not have an IP
         axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
 
@@ -640,13 +645,18 @@ class LLMDefenderValidator(BaseNeuron):
             f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
         )
 
-        return filtered_axons
+        blacklist_filtered_axons = [
+            axon for axon in filtered_axons
+            if axon.hotkey not in self.blacklisted_miner_hotkeys
+        ]
+
+        return blacklist_filtered_axons
 
     def get_uids_to_query(self, all_axons) -> list:
         """Returns the list of UIDs to query"""
 
         # Filter Axons with invalid IPs
-        valid_axons = self.determine_valid_axon_ips(all_axons)
+        valid_axons = self.determine_valid_axons(all_axons)
 
         # Determine list of Axons to not query
         invalid_axons = [axon for axon in all_axons if axon not in valid_axons]
