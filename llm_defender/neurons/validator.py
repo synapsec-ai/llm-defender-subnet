@@ -238,7 +238,6 @@ async def main(validator: LLMDefenderValidator):
                     truncate_miner_state_async(validator),
                     save_used_nonces_async(validator)
                 )
-                validator.check_blacklisted_miner_hotkeys()
 
             # Get all axons
             all_axons = validator.metagraph.axons
