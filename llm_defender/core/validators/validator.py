@@ -677,7 +677,7 @@ class LLMDefenderValidator(BaseNeuron):
             end_index = start_index + targets_per_group
 
         # Increment the target group
-        if end_index > len(valid_axons):
+        if end_index >= len(valid_axons):
             end_index = len(valid_axons)
             self.target_group = 0
         else:
@@ -685,11 +685,14 @@ class LLMDefenderValidator(BaseNeuron):
 
         bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
 
-        # Determine the UIDs to query based on the start and end index
-        axons_to_query = valid_axons[start_index:end_index]
-        uids_to_query = [
-            self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
-        ]
+        if start_index == end_index:
+            axons_to_query = valid_axons[start_index]
+        else:
+            # Determine the UIDs to query based on the start and end index
+            axons_to_query = valid_axons[start_index:end_index]
+            uids_to_query = [
+                self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
+            ]
 
         return axons_to_query, uids_to_query, invalid_uids
 
