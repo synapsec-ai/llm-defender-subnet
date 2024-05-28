@@ -12,7 +12,6 @@ Typical example usage:
 import asyncio
 import copy
 import pickle
-import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
@@ -301,23 +300,6 @@ class LLMDefenderValidator(BaseNeuron):
 
         return response_data
 
-    def calculate_subscore_speed(self, hotkey, response_time):
-        """Calculates the speed subscore for the response"""
-
-        # Calculate score for the speed of the response
-        bt.logging.trace(
-            f"Calculating speed_score for {hotkey} with response_time: {response_time} and timeout {self.timeout}"
-        )
-        if response_time > self.timeout:
-            bt.logging.debug(
-                f"Received response time {response_time} larger than timeout {self.timeout}, setting response_time to timeout value"
-            )
-            response_time = self.timeout
-
-        speed_score = 1.0 - (response_time / self.timeout)
-
-        return speed_score
-
     def calculate_penalized_scores(
         self,
         score_weights,
@@ -338,7 +320,7 @@ class LLMDefenderValidator(BaseNeuron):
         return total_score, final_distance_score, final_speed_score
 
     def get_api_prompt(
-        self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list
+        self, hotkey, signature, synapse_uuid, timestamp, nonce
     ) -> dict:
         """Retrieves a prompt from the prompt API"""
 
@@ -352,14 +334,12 @@ class LLMDefenderValidator(BaseNeuron):
             "X-API-Key": hotkey,
         }
 
-        data = {"miner_hotkeys": miner_hotkeys}
-
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
             res = requests.post(
-                url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12
+                url=prompt_api_url, headers=headers, timeout=12
             )
             # check for correct status code
             if res.status_code == 200:
@@ -389,7 +369,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return {}
 
-    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
+    def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -415,15 +395,14 @@ class LLMDefenderValidator(BaseNeuron):
             synapse_uuid=synapse_uuid,
             timestamp=timestamp,
             nonce=nonce,
-            miner_hotkeys=miner_hotkeys,
         )
 
         self.prompt = entry
 
         return self.prompt
 
-    async def load_prompt_to_validator_async(self, synapse_uuid, miner_hotkeys):
-        return await asyncio.to_thread(self.serve_prompt, synapse_uuid, miner_hotkeys)
+    async def load_prompt_to_validator_async(self, synapse_uuid):
+        return await asyncio.to_thread(self.serve_prompt, synapse_uuid)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -526,7 +505,7 @@ class LLMDefenderValidator(BaseNeuron):
                 "step": self.step,
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
-                "last_updated_block": self.last_updated_block,
+                "last_updated_block": self.last_updated_block
             },
             f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt",
         )
@@ -575,7 +554,6 @@ class LLMDefenderValidator(BaseNeuron):
                 self.scores = state["scores"]
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
@@ -592,7 +570,6 @@ class LLMDefenderValidator(BaseNeuron):
                 self.scores = state["scores"]
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
@@ -640,12 +617,13 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             bt.logging.error("Failed to set weights.")
 
-    def determine_valid_axon_ips(self, axons):
-        """This function determines valid axon IPs to send the query to"""
+    def determine_valid_axons(self, axons):
+        """This function determines valid axon to send the query to--
+        they must have valid ips """
         # Clear axons that do not have an IP
         axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
 
-        # Clear axons with duplicate IP/Port
+        # Clear axons with duplicate IP/Port 
         axon_ips = set()
         filtered_axons = [
             axon
@@ -663,7 +641,7 @@ class LLMDefenderValidator(BaseNeuron):
         """Returns the list of UIDs to query"""
 
         # Filter Axons with invalid IPs
-        valid_axons = self.determine_valid_axon_ips(all_axons)
+        valid_axons = self.determine_valid_axons(all_axons)
 
         # Determine list of Axons to not query
         invalid_axons = [axon for axon in all_axons if axon not in valid_axons]
@@ -699,7 +677,7 @@ class LLMDefenderValidator(BaseNeuron):
             end_index = start_index + targets_per_group
 
         # Increment the target group
-        if end_index > len(valid_axons):
+        if end_index >= len(valid_axons):
             end_index = len(valid_axons)
             self.target_group = 0
         else:
@@ -707,11 +685,14 @@ class LLMDefenderValidator(BaseNeuron):
 
         bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
 
-        # Determine the UIDs to query based on the start and end index
-        axons_to_query = valid_axons[start_index:end_index]
-        uids_to_query = [
-            self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
-        ]
+        if start_index == end_index:
+            axons_to_query = valid_axons[start_index]
+        else:
+            # Determine the UIDs to query based on the start and end index
+            axons_to_query = valid_axons[start_index:end_index]
+            uids_to_query = [
+                self.metagraph.hotkeys.index(axon.hotkey) for axon in axons_to_query
+            ]
 
         return axons_to_query, uids_to_query, invalid_uids
 

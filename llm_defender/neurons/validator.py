@@ -262,10 +262,10 @@ async def main(validator: LLMDefenderValidator):
                 )
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
-            axons_with_valid_ip = validator.determine_valid_axon_ips(all_axons)
-            miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
+            axons_with_valid_ip = validator.determine_valid_axons(all_axons)
+            # miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
-            if not miner_hotkeys_to_broadcast:
+            if not axons_with_valid_ip:
                 bt.logging.warning("No axons with valid IPs found")
                 bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
                 time.sleep(bt.__blocktime__)
@@ -275,8 +275,7 @@ async def main(validator: LLMDefenderValidator):
 
                 synapse_uuid = str(uuid4())
                 prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    synapse_uuid=synapse_uuid,
-                    miner_hotkeys=miner_hotkeys_to_broadcast
+                    synapse_uuid=synapse_uuid
                 )
 
                 bt.logging.debug(f'Serving prompt: {prompt_to_analyze}')
@@ -291,21 +290,35 @@ async def main(validator: LLMDefenderValidator):
                     handle_invalid_prompt(validator)
                     continue
                 
-                bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
-                bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
-                bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
+                # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
+                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
+                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
 
-                notification_responses = send_notification_synapse(
-                    synapse_uuid=synapse_uuid,
-                    validator=validator,
-                    axons_with_valid_ip=axons_with_valid_ip,
-                    prompt_to_analyze=prompt_to_analyze
-                )
-                valid_response, invalid_response = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
+                # notification_responses = send_notification_synapse(
+                #     synapse_uuid=synapse_uuid,
+                #     validator=validator,
+                #     axons_with_valid_ip=axons_with_valid_ip,
+                #     prompt_to_analyze=prompt_to_analyze
+                # )
+                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(e  # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
+                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
+                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
+
+                # notification_responses = send_notification_synapse(
+                #     synapse_uuid=synapse_uuid,
+                #     validator=validator,
+                #     axons_with_valid_ip=axons_with_valid_ip,
+                #     prompt_to_analyze=prompt_to_analyze
+                # )
+                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
 
 
-                bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
-                bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')
+                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
+                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')ntry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
+
+
+                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
+                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')
 
             # Get list of UIDs to send the payload synapse
             (
@@ -315,6 +328,7 @@ async def main(validator: LLMDefenderValidator):
             ) = await validator.get_uids_to_query_async(all_axons=all_axons)
             if not uids_to_query:
                 bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
+                continue
 
             bt.logging.info(f'Sending Payload Synapse to {len(uids_to_query)} targets starting with UID: {list_of_uids[0]} and ending with UID: {list_of_uids[-1]}')
 

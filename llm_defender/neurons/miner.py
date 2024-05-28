@@ -69,7 +69,7 @@ def main(miner: LLMDefenderMiner):
                 miner.save_used_nonces()
 
                 # Clean local data
-                miner.clean_local_storage()
+                # miner.clean_local_storage()
 
             if miner.step % 60 == 0:
                 miner.metagraph = miner.subtensor.metagraph(miner.neuron_config.netuid)
