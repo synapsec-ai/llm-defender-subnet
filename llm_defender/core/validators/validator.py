@@ -537,7 +537,6 @@ class LLMDefenderValidator(BaseNeuron):
         self.step = 0
         self.last_updated_block = 0
         self.hotkeys = None
-        self.blacklisted_miner_hotkeys = None
 
     def load_state(self):
         """Loads the state of the validator from a file."""
@@ -620,11 +619,11 @@ class LLMDefenderValidator(BaseNeuron):
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--
-        they must have valid ips and not be blacklisted."""
+        they must have valid ips """
         # Clear axons that do not have an IP
         axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
 
-        # Clear axons with duplicate IP/Port and blacklisted axons
+        # Clear axons with duplicate IP/Port 
         axon_ips = set()
         filtered_axons = [
             axon
