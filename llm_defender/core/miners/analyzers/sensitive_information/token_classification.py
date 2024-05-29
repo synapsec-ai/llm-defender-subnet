@@ -2,6 +2,8 @@
 This module implements the base-engine used by the sensitive-data
 feature of the llm-defender-subnet.
 """
+from typing import List
+
 import torch
 from os import path, makedirs
 from transformers import (
@@ -70,7 +72,7 @@ class TokenClassificationEngine(BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompt: str = None, name: str = "sensitive_info:token_classification"):
+    def __init__(self, prompts: List[str] = None, name: str = "sensitive_info:token_classification"):
         """
         Initializes the TokenClassificationEngine object with the name and prompt attributes.
 
@@ -86,7 +88,7 @@ class TokenClassificationEngine(BaseEngine):
             None
         """        
         super().__init__(name=name)
-        self.prompt = prompt
+        self.prompts = prompts
 
     def _calculate_confidence(self):
         # Determine the confidence based on the score
@@ -226,7 +228,7 @@ class TokenClassificationEngine(BaseEngine):
                 tokenizer=tokenizer,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            results = pipe(self.prompt, aggregation_strategy="first")
+            results = pipe(self.prompts, aggregation_strategy="first")
         except Exception as e:
             raise Exception(
                 f"Error occurred during token classification pipeline execution: {e}"

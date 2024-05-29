@@ -1,5 +1,7 @@
 import secrets
 import time
+from typing import List
+
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.base.utils import sign_data
@@ -45,12 +47,12 @@ class SensitiveInformationAnalyzer:
             self.wandb_enabled = False
             self.wandb_handler = None
 
-    def execute(self, synapse: LLMDefenderProtocol, prompt: str):
+    def execute(self, synapse: LLMDefenderProtocol, prompts: List[str]):
         output = {"analyzer": "Sensitive Information", "confidence": None, "engines": []}
         engine_confidences = []
 
         # Execute Token Classification engine
-        token_classification_engine = TokenClassificationEngine(prompt=prompt)
+        token_classification_engine = TokenClassificationEngine(prompts=prompts)
         token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         token_classification_response = token_classification_engine.get_response().get_dict()
         output["engines"].append(token_classification_response)

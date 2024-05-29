@@ -356,7 +356,7 @@ class LLMDefenderMiner(BaseNeuron):
         """
 
         is_notification_message = (
-            synapse.synapse_prompt is None and synapse.synapse_hash is not None
+                synapse.synapse_prompts is None and synapse.synapse_hash is not None
         )
 
         # synapse_hash = synapse.synapse_hash
@@ -420,8 +420,8 @@ class LLMDefenderMiner(BaseNeuron):
             f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
         )
 
-        if not (prompt := synapse.synapse_prompt):
-            bt.logging.warning(f"Received a synapse empty prompt: {synapse}")
+        if not (prompts := synapse.synapse_prompts):
+            bt.logging.warning(f"Received a synapse without prompts: {synapse}")
             return synapse
 
         # encoded_prompt = prompt.encode("utf-8")
@@ -481,7 +481,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
         output = self.analyzers[synapse.analyzer].execute(
-            synapse=synapse, prompt=prompt
+            synapse=synapse, prompt=prompts
         )
 
         bt.logging.debug(f"Setting synapse.output to: {output}")
@@ -490,7 +490,7 @@ class LLMDefenderMiner(BaseNeuron):
         # Remove the message from the notification field
         # self.notification_synapses.pop(prompt_hash, None)
         bt.logging.debug(
-            f'Processed prompt "{prompt}" with analyzer: {output["analyzer"]}'
+            f'Processed prompt "{prompts}" with analyzer: {output["analyzer"]}'
         )
         bt.logging.debug(
             f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'

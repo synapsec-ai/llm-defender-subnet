@@ -62,7 +62,7 @@ class BaseEngine:
         Returns:
             None
         """        
-        self.prompt = None
+        self.prompts = None
         self.confidence = None
         self.output = {}
         self.name = name
