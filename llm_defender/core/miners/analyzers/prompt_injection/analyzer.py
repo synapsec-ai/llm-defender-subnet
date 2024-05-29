@@ -27,7 +27,7 @@ class PromptInjectionAnalyzer:
     
     """
 
-    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: int):
+    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: str):
         # Parameters
         self.wallet = wallet
         self.miner_hotkey = self.wallet.hotkey.ss58_address
