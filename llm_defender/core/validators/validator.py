@@ -12,7 +12,6 @@ Typical example usage:
 import asyncio
 import copy
 import pickle
-import json
 from argparse import ArgumentParser
 from typing import Tuple
 from sys import getsizeof
@@ -383,7 +382,7 @@ class LLMDefenderValidator(BaseNeuron):
         return total_score, final_distance_score, final_speed_score
 
     def get_api_prompt(
-        self, hotkey, signature, synapse_uuid, timestamp, nonce, miner_hotkeys: list
+        self, hotkey, signature, synapse_uuid, timestamp, nonce
     ) -> dict:
         """Retrieves a prompt from the prompt API"""
 
@@ -397,14 +396,12 @@ class LLMDefenderValidator(BaseNeuron):
             "X-API-Key": hotkey,
         }
 
-        data = {"miner_hotkeys": miner_hotkeys}
-
         prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
             res = requests.post(
-                url=prompt_api_url, headers=headers, data=json.dumps(data), timeout=12
+                url=prompt_api_url, headers=headers, timeout=12
             )
             # check for correct status code
             if res.status_code == 200:
@@ -434,7 +431,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return {}
 
-    def serve_prompt(self, synapse_uuid, miner_hotkeys) -> dict:
+    def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -460,15 +457,14 @@ class LLMDefenderValidator(BaseNeuron):
             synapse_uuid=synapse_uuid,
             timestamp=timestamp,
             nonce=nonce,
-            miner_hotkeys=miner_hotkeys,
         )
 
         self.prompt = entry
 
         return self.prompt
 
-    async def load_prompt_to_validator_async(self, synapse_uuid, miner_hotkeys):
-        return await asyncio.to_thread(self.serve_prompt, synapse_uuid, miner_hotkeys)
+    async def load_prompt_to_validator_async(self, synapse_uuid):
+        return await asyncio.to_thread(self.serve_prompt, synapse_uuid)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -632,11 +628,7 @@ class LLMDefenderValidator(BaseNeuron):
                 self.sensitive_information_scores = state['sensitive_information_scores']
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-
-                if analyzer_scores_loaded:
-                    bt.logging.info(f"Loaded the following from saved file: prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, scores: {self.scores}")
-                else:
-                    bt.logging.info(f"Scores loaded from saved file: {self.scores}. The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}")
+                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
