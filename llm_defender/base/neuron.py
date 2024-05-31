@@ -9,10 +9,13 @@ Typical example usage:
     miner = MinerNeuron(profile="miner")
     miner.run()
 """
+import traceback
 from argparse import ArgumentParser
 from os import path, makedirs, rename
 from datetime import datetime
 import bittensor as bt
+import torch
+
 from llm_defender.base.utils import sign_data
 import requests
 import secrets
@@ -20,6 +23,17 @@ import pickle
 import time
 import json
 from llm_defender import __spec_version__ as subnet_version
+
+
+def convert_tensors(data):
+    if isinstance(data, dict):
+        return {key: convert_tensors(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_tensors(item) for item in data]
+    elif isinstance(data, torch.Tensor):
+        return data.item() if data.numel() == 1 else data.tolist()
+    else:
+        return data
 
 
 class BaseNeuron:
@@ -132,10 +146,12 @@ class BaseNeuron:
         return False
   
     def requests_post(self, url, headers: dict, data: dict, timeout: int = 12) -> dict:
-        
+
         try:
+            serializable_data = convert_tensors(data)
+            serialized_data = json.dumps(serializable_data)
             # get prompt
-            res = requests.post(url=url, headers=headers, data=json.dumps(data), timeout=timeout)
+            res = requests.post(url=url, headers=headers, data=serialized_data, timeout=timeout)
             # check for correct status code
             if res.status_code == 200:
                 return res.json()

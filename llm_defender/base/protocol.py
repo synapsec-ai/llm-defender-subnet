@@ -1,4 +1,4 @@
-import typing
+from typing import List
 import bittensor as bt
 import pydantic
 
@@ -54,7 +54,7 @@ class LLMDefenderProtocol(bt.Synapse):
         allow_mutation=False,
     )
 
-    synapse_prompt: str | None = pydantic.Field(
+    synapse_prompts: List[str] | None = pydantic.Field(
         None,
         title="synapse_prompt",
         description="Optional field providing additional prompt information.",

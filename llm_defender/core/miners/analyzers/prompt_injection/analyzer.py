@@ -1,6 +1,8 @@
 """Analyzer method for the prompt injection analyzer"""
 import time
 import secrets
+from typing import List
+
 import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
@@ -27,7 +29,7 @@ class PromptInjectionAnalyzer:
     
     """
 
-    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: int):
+    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: str):
         # Parameters
         self.wallet = wallet
         self.miner_hotkey = self.wallet.hotkey.ss58_address
@@ -45,14 +47,12 @@ class PromptInjectionAnalyzer:
             self.wandb_enabled = False
             self.wandb_handler = None
     
-    def execute(self, synapse: LLMDefenderProtocol, prompt: str) -> dict:
+    def execute(self, synapse: LLMDefenderProtocol, prompts: List[str]) -> dict:
         # Responses are stored in a dict
         output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
-        prompt = prompt
-
         # Execute Text Classification engine
-        text_classification_engine = TextClassificationEngine(prompt=prompt)
+        text_classification_engine = TextClassificationEngine(prompts=prompts)
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
         text_classification_response = text_classification_engine.get_response().get_dict()
         output["engines"].append(text_classification_response)
