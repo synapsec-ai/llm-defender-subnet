@@ -228,7 +228,8 @@ class TokenClassificationEngine(BaseEngine):
                 tokenizer=tokenizer,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            results = pipe(self.prompts, aggregation_strategy="first")
+            nested_results = pipe([self.prompts[0], self.prompts[0]], aggregation_strategy="first")
+            results = [item for sublist in nested_results if isinstance(sublist, list) for item in sublist]
         except Exception as e:
             raise Exception(
                 f"Error occurred during token classification pipeline execution: {e}"
