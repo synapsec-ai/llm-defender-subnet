@@ -137,8 +137,6 @@ class BaseNeuron:
             "X-API-Key":hotkey.ss58_address
         }
 
-        print("headers>>>>>>>>>>>>>.", headers)
-        print("message#################", message)
         data = message
 
         res = self.requests_post(url="https://logger.synapsec.ai/logger", headers=headers, data=data)
