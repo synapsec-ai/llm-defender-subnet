@@ -18,14 +18,9 @@ import bittensor as bt
 import torch
 
 # Import subnet modules
-from llm_defender import (
-    ModuleConfig,
-    sign_data,
-    LLMDefenderProtocol,
-    LLMDefenderValidator
-)
+import llm_defender as LLMDefender
 
-def update_metagraph(validator: LLMDefenderValidator) -> None:
+def update_metagraph(validator: LLMDefender.SubnetValidator) -> None:
     try:
         validator.metagraph = asyncio.run(validator.sync_metagraph(validator.metagraph, validator.subtensor))
         bt.logging.debug(f'Metagraph synced: {validator.metagraph}')
@@ -33,49 +28,49 @@ def update_metagraph(validator: LLMDefenderValidator) -> None:
         bt.logging.error(f"Metagraph sync timed out: {e}")
 
 
-async def update_metagraph_async(validator: LLMDefenderValidator) -> None:
+async def update_metagraph_async(validator: LLMDefender.SubnetValidator) -> None:
     await asyncio.to_thread(update_metagraph, validator)
 
 
-def update_and_check_hotkeys(validator: LLMDefenderValidator) -> None:
+def update_and_check_hotkeys(validator: LLMDefender.SubnetValidator) -> None:
     validator.check_hotkeys()
     if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
         bt.logging.error(f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}.")
 
 
-async def update_and_check_hotkeys_async(validator: LLMDefenderValidator) -> None:
+async def update_and_check_hotkeys_async(validator: LLMDefender.SubnetValidator) -> None:
     await asyncio.to_thread(update_and_check_hotkeys, validator)
 
 
-def save_validator_state(validator: LLMDefenderValidator) -> None:
+def save_validator_state(validator: LLMDefender.SubnetValidator) -> None:
     validator.save_state()
 
 
-async def save_validator_state_async(validator: LLMDefenderValidator) -> None:
+async def save_validator_state_async(validator: LLMDefender.SubnetValidator) -> None:
     await asyncio.to_thread(save_validator_state, validator)
 
 
-def save_miner_state(validator: LLMDefenderValidator):
+def save_miner_state(validator: LLMDefender.SubnetValidator):
     validator.save_miner_state()
 
 
-async def save_miner_state_async(validator: LLMDefenderValidator):
+async def save_miner_state_async(validator: LLMDefender.SubnetValidator):
     await asyncio.to_thread(save_miner_state, validator)
 
 
-def truncate_miner_state(validator: LLMDefenderValidator):
+def truncate_miner_state(validator: LLMDefender.SubnetValidator):
     validator.truncate_miner_state()
 
 
-async def truncate_miner_state_async(validator: LLMDefenderValidator):
+async def truncate_miner_state_async(validator: LLMDefender.SubnetValidator):
     await asyncio.to_thread(truncate_miner_state, validator)
 
 
-def save_used_nonces(validator: LLMDefenderValidator):
+def save_used_nonces(validator: LLMDefender.SubnetValidator):
     validator.save_used_nonces()
 
 
-async def save_used_nonces_async(validator: LLMDefenderValidator):
+async def save_used_nonces_async(validator: LLMDefender.SubnetValidator):
     await asyncio.to_thread(save_used_nonces, validator)
 
 def query_axons(synapse_uuid, uids_to_query, validator):
@@ -87,11 +82,11 @@ def query_axons(synapse_uuid, uids_to_query, validator):
     # query['analyzer'] = "Sensitive Information"
     responses = validator.dendrite.query(
         uids_to_query,
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             analyzer=validator.query['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=LLMDefender.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp
         ),
@@ -110,11 +105,11 @@ async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to
     prompts = [prompt_to_analyze["prompt"]]
     responses = await validator.dendrite.forward(
         uids_to_query,
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             analyzer=prompt_to_analyze['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=LLMDefender.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
             synapse_prompts=prompts
@@ -134,10 +129,10 @@ def send_notification_synapse(synapse_uuid, validator, axons_with_valid_ip, prom
     bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
     responses = validator.dendrite.query(
         axons_with_valid_ip,
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=LLMDefender.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
             synapse_hash=prompt_hash
@@ -221,13 +216,13 @@ async def update_weights_async(validator):
     await asyncio.to_thread(update_weights, validator)
 
 
-async def main(validator: LLMDefenderValidator):
+async def main(validator: LLMDefender.SubnetValidator):
     """
     This function executes the main function for the validator.
     """
 
     # Get module version
-    version = ModuleConfig().get_config(key="module_version")
+    version = LLMDefender.config["module_version"]
 
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
@@ -473,7 +468,7 @@ if __name__ == "__main__":
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     # Create a validator based on the Class definitions and initialize it
-    subnet_validator = LLMDefenderValidator(parser=parser)
+    subnet_validator = LLMDefender.SubnetValidator(parser=parser)
     if (
         not subnet_validator.apply_config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet]

@@ -3,7 +3,7 @@ import bittensor as bt
 import pydantic
 
 
-class LLMDefenderProtocol(bt.Synapse):
+class SubnetProtocol(bt.Synapse):
     """
     This class implements the protocol definition for the the
     llm-defender subnet.

@@ -1,10 +1,10 @@
 import bittensor as bt
-from llm_defender.base.utils import validate_uid
+from llm_defender import validate_uid
 import bittensor as bt
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
-from llm_defender.base.utils import validate_uid
+
 def check_similarity_penalty(uid, miner_responses):
     """
     This function checks the total penalty score within the similarity category. 

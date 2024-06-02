@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 import bittensor as bt
 
-from llm_defender.core.validators.validator import LLMDefenderValidator
+from llm_defender import LLMDefender.SubnetValidator
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def mock_bittensor_classes():
 
 @pytest.fixture
 def validator_instance(mock_validator_config, mock_bittensor_classes):
-    return LLMDefenderValidator(parser=mock_validator_config)
+    return LLMDefender.SubnetValidator(parser=mock_validator_config)
 
 
 @pytest.fixture

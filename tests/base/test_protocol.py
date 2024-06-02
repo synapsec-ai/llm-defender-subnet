@@ -2,12 +2,12 @@ from typing import List
 
 import pytest
 
-from llm_defender.base.protocol import LLMDefenderProtocol
+from llm_defender importLLMDefender.SubnetProtocol
 
 
 @pytest.fixture
 def sample_protocol_instance():
-    return LLMDefenderProtocol(
+    returnLLMDefender.SubnetProtocol(
         output={"result": "sample_output"},
         synapse_uuid="sample_uuid",
         synapse_nonce="sample_nonce",
@@ -22,7 +22,7 @@ def sample_protocol_instance():
 
 @pytest.fixture
 def instance_with_null_values():
-    return LLMDefenderProtocol(
+    returnLLMDefender.SubnetProtocol(
         output=None,
         synapse_uuid="sample_uuid",
         synapse_nonce="sample_nonce",
@@ -37,7 +37,7 @@ def instance_with_null_values():
 
 def test_deserialize(sample_protocol_instance):
     deserialized_instance = sample_protocol_instance.deserialize()
-    assert isinstance(deserialized_instance, LLMDefenderProtocol)
+    assert isinstance(deserialized_instance,LLMDefender.SubnetProtocol)
     assert deserialized_instance == sample_protocol_instance
 
 
@@ -50,7 +50,7 @@ def test_nullable_fields_with_values(sample_protocol_instance):
 
 def test_synapse_uuid_required():
     with pytest.raises(ValueError):
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             output={"result": "sample_output"},
             synapse_nonce="sample_nonce",
             synapse_timestamp="sample_timestamp",
@@ -64,7 +64,7 @@ def test_synapse_uuid_required():
 
 def test_synapse_nonce_required():
     with pytest.raises(ValueError):
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             synapse_uuid="sample_uuid",
             synapse_timestamp="sample_timestamp",
             subnet_version=1,
@@ -77,7 +77,7 @@ def test_synapse_nonce_required():
 
 def test_synapse_timestamp_required():
     with pytest.raises(ValueError):
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             synapse_uuid="sample_uuid",
             subnet_version=1,
             analyzer="sample_analyzer",
@@ -89,7 +89,7 @@ def test_synapse_timestamp_required():
 
 def test_subnet_version_required():
     with pytest.raises(ValueError):
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             synapse_uuid="sample_uuid",
             synapse_timestamp="sample_timestamp",
             analyzer="sample_analyzer",
@@ -101,7 +101,7 @@ def test_subnet_version_required():
 
 def test_synapse_signature_required():
     with pytest.raises(ValueError):
-        LLMDefenderProtocol(
+       LLMDefender.SubnetProtocol(
             synapse_uuid="sample_uuid",
             synapse_timestamp="sample_timestamp",
             subnet_version=1,

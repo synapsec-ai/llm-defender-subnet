@@ -2,7 +2,6 @@
 This module implements common classes that are used by one or more core
 features and their engines.
 """
-import gc
 import asyncio
 import bittensor as bt
 

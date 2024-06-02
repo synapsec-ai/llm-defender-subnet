@@ -1,10 +1,11 @@
 """This module processes the incoming response from the miner"""
 
+from copy import deepcopy
 from bittensor import logging
 from torch import Tensor
-from copy import deepcopy
-import llm_defender.base.utils as utils
 from numpy import cbrt, log
+
+import llm_defender as LLMDefender
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
@@ -26,7 +27,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
             A dict containing the scores associated with the engine
     """
 
-    if not utils.validate_numerical_value(
+    if not LLMDefender.validate_numerical_value(
         engine_response["confidence"], float, 0.0, 1.0
     ):
         return 1.0
@@ -82,7 +83,7 @@ def calculate_subscore_distance(response, target) -> float:
         return None
 
     for _, engine_response in enumerate(response["engines"]):
-        if not utils.validate_response_data(engine_response):
+        if not LLMDefender.validate_response_data(engine_response):
             return None
 
         distance_scores.append(calculate_distance_score(target, engine_response))
@@ -159,7 +160,7 @@ def validate_response(hotkey, response) -> bool:
     data = (
         f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     )
-    if not utils.validate_signature(
+    if not LLMDefender.validate_signature(
         hotkey=hotkey, data=data, signature=response["signature"]
     ):
         logging.debug(
@@ -232,7 +233,7 @@ def assign_score_for_uid(
         )
 
     # Ensure the response score is correctly defined
-    if not utils.validate_numerical_value(
+    if not LLMDefender.validate_numerical_value(
         value=response_score, value_type=float, min_value=0.0, max_value=1.0
     ):
         logging.error(f"Value for response_score is incorrect: {response_score}")
@@ -241,7 +242,7 @@ def assign_score_for_uid(
         )
 
     # Ensure UID is correctly defined
-    if not utils.validate_uid(uid):
+    if not LLMDefender.validate_uid(uid):
         logging.error(f"Value for UID is incorrect: {uid}")
         raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 

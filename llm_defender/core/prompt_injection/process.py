@@ -1,6 +1,6 @@
-from llm_defender.core.validators.analyzers.prompt_injection.reward import scoring, penalty
 import bittensor as bt
-from llm_defender.base import utils
+import llm_defender as LLMDefender
+
 
 def process_response(
         prompt, response,
@@ -17,15 +17,15 @@ def process_response(
     coldkey = validator.metagraph.coldkeys[uid]
 
     # Get the default response object
-    response_object = scoring.get_response_object(
+    response_object = LLMDefender.prompt_injection_scoring.get_response_object(
         uid, hotkey, coldkey, target, synapse_uuid, query["analyzer"], query["category"], query["prompt"]
     )
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
-    if not scoring.validate_response(hotkey, response.output) or not validator.validate_nonce(response.output["nonce"]):
+    if not LLMDefender.prompt_injection_scoring.validate_response(hotkey, response.output) or not validator.validate_nonce(response.output["nonce"]):
         bt.logging.debug(f'Empty response or nonce validation failed: {response}')
         validator.prompt_injection_scores, old_score, unweighted_new_score = (
-            scoring.assign_score_for_uid(
+            LLMDefender.prompt_injection_scoring.assign_score_for_uid(
                 validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
@@ -44,7 +44,7 @@ def process_response(
         )
 
         validator.prompt_injection_scores, old_score, unweighted_new_score = (
-            scoring.assign_score_for_uid(
+            LLMDefender.prompt_injection_scoring.assign_score_for_uid(
                 validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
@@ -200,7 +200,7 @@ def calculate_analyzer_score(
     """
 
     # Calculate distance score
-    distance_score = scoring.calculate_subscore_distance(response, target)
+    distance_score = LLMDefender.prompt_injection_scoring.calculate_subscore_distance(response, target)
     if distance_score is None:
         bt.logging.debug(
             f"Received an invalid response: {response} from hotkey: {hotkey}"
@@ -208,7 +208,7 @@ def calculate_analyzer_score(
         distance_score = 0.0
 
     # Calculate speed score
-    speed_score = scoring.calculate_subscore_speed(
+    speed_score = LLMDefender.prompt_injection_scoring.calculate_subscore_speed(
         validator.timeout, response_time
     )
     if speed_score is None:
@@ -218,13 +218,13 @@ def calculate_analyzer_score(
         speed_score = 0.0
 
     # Validate individual scores
-    if not utils.validate_numerical_value(
+    if not LLMDefender.validate_numerical_value(
         distance_score, float, 0.0, 1.0
-    ) or not utils.validate_numerical_value(speed_score, float, 0.0, 1.0):
+    ) or not LLMDefender.validate_numerical_value(speed_score, float, 0.0, 1.0):
         bt.logging.error(
             f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
-        return scoring.get_engine_response_object()
+        return LLMDefender.prompt_injection_scoring.get_engine_response_object()
 
     # Set weights for scores
     score_weights = {"distance": 0.85, "speed": 0.15}
@@ -245,16 +245,16 @@ def calculate_analyzer_score(
 
     # Validate individual scores
     if (
-        not utils.validate_numerical_value(total_analyzer_raw_score, float, 0.0, 1.0)
-        or not utils.validate_numerical_value(final_distance_score, float, 0.0, 1.0)
-        or not utils.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
+        not LLMDefender.validate_numerical_value(total_analyzer_raw_score, float, 0.0, 1.0)
+        or not LLMDefender.validate_numerical_value(final_distance_score, float, 0.0, 1.0)
+        or not LLMDefender.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
             f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
-        return scoring.get_engine_response_object()
+        return LLMDefender.prompt_injection_scoring.get_engine_response_object()
 
-    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
+    normalized_analyzer_score, binned_analyzer_score = LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
 
     # Log the scoring data
     score_logger = {
@@ -275,9 +275,9 @@ def calculate_analyzer_score(
 
     bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
-    normalized_analyzer_score, binned_analyzer_score = scoring.get_normalize_and_binned_scores(total_analyzer_raw_score)
+    normalized_analyzer_score, binned_analyzer_score = LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
 
-    return scoring.get_engine_response_object(
+    return LLMDefender.prompt_injection_scoring.get_engine_response_object(
         normalized_analyzer_score=normalized_analyzer_score,
         binned_analyzer_score=binned_analyzer_score,
         total_analyzer_raw_score=total_analyzer_raw_score,
@@ -307,13 +307,13 @@ def apply_penalty(prompt, validator, response, hotkey) -> tuple:
 
     similarity = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    similarity += penalty.check_similarity_penalty(
+    similarity += LLMDefender.prompt_injection_penalty.check_similarity_penalty(
         uid, validator.miner_responses[hotkey]
     )
-    base += penalty.check_base_penalty(
+    base += LLMDefender.prompt_injection_penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
     )
-    duplicate += penalty.check_duplicate_penalty(
+    duplicate += LLMDefender.prompt_injection_penalty.check_duplicate_penalty(
         uid, validator.miner_responses[hotkey], response
     )
 

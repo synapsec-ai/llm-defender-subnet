@@ -12,10 +12,10 @@ from transformers import (
 )
 from transformers import pipeline
 import bittensor as bt
-from llm_defender.base.engine import BaseEngine
+import llm_defender as LLMDefender
 
 
-class TokenClassificationEngine(BaseEngine):
+class TokenClassificationEngine(LLMDefender.BaseEngine):
     """Token classification engine for detecting sensitive data exposure.
 
     This class implements an engine that uses token classification to

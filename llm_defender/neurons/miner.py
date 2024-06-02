@@ -8,11 +8,9 @@ from argparse import ArgumentParser
 import traceback
 import bittensor as bt
 
-from llm_defender.core.miners.miner import LLMDefenderMiner
-from llm_defender import ModuleConfig
+import llm_defender as LLMDefender
 
-
-def main(miner: LLMDefenderMiner):
+def main(miner: LLMDefender.SubnetMiner):
     """
     This function executes the main miner loop. The miner is configured
     upon the initialization of the miner. If you want to change the
@@ -48,7 +46,7 @@ def main(miner: LLMDefenderMiner):
     )
 
     # Get module version
-    version = ModuleConfig().get_config(key="module_version")
+    version = LLMDefender.config["module_version"]
 
     # When we init, set last_updated_block to current_block
     miner.last_updated_block = miner.subtensor.get_current_block()
@@ -161,6 +159,6 @@ if __name__ == "__main__":
     )
 
     # Create a miner based on the Class definitions
-    subnet_miner = LLMDefenderMiner(parser=parser)
+    subnet_miner = LLMDefender.SubnetMiner(parser=parser)
 
     main(subnet_miner)

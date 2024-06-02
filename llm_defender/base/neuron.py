@@ -9,7 +9,6 @@ Typical example usage:
     miner = MinerNeuron(profile="miner")
     miner.run()
 """
-import traceback
 from argparse import ArgumentParser
 from os import path, makedirs, rename
 from datetime import datetime
@@ -21,7 +20,7 @@ import secrets
 import pickle
 import time
 import json
-from llm_defender import ModuleConfig, sign_data
+import llm_defender as LLMDefender
 
 
 def convert_tensors(data):
@@ -55,11 +54,19 @@ class BaseNeuron:
         self.step = 0
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
-        self.subnet_version = ModuleConfig().get_config(key="module_version")
+        self.subnet_version = LLMDefender.config["module_version"]
         self.used_nonces = []
 
         # Load used nonces if they exists
         self.load_used_nonces()
+
+        # Enable wandb if it has been configured
+        if LLMDefender.config["wandb_enabled"] is True:
+            self.wandb_enabled = True
+            self.wandb_handler = LLMDefender.WandbHandler()
+        else:
+            self.wandb_enabled = False
+            self.wandb_handler = None
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -126,7 +133,7 @@ class BaseNeuron:
         nonce = str(secrets.token_hex(24))
         timestamp = str(int(time.time()))
 
-        signature = sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
+        signature = LLMDefender.sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
 
         headers = {
             "X-Hotkey": hotkey.ss58_address,

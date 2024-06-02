@@ -6,7 +6,7 @@ import bittensor as bt
 import pytest
 from requests import ReadTimeout, JSONDecodeError, ConnectionError
 
-from llm_defender.base.neuron import BaseNeuron
+from llm_defender import BaseNeuron
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def neuron_instance() -> BaseNeuron:
 
 
 @pytest.fixture
-def mock_sign_data():
+def mock_LLMDefender.sign_data():
     with patch('llm_defender.base.neuron.sign_data') as mock_sign:
         mock_sign.return_value = "dummy_signature"
         yield mock_sign

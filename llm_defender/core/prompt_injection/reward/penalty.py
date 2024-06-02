@@ -1,8 +1,5 @@
 import bittensor as bt
-from llm_defender.base.utils import validate_uid
-import bittensor as bt
-from llm_defender.base.utils import validate_uid
-
+import llm_defender as LLMDefender
 
 def check_similarity_penalty(uid, miner_responses):
     """
@@ -37,7 +34,7 @@ def check_similarity_penalty(uid, miner_responses):
 
     penalty = 0.0
 
-    if not validate_uid(uid) or not miner_responses:
+    if not LLMDefender.validate_uid(uid) or not miner_responses:
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
@@ -83,7 +80,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
             is not inputted.
     """
 
-    if not validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefender.validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
@@ -254,7 +251,7 @@ def check_base_penalty(uid, miner_responses, response):
 
         return penalty
     
-    if not validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefender.validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
         bt.logging.debug(f'Validation failed: {uid}, {miner_responses}, {response}')
         return 10.0

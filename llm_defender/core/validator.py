@@ -21,29 +21,10 @@ import torch
 import secrets
 import time
 import bittensor as bt
-from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.utils import (
-    timeout_decorator,
-    sign_data,
-    validate_validator_api_prompt_output,
-)
 import requests
-from llm_defender.core.validators.analyzers.prompt_injection import (
-    process as prompt_injection_process,
-)
-from llm_defender.core.validators.analyzers.sensitive_data import (
-    process as sensitive_data_process,
-)
+import llm_defender as LLMDefender
 
-
-# Load wandb library only if it is enabled
-from llm_defender import ModuleConfig
-
-if ModuleConfig().get_config(key="wandb_enabled") is True:
-    from llm_defender.base.wandb_handler import WandbHandler
-
-
-class LLMDefenderValidator(BaseNeuron):
+class SubnetValidator(LLMDefender.BaseNeuron):
     """Summary of the class
 
     Class description
@@ -74,13 +55,6 @@ class LLMDefenderValidator(BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
-
-        # Enable wandb if it has been configured
-        if ModuleConfig().get_config(key="wandb_enabled") is True:
-            self.wandb_enabled = True
-            self.wandb_handler = WandbHandler()
-        else:
-            self.wandb_enabled = False
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -246,7 +220,7 @@ class LLMDefenderValidator(BaseNeuron):
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
                 response_object, responses_invalid_uids, responses_valid_uids = (
-                    prompt_injection_process.process_response(
+                    LLMDefender.prompt_injection_process.process_response(
                         prompt=query["prompt"],
                         response=response,
                         uid=processed_uids[i],
@@ -260,7 +234,7 @@ class LLMDefenderValidator(BaseNeuron):
                 )
             elif query["analyzer"] == "Sensitive Information":
                 response_object, responses_invalid_uids, responses_valid_uids = (
-                    sensitive_data_process.process_response(
+                    LLMDefender.sensitive_information_process.process_response(
                         prompt=query["prompt"],
                         response=response,
                         uid=processed_uids[i],
@@ -304,26 +278,29 @@ class LLMDefenderValidator(BaseNeuron):
 
         return final_response_data
 
-    def determine_overall_scores(self, response_data, responses, specialization_bonus_n = 5):
+    def determine_overall_scores(
+        self, response_data, responses, specialization_bonus_n=5
+    ):
 
         _, top_prompt_injection_uids = torch.topk(
-            input = self.prompt_injection_scores,
-            k = specialization_bonus_n,
-            largest = True
+            input=self.prompt_injection_scores, k=specialization_bonus_n, largest=True
         )
 
         _, top_sensitive_information_uids = torch.topk(
-            input = self.sensitive_information_scores,
-            k = specialization_bonus_n,
-            largest = True
+            input=self.sensitive_information_scores,
+            k=specialization_bonus_n,
+            largest=True,
         )
 
         for uid, _ in enumerate(responses):
 
-            analyzer_avg = (self.prompt_injection_scores[uid] + self.sensitive_information_scores[uid])
+            analyzer_avg = (
+                self.prompt_injection_scores[uid]
+                + self.sensitive_information_scores[uid]
+            )
             self.scores[uid] = analyzer_avg / 2
-            
-            top_prompt_injection_uid = 0 
+
+            top_prompt_injection_uid = 0
             top_sensitive_informaiton_uid = 0
 
             if uid in top_prompt_injection_uids:
@@ -335,26 +312,28 @@ class LLMDefenderValidator(BaseNeuron):
                 top_sensitive_informaiton_uid = 1
                 if self.sensitive_information_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.sensitive_information_scores[uid]
-                    
-            response_data[uid]['total_scored_response'] = {
-                'top_prompt_injection_uid': True if top_prompt_injection_uid == 1 else False,
-                'top_sensitive_information_uid': True if top_sensitive_informaiton_uid == 1 else False,
-                'total_score': self.scores[uid]
+
+            response_data[uid]["total_scored_response"] = {
+                "top_prompt_injection_uid": (
+                    True if top_prompt_injection_uid == 1 else False
+                ),
+                "top_sensitive_information_uid": (
+                    True if top_sensitive_informaiton_uid == 1 else False
+                ),
+                "total_score": self.scores[uid],
             }
 
-            miner_hotkey = response_data[uid]['hotkey']
+            miner_hotkey = response_data[uid]["hotkey"]
 
             if self.wandb_enabled:
                 wandb_logs = [
                     {
-                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid":top_prompt_injection_uid
+                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid": top_prompt_injection_uid
                     },
                     {
                         f"{uid}:{miner_hotkey}_is_top_sensitive_information_uid": top_sensitive_informaiton_uid
                     },
-                    {
-                        f"{uid}:{miner_hotkey}_total_score":self.scores[uid]
-                    }
+                    {f"{uid}:{miner_hotkey}_total_score": self.scores[uid]},
                 ]
 
                 for wandb_log in wandb_logs:
@@ -381,9 +360,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-    def get_api_prompt(
-        self, hotkey, signature, synapse_uuid, timestamp, nonce
-    ) -> dict:
+    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         headers = {
@@ -400,15 +377,13 @@ class LLMDefenderValidator(BaseNeuron):
 
         try:
             # get prompt
-            res = requests.post(
-                url=prompt_api_url, headers=headers, timeout=12
-            )
+            res = requests.post(url=prompt_api_url, headers=headers, timeout=12)
             # check for correct status code
             if res.status_code == 200:
                 # get prompt entry from the API output
                 prompt_entry = res.json()
                 # check to make sure prompt is valid
-                if validate_validator_api_prompt_output(prompt_entry):
+                if LLMDefender.validate_validator_api_prompt_output(prompt_entry):
                     bt.logging.trace(
                         f"Loaded remote prompt to serve to miners: {prompt_entry}"
                     )
@@ -453,7 +428,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         entry = self.get_api_prompt(
             hotkey=self.wallet.hotkey.ss58_address,
-            signature=sign_data(hotkey=self.wallet.hotkey, data=data),
+            signature=LLMDefender.sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse_uuid,
             timestamp=timestamp,
             nonce=nonce,
@@ -583,17 +558,31 @@ class LLMDefenderValidator(BaseNeuron):
         with default score of 0.0 for each UID. The method can also be
         used to reset the scores in case of an internal error"""
 
-        bt.logging.info("Initiating validator with default Prompt Injection Analyzer scores for each UID")
-        self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        bt.logging.info(f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}")
+        bt.logging.info(
+            "Initiating validator with default Prompt Injection Analyzer scores for each UID"
+        )
+        self.prompt_injection_scores = torch.zeros_like(
+            self.metagraph.S, dtype=torch.float32
+        )
+        bt.logging.info(
+            f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}"
+        )
 
-        bt.logging.info("Initiating validator with default Sensiive Information Analyzer scores for each UID")
-        self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        bt.logging.info(f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}")
+        bt.logging.info(
+            "Initiating validator with default Sensiive Information Analyzer scores for each UID"
+        )
+        self.sensitive_information_scores = torch.zeros_like(
+            self.metagraph.S, dtype=torch.float32
+        )
+        bt.logging.info(
+            f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}"
+        )
 
         bt.logging.info("Initiating validator with default overall scores for each UID")
         self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-        bt.logging.info(f"Overall weights for validation have been initialized: {self.scores}")
+        bt.logging.info(
+            f"Overall weights for validation have been initialized: {self.scores}"
+        )
 
     def reset_validator_state(self, state_path):
         """Inits the default validator state. Should be invoked only
@@ -625,13 +614,19 @@ class LLMDefenderValidator(BaseNeuron):
                 self.step = state["step"]
                 self.scores = state["scores"]
                 analyzer_scores_loaded = False
-                try: 
-                    self.prompt_injection_scores = state['prompt_injection_scores']
-                    self.sensitive_information_scores = state['sensitive_information_scores']
+                try:
+                    self.prompt_injection_scores = state["prompt_injection_scores"]
+                    self.sensitive_information_scores = state[
+                        "sensitive_information_scores"
+                    ]
                     analyzer_scores_loaded = True
-                except: 
-                    self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-                    self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+                except:
+                    self.prompt_injection_scores = torch.zeros_like(
+                        self.metagraph.S, dtype=torch.float32
+                    )
+                    self.sensitive_information_scores = torch.zeros_like(
+                        self.metagraph.S, dtype=torch.float32
+                    )
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
@@ -648,12 +643,18 @@ class LLMDefenderValidator(BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
-                self.prompt_injection_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
-                self.sensitive_information_scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+                self.prompt_injection_scores = torch.zeros_like(
+                    self.metagraph.S, dtype=torch.float32
+                )
+                self.sensitive_information_scores = torch.zeros_like(
+                    self.metagraph.S, dtype=torch.float32
+                )
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
 
-                bt.logging.info(f"Scores loaded from saved file: {self.scores} The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}")
+                bt.logging.info(
+                    f"Scores loaded from saved file: {self.scores} The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}"
+                )
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
@@ -662,7 +663,7 @@ class LLMDefenderValidator(BaseNeuron):
         else:
             self.init_default_scores()
 
-    @timeout_decorator(timeout=30)
+    @LLMDefender.timeout_decorator(timeout=30)
     async def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
 
@@ -675,7 +676,7 @@ class LLMDefenderValidator(BaseNeuron):
 
         return metagraph
 
-    @timeout_decorator(timeout=30)
+    @LLMDefender.timeout_decorator(timeout=30)
     async def set_weights(self):
         """Sets the weights for the subnet"""
 

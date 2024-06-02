@@ -12,10 +12,9 @@ from transformers import (
 )
 from transformers import pipeline
 import bittensor as bt
-from llm_defender.base.engine import BaseEngine
+import llm_defender as LLMDefender
 
-
-class TextClassificationEngine(BaseEngine):
+class TextClassificationEngine(LLMDefender.BaseEngine):
     """Text classification engine for detecting prompt injection.
 
     This class implements an engine that uses text classification to

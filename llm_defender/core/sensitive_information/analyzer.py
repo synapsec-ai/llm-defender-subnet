@@ -3,12 +3,7 @@ import time
 from typing import List
 
 import bittensor as bt
-from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.base.utils import sign_data
-from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
-
-# Load wandb library only if it is enabled
-from llm_defender import ModuleConfig
+import llm_defender as LLMDefender
 
 
 class SensitiveInformationAnalyzer:
@@ -29,55 +24,72 @@ class SensitiveInformationAnalyzer:
 
     """
 
-    def __init__(self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: str):
+    def __init__(
+        self, wallet: bt.wallet, subnet_version: int, wandb_handler, miner_uid: str
+    ):
         self.wallet = wallet
         self.miner_hotkey = self.wallet.hotkey.ss58_address
         self.subnet_version = subnet_version
         self.miner_uid = miner_uid
 
-        self.model, self.tokenizer = TokenClassificationEngine().initialize()
+        self.model, self.tokenizer = (
+            LLMDefender.TokenClassificationEngine().initialize()
+        )
 
-        # Enable wandb if it has been configured
-        if ModuleConfig().get_config(key="wandb_enabled") is True:
+        self.wandb_handler = wandb_handler
+        if self.wandb_handler:
             self.wandb_enabled = True
-            self.wandb_handler = wandb_handler
         else:
             self.wandb_enabled = False
-            self.wandb_handler = None
 
-    def execute(self, synapse: LLMDefenderProtocol, prompts: List[str]):
-        output = {"analyzer": "Sensitive Information", "confidence": None, "engines": []}
+    def execute(self, synapse:LLMDefender.SubnetProtocol, prompts: List[str]):
+        output = {
+            "analyzer": "Sensitive Information",
+            "confidence": None,
+            "engines": [],
+        }
         engine_confidences = []
 
         # Execute Token Classification engine
-        token_classification_engine = TokenClassificationEngine(prompts=prompts)
+        token_classification_engine = LLMDefender.TokenClassificationEngine(
+            prompts=prompts
+        )
         token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        token_classification_response = token_classification_engine.get_response().get_dict()
+        token_classification_response = (
+            token_classification_engine.get_response().get_dict()
+        )
         output["engines"].append(token_classification_response)
         engine_confidences.append(token_classification_response["confidence"])
 
         # Calculate confidence score
-        output["confidence"] = sum(engine_confidences)/len(engine_confidences)
+        output["confidence"] = sum(engine_confidences) / len(engine_confidences)
 
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
         output["synapse_uuid"] = synapse.synapse_uuid
         output["nonce"] = secrets.token_hex(24)
         output["timestamp"] = str(int(time.time()))
-        
+
         data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = sign_data(self.wallet.hotkey, data_to_sign)
+        output["signature"] = LLMDefender.sign_data(self.wallet.hotkey, data_to_sign)
 
         # Wandb logging
         if self.wandb_enabled:
             self.wandb_handler.set_timestamp()
 
             wandb_logs = [
-                {f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
-                    'confidence']},
-                {f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output['confidence']}
+                {
+                    f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
+                        "confidence"
+                    ]
+                },
+                {
+                    f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output[
+                        "confidence"
+                    ]
+                },
             ]
 
             for wandb_log in wandb_logs:

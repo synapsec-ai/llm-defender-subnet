@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 
-from llm_defender.base.wandb_handler import WandbHandler
+from llm_defender import WandbHandler
 
 
 sample_env_vars = {
