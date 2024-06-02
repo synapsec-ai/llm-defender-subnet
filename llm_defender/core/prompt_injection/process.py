@@ -3,27 +3,37 @@ import llm_defender as LLMDefender
 
 
 def process_response(
-        prompt, response,
-        uid,
-        target,
-        synapse_uuid,
-        query,
-        validator,
-        responses_invalid_uids,
-        responses_valid_uids
-    ):
+    prompt,
+    response,
+    uid,
+    target,
+    synapse_uuid,
+    query,
+    validator,
+    responses_invalid_uids,
+    responses_valid_uids,
+):
     # Get the hotkey and coldkey for the response
     hotkey = validator.metagraph.hotkeys[uid]
     coldkey = validator.metagraph.coldkeys[uid]
 
     # Get the default response object
     response_object = LLMDefender.prompt_injection_scoring.get_response_object(
-        uid, hotkey, coldkey, target, synapse_uuid, query["analyzer"], query["category"], query["prompt"]
+        uid,
+        hotkey,
+        coldkey,
+        target,
+        synapse_uuid,
+        query["analyzer"],
+        query["category"],
+        query["prompt"],
     )
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
-    if not LLMDefender.prompt_injection_scoring.validate_response(hotkey, response.output) or not validator.validate_nonce(response.output["nonce"]):
-        bt.logging.debug(f'Empty response or nonce validation failed: {response}')
+    if not LLMDefender.prompt_injection_scoring.validate_response(
+        hotkey, response.output
+    ) or not validator.validate_nonce(response.output["nonce"]):
+        bt.logging.debug(f"Empty response or nonce validation failed: {response}")
         validator.prompt_injection_scores, old_score, unweighted_new_score = (
             LLMDefender.prompt_injection_scoring.assign_score_for_uid(
                 validator.prompt_injection_scores,
@@ -39,8 +49,8 @@ def process_response(
     else:
         response_time = response.dendrite.process_time
 
-        scored_response = calculate_analyzer_score(prompt, validator,
-            response.output, target, response_time, hotkey
+        scored_response = calculate_analyzer_score(
+            prompt, validator, response.output, target, response_time, hotkey
         )
 
         validator.prompt_injection_scores, old_score, unweighted_new_score = (
@@ -57,7 +67,7 @@ def process_response(
             "confidence": response.output["confidence"],
             "timestamp": response.output["timestamp"],
             "category": response.output["analyzer"],
-            "response_time": response_time
+            "response_time": response_time,
         }
 
         text_class = [
@@ -184,14 +194,14 @@ def process_response(
                 f"Adding wandb logs for response data: {wandb_logs} for uid: {uid}"
             )
 
-
     bt.logging.debug(f"Processed response: {response_object}")
 
     return response_object, responses_invalid_uids, responses_valid_uids
 
+
 def calculate_analyzer_score(
-        prompt, validator, response, target: float, response_time: float, hotkey: str
-    ) -> dict:
+    prompt, validator, response, target: float, response_time: float, hotkey: str
+) -> dict:
     """This function sets the score based on the response.
 
     Returns:
@@ -200,7 +210,9 @@ def calculate_analyzer_score(
     """
 
     # Calculate distance score
-    distance_score = LLMDefender.prompt_injection_scoring.calculate_subscore_distance(response, target)
+    distance_score = LLMDefender.prompt_injection_scoring.calculate_subscore_distance(
+        response, target
+    )
     if distance_score is None:
         bt.logging.debug(
             f"Received an invalid response: {response} from hotkey: {hotkey}"
@@ -230,8 +242,8 @@ def calculate_analyzer_score(
     score_weights = {"distance": 0.85, "speed": 0.15}
 
     # Get penalty multipliers
-    distance_penalty, speed_penalty = get_response_penalties(prompt, validator,
-        response, hotkey
+    distance_penalty, speed_penalty = get_response_penalties(
+        prompt, validator, response, hotkey
     )
 
     # Apply penalties to scores
@@ -245,8 +257,12 @@ def calculate_analyzer_score(
 
     # Validate individual scores
     if (
-        not LLMDefender.validate_numerical_value(total_analyzer_raw_score, float, 0.0, 1.0)
-        or not LLMDefender.validate_numerical_value(final_distance_score, float, 0.0, 1.0)
+        not LLMDefender.validate_numerical_value(
+            total_analyzer_raw_score, float, 0.0, 1.0
+        )
+        or not LLMDefender.validate_numerical_value(
+            final_distance_score, float, 0.0, 1.0
+        )
         or not LLMDefender.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
@@ -254,7 +270,11 @@ def calculate_analyzer_score(
         )
         return LLMDefender.prompt_injection_scoring.get_engine_response_object()
 
-    normalized_analyzer_score, binned_analyzer_score = LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
+    normalized_analyzer_score, binned_analyzer_score = (
+        LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(
+            total_analyzer_raw_score
+        )
+    )
 
     # Log the scoring data
     score_logger = {
@@ -275,7 +295,11 @@ def calculate_analyzer_score(
 
     bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
-    normalized_analyzer_score, binned_analyzer_score = LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(total_analyzer_raw_score)
+    normalized_analyzer_score, binned_analyzer_score = (
+        LLMDefender.prompt_injection_scoring.get_normalized_and_binned_scores(
+            total_analyzer_raw_score
+        )
+    )
 
     return LLMDefender.prompt_injection_scoring.get_engine_response_object(
         normalized_analyzer_score=normalized_analyzer_score,
@@ -288,6 +312,7 @@ def calculate_analyzer_score(
         raw_distance_score=distance_score,
         raw_speed_score=speed_score,
     )
+
 
 def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     """
@@ -322,11 +347,12 @@ def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     )
     return similarity, base, duplicate
 
+
 def get_response_penalties(prompt, validator, response, hotkey):
     """This function resolves the penalties for the response"""
 
-    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(prompt, validator,
-        response, hotkey
+    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(
+        prompt, validator, response, hotkey
     )
 
     distance_penalty_multiplier = 1.0

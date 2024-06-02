@@ -18,6 +18,7 @@ import bittensor as bt
 # Import custom modules
 import llm_defender as LLMDefender
 
+
 class SubnetMiner(LLMDefender.BaseNeuron):
     """SubnetMiner class for LLM Defender Subnet
 
@@ -80,13 +81,17 @@ class SubnetMiner(LLMDefender.BaseNeuron):
 
         # Initialize the analyzers
         self.analyzers = {
-            str(LLMDefender.SupportedAnalyzers.PROMPT_INJECTION): LLMDefender.PromptInjectionAnalyzer(
+            str(
+                LLMDefender.SupportedAnalyzers.PROMPT_INJECTION
+            ): LLMDefender.PromptInjectionAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
                 miner_uid=self.miner_uid,
             ),
-            str(LLMDefender.SupportedAnalyzers.SENSITIVE_INFORMATION): LLMDefender.SensitiveInformationAnalyzer(
+            str(
+                LLMDefender.SupportedAnalyzers.SENSITIVE_INFORMATION
+            ): LLMDefender.SensitiveInformationAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
@@ -283,7 +288,7 @@ class SubnetMiner(LLMDefender.BaseNeuron):
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
-    def priority(self, synapse:LLMDefender.SubnetProtocol) -> float:
+    def priority(self, synapse: LLMDefender.SubnetProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -313,7 +318,9 @@ class SubnetMiner(LLMDefender.BaseNeuron):
 
         return stake
 
-    def forward(self, synapse:LLMDefender.SubnetProtocol) ->LLMDefender.SubnetProtocol:
+    def forward(
+        self, synapse: LLMDefender.SubnetProtocol
+    ) -> LLMDefender.SubnetProtocol:
         """
         The function is executed once the data from the
         validator has been deserialized, which means we can utilize the

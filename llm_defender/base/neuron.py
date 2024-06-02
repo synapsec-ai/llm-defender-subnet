@@ -9,6 +9,7 @@ Typical example usage:
     miner = MinerNeuron(profile="miner")
     miner.run()
 """
+
 from argparse import ArgumentParser
 from os import path, makedirs, rename
 from datetime import datetime
@@ -159,7 +160,9 @@ class BaseNeuron:
             serializable_data = convert_tensors(data)
             serialized_data = json.dumps(serializable_data)
             # get prompt
-            res = requests.post(url=url, headers=headers, data=serialized_data, timeout=timeout)
+            res = requests.post(
+                url=url, headers=headers, data=serialized_data, timeout=timeout
+            )
             # check for correct status code
             if res.status_code == 200:
                 return res.json()

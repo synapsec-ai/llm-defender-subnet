@@ -42,7 +42,7 @@ class SensitiveInformationAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(self, synapse:LLMDefender.SubnetProtocol, prompts: List[str]):
+    def execute(self, synapse: LLMDefender.SubnetProtocol, prompts: List[str]):
         output = {
             "analyzer": "Sensitive Information",
             "confidence": None,

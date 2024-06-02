@@ -1,6 +1,7 @@
 import bittensor as bt
 import llm_defender as LLMDefender
 
+
 def check_similarity_penalty(uid, miner_responses):
     """
     This function checks the total penalty score within the similarity category.
@@ -30,7 +31,6 @@ def check_similarity_penalty(uid, miner_responses):
             A penalty of 20.0 is also added if any of the inputs (uid or miner_responses)
             is not inputted.
     """
-
 
     penalty = 0.0
 
@@ -250,14 +250,14 @@ def check_base_penalty(uid, miner_responses, response):
         )
 
         return penalty
-    
+
     if not LLMDefender.validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
-        bt.logging.debug(f'Validation failed: {uid}, {miner_responses}, {response}')
+        bt.logging.debug(f"Validation failed: {uid}, {miner_responses}, {response}")
         return 10.0
 
-    bt.logging.trace(f'Miner responses length: {len(miner_responses)}')
-    bt.logging.trace(f'Miner responses: {miner_responses}')
+    bt.logging.trace(f"Miner responses length: {len(miner_responses)}")
+    bt.logging.trace(f"Miner responses: {miner_responses}")
     if len(miner_responses) < 15:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(

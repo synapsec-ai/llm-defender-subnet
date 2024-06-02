@@ -19,19 +19,19 @@ class SubnetProtocol(bt.Synapse):
     synapse_uuid: str = pydantic.Field(
         ...,
         description="Synapse UUID provides a unique identifier for the prompt sent out by the validator",
-        allow_mutation=False
+        allow_mutation=False,
     )
 
     synapse_nonce: str = pydantic.Field(
         ...,
         description="Synapse nonce provides a unique identifier for the prompt sent out by the validator",
-        allow_mutation=False
+        allow_mutation=False,
     )
 
     synapse_timestamp: str = pydantic.Field(
         ...,
         description="Synapse timestamp provides a unique identifier for the prompt sent out by the validator",
-        allow_mutation=False
+        allow_mutation=False,
     )
 
     subnet_version: int = pydantic.Field(

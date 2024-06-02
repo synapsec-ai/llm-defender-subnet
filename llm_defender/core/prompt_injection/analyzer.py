@@ -45,9 +45,7 @@ class PromptInjectionAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(
-        self, synapse: LLMDefender.SubnetProtocol, prompts: List[str]
-    ) -> dict:
+    def execute(self, synapse: LLMDefender.SubnetProtocol, prompts: List[str]) -> dict:
         # Responses are stored in a dict
         output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 

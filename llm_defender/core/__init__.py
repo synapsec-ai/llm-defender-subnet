@@ -18,6 +18,7 @@ from .sensitive_information.reward import (
     penalty as sensitive_information_penalty,
 )
 
+
 class SupportedAnalyzers(Enum):
     PROMPT_INJECTION = "Prompt Injection"
     SENSITIVE_INFORMATION = "Sensitive Information"

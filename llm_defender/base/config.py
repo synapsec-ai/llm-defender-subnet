@@ -54,7 +54,7 @@ class ModuleConfig:
         else:
             raise ValueError(f"Unable to set the value: {value} for key: {key}")
         return self.get_full_config()
-    
+
     def get_config(self, key):
         """Returns the configuration for a particular key"""
 

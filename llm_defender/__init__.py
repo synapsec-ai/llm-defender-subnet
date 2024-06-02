@@ -36,7 +36,7 @@ from .core import (
     TokenClassificationEngine,
     TextClassificationEngine,
     PromptInjectionAnalyzer,
-    SensitiveInformationAnalyzer
+    SensitiveInformationAnalyzer,
 )
 
 # Import wandb handler only if it enabled

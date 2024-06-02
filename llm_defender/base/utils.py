@@ -2,8 +2,10 @@
 This module implements common classes that are used by one or more core
 features and their engines.
 """
+
 import asyncio
 import bittensor as bt
+
 
 class EngineResponse:
     """
@@ -57,6 +59,7 @@ class EngineResponse:
         """
         return {"name": self.name, "confidence": self.confidence, "data": self.data}
 
+
 def validate_numerical_value(value, value_type, min_value, max_value):
     """Validates that a given value is a specific type and between the
     given range
@@ -65,25 +68,26 @@ def validate_numerical_value(value, value_type, min_value, max_value):
         value
             Value to validate
         type
-            Python type  
+            Python type
         min
             Minimum value
         max
             Maximum value
-    
+
     Returns:
         result
             A bool depicting the outcome of the validation
-    
+
     """
-    
+
     if isinstance(value, bool) or not isinstance(value, value_type):
         return False
-    
+
     if (value < min_value) or (value > max_value):
         return False
-    
+
     return True
+
 
 def timeout_decorator(timeout):
     """
@@ -147,39 +151,52 @@ def validate_uid(uid):
         return False
     return True
 
+
 def validate_response_data(engine_response: dict) -> bool:
     """Validates the engine response contains correct data
-    
+
     Arguments:
         engine_response:
             A dict containing the individual response produces by an
             engine
-    
+
     Returns:
         result:
             A bool depicting the validity of the response
     """
-    
+
     if isinstance(engine_response, bool) or not isinstance(engine_response, dict):
         return False
-    
+
     required_keys = ["name", "confidence", "data"]
-    for _,key in enumerate(required_keys):
+    for _, key in enumerate(required_keys):
         if key not in engine_response.keys():
             return False
-        if engine_response[key] is None or engine_response[key] == "" or engine_response[key] == [] or engine_response[key] == {} or isinstance(engine_response[key], bool):
+        if (
+            engine_response[key] is None
+            or engine_response[key] == ""
+            or engine_response[key] == []
+            or engine_response[key] == {}
+            or isinstance(engine_response[key], bool)
+        ):
             return False
-        
+
         if key == "confidence":
-            if not validate_numerical_value(value=engine_response[key], value_type=float, min_value=0.0, max_value=1.0):
+            if not validate_numerical_value(
+                value=engine_response[key],
+                value_type=float,
+                min_value=0.0,
+                max_value=1.0,
+            ):
                 return False
-        
+
     return True
+
 
 def validate_signature(hotkey: str, data: str, signature: str) -> bool:
     """Validates that the given hotkey has been used to generate the
     signature for data
-    
+
     Arguments:
         hotkey:
             SS58_address of the hotkey used to sign the data
@@ -187,7 +204,7 @@ def validate_signature(hotkey: str, data: str, signature: str) -> bool:
             Data signed
         signature:
             Signature of the signed data
-    
+
     Returns:
         verdict:
             A bool depicting the validity of the signature
@@ -196,24 +213,31 @@ def validate_signature(hotkey: str, data: str, signature: str) -> bool:
         outcome = bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
         return outcome
     except AttributeError as e:
-        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        bt.logging.error(
+            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        )
         return False
     except TypeError as e:
-        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        bt.logging.error(
+            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        )
         return False
     except ValueError as e:
-        bt.logging.error(f'Failed to validate signature: {signature} for data: {data} with error: {e}')
+        bt.logging.error(
+            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        )
         return False
+
 
 def sign_data(hotkey: bt.Keypair, data: str) -> str:
     """Signs the given data with the wallet hotkey
-    
+
     Arguments:
         wallet:
             The wallet used to sign the Data
         data:
             Data to be signed
-    
+
     Returns:
         signature:
             Signature of the key signing for the data
@@ -222,23 +246,28 @@ def sign_data(hotkey: bt.Keypair, data: str) -> str:
         signature = hotkey.sign(data.encode()).hex()
         return signature
     except TypeError as e:
-        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
+        bt.logging.error(
+            f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}"
+        )
         raise TypeError from e
     except AttributeError as e:
-        bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
+        bt.logging.error(
+            f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}"
+        )
         raise AttributeError from e
+
 
 def validate_prompt(prompt_dict):
 
     # define valid data types for each key to check later
     key_types = {
-    'analyzer':str,
-    'category':str,
-    'label':int,
-    'weight':(int, float),
-    'hotkey': str,
-    'synapse_uuid': str,
-    'created_at': str,
+        "analyzer": str,
+        "category": str,
+        "label": int,
+        "weight": (int, float),
+        "hotkey": str,
+        "synapse_uuid": str,
+        "created_at": str,
     }
     # run checks
     if not isinstance(prompt_dict, dict):
@@ -246,38 +275,47 @@ def validate_prompt(prompt_dict):
     if len([pd for pd in prompt_dict]) != len(key_types):
         return False
     for pd in prompt_dict:
-        if pd not in ['analyzer','category','label','weight', 'created_at', 'synapse_uuid', 'hotkey']:
-            return False 
+        if pd not in [
+            "analyzer",
+            "category",
+            "label",
+            "weight",
+            "created_at",
+            "synapse_uuid",
+            "hotkey",
+        ]:
+            return False
         if not isinstance(prompt_dict[pd], key_types[pd]):
-            return False 
-        elif pd == 'label':
+            return False
+        elif pd == "label":
             if isinstance(prompt_dict[pd], bool):
                 return False
-            if prompt_dict[pd] not in [0,1]:
+            if prompt_dict[pd] not in [0, 1]:
                 return False
-        elif pd == 'weight':
+        elif pd == "weight":
             if isinstance(prompt_dict[pd], bool):
-                return False 
+                return False
             if not (0.0 < prompt_dict[pd] <= 1.0):
                 return False
     return True
+
 
 def validate_validator_api_prompt_output(api_output):
     """
     Returns a boolean for whether or not the validator's output from the prompt API is valid
 
-  
+
     """
     if not isinstance(api_output, dict):
-        return False 
-    
+        return False
+
     good_output = True
 
     type_check_dict = {
-        'analyzer': str,
-        'category': str,
-        'label': int,
-        'weight': (int,float)
+        "analyzer": str,
+        "category": str,
+        "label": int,
+        "weight": (int, float),
     }
 
     for key in type_check_dict:
@@ -288,8 +326,8 @@ def validate_validator_api_prompt_output(api_output):
 
         if not isinstance(api_output[key], type_check_dict[key]):
             good_output = False
-            
-    if not good_output:        
+
+    if not good_output:
         bt.logging.trace("Prompt API query validation failed.")
     else:
         bt.logging.trace("Prompt API query validation succeeded.")

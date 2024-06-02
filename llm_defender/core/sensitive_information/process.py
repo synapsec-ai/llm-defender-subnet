@@ -210,7 +210,11 @@ def calculate_score(
     """
 
     # Calculate distance score
-    distance_score = LLMDefender.sensitive_information_scoring.calculate_subscore_distance(response, target)
+    distance_score = (
+        LLMDefender.sensitive_information_scoring.calculate_subscore_distance(
+            response, target
+        )
+    )
     if distance_score is None:
         bt.logging.debug(
             f"Received an invalid response: {response} from hotkey: {hotkey}"
@@ -218,7 +222,9 @@ def calculate_score(
         distance_score = 0.0
 
     # Calculate speed score
-    speed_score = LLMDefender.sensitive_information_scoring.calculate_subscore_speed(validator.timeout, response_time)
+    speed_score = LLMDefender.sensitive_information_scoring.calculate_subscore_speed(
+        validator.timeout, response_time
+    )
     if speed_score is None:
         bt.logging.debug(
             f"Response time {response_time} was larger than timeout {validator.timeout} for response: {response} from hotkey: {hotkey}"
@@ -254,7 +260,9 @@ def calculate_score(
     # Validate individual scores
     if (
         not LLMDefender.validate_numerical_value(total_score, float, 0.0, 1.0)
-        or not LLMDefender.validate_numerical_value(final_distance_score, float, 0.0, 1.0)
+        or not LLMDefender.validate_numerical_value(
+            final_distance_score, float, 0.0, 1.0
+        )
         or not LLMDefender.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
@@ -311,7 +319,9 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     similarity += LLMDefender.sensitive_information_penalty.check_similarity_penalty(
         uid, validator.miner_responses[hotkey]
     )
-    base += LLMDefender.sensitive_information_penalty.check_base_penalty(uid, validator.miner_responses[hotkey], response)
+    base += LLMDefender.sensitive_information_penalty.check_base_penalty(
+        uid, validator.miner_responses[hotkey], response
+    )
     duplicate += LLMDefender.sensitive_information_penalty.check_duplicate_penalty(
         uid, validator.miner_responses[hotkey], response
     )

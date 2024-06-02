@@ -25,15 +25,17 @@ def send_notification_synapse(
     responses = dendrite.query(
         axons_with_valid_ip,
         LLMDefender.SubnetProtocol(
-                subnet_version=LLMDefender.config["module_version"],
-                synapse_uuid=synapse_uuid,
-                synapse_signature=LLMDefender.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
-                synapse_nonce=nonce,
-                synapse_timestamp=timestamp,
-                synapse_hash=prompt_hash,
+            subnet_version=LLMDefender.config["module_version"],
+            synapse_uuid=synapse_uuid,
+            synapse_signature=LLMDefender.sign_data(
+                hotkey=wallet.hotkey, data=data_to_sign
             ),
-            timeout=6.0,
-            deserialize=True,
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp,
+            synapse_hash=prompt_hash,
+        ),
+        timeout=6.0,
+        deserialize=True,
     )
     return responses
 
@@ -51,16 +53,18 @@ async def send_payload_message(
     responses = await dendrite.forward(
         uids_to_query,
         LLMDefender.SubnetProtocol(
-                analyzer=prompt_to_analyze["analyzer"],
-                subnet_version=LLMDefender.config["module_version"],
-                synapse_uuid=synapse_uuid,
-                synapse_signature=LLMDefender.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
-                synapse_nonce=nonce,
-                synapse_timestamp=timestamp,
-                synapse_prompt=prompt_to_analyze["prompt"],
+            analyzer=prompt_to_analyze["analyzer"],
+            subnet_version=LLMDefender.config["module_version"],
+            synapse_uuid=synapse_uuid,
+            synapse_signature=LLMDefender.sign_data(
+                hotkey=wallet.hotkey, data=data_to_sign
             ),
-            timeout=12.0,
-            deserialize=True,
+            synapse_nonce=nonce,
+            synapse_timestamp=timestamp,
+            synapse_prompt=prompt_to_analyze["prompt"],
+        ),
+        timeout=12.0,
+        deserialize=True,
     )
     return responses
 

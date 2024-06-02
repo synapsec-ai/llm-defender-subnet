@@ -24,6 +24,7 @@ import bittensor as bt
 import requests
 import llm_defender as LLMDefender
 
+
 class SubnetValidator(LLMDefender.BaseNeuron):
     """Summary of the class
 

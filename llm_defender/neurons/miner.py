@@ -10,6 +10,7 @@ import bittensor as bt
 
 import llm_defender as LLMDefender
 
+
 def main(miner: LLMDefender.SubnetMiner):
     """
     This function executes the main miner loop. The miner is configured
