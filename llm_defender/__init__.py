@@ -39,8 +39,11 @@ from .core import (
     SensitiveInformationAnalyzer,
 )
 
+# Configuration
+config = ModuleConfig().get_full_config()
+
 # Import wandb handler only if it enabled
-if ModuleConfig().get_config(key="wandb_enabled") is True:
+if config["wandb_enabled"] is True:
     from .base.wandb_handler import WandbHandler
 
 config = ModuleConfig().get_full_config()
