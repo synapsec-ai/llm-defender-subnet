@@ -322,7 +322,7 @@ async def main(validator: LLMDefender.SubnetValidator):
                     f"Updated sensitive_information_scores, new sensitive_information_scores: {validator.sensitive_information_scores}"
                 )
 
-            axons_with_valid_ip = validator.determine_valid_axon_ips(all_axons)
+            axons_with_valid_ip = validator.determine_valid_axons(all_axons)
             # miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
             if not axons_with_valid_ip:

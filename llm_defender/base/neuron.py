@@ -30,6 +30,8 @@ def convert_data(data):
         return [convert_data(item) for item in data]
     elif isinstance(data, np.ndarray):
         return data.item() if data.size == 1 else data.tolist()
+    elif isinstance(data, np.float32):
+        return float(data.item()) if data.size == 1 else data.tolist()
     else:
         return data
 
