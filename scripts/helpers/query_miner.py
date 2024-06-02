@@ -5,7 +5,7 @@ import bittensor as bt
 from llm_defender.base.protocol import LLMDefenderProtocol
 import uuid
 from llm_defender.base import utils
-from llm_defender import __spec_version__ as subnet_version
+from llm_defender import ModuleConfig
 import secrets
 import hashlib
 import time
@@ -21,7 +21,7 @@ def send_notification_synapse(synapse_uuid, wallet, dendrite, axons_with_valid_i
     responses = dendrite.query(
         axons_with_valid_ip,
         LLMDefenderProtocol(
-            subnet_version=subnet_version,
+            subnet_version=ModuleConfig().get_config(key="module_version"),
             synapse_uuid=synapse_uuid,
             synapse_signature=utils.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
@@ -44,7 +44,7 @@ async def send_payload_message(synapse_uuid, uids_to_query, wallet, dendrite, pr
         uids_to_query,
         LLMDefenderProtocol(
             analyzer=prompt_to_analyze['analyzer'],
-            subnet_version=subnet_version,
+            subnet_version=ModuleConfig().get_config(key="module_version"),
             synapse_uuid=synapse_uuid,
             synapse_signature=utils.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,

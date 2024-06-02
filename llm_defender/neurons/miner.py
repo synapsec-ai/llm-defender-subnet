@@ -9,7 +9,7 @@ import traceback
 import bittensor as bt
 
 from llm_defender.core.miners.miner import LLMDefenderMiner
-from llm_defender import __version__ as version
+from llm_defender import ModuleConfig
 
 
 def main(miner: LLMDefenderMiner):
@@ -46,6 +46,9 @@ def main(miner: LLMDefenderMiner):
     bt.logging.info(
         "Miner has been initialized and we are connected to the network. Start main loop."
     )
+
+    # Get module version
+    version = ModuleConfig().get_config(key="module_version")
 
     # When we init, set last_updated_block to current_block
     miner.last_updated_block = miner.subtensor.get_current_block()

@@ -86,58 +86,6 @@ def validate_numerical_value(value, value_type, min_value, max_value):
     
     return True
 
-def normalize_list(input_list: list) -> list:
-    """
-    This function normalizes a list so that values are between [0,1] and
-    they sum up to 1.
-
-    Arguments:
-        input_list:
-            A list containing values to be normalized. 
-        
-    Returns:
-        normalized_list:
-            A list instance. If input_list is length 1, the output will be [1.0]. 
-            If there are negative values in input_list, the output will be normalized 
-            between abs(min(input_list)) and the maximum value.
-    """
-    if len(input_list) > 1:
-        min_val = min(input_list)
-
-        if min_val >= 0:
-            # If all values are non-negative, simply divide by sum
-            sum_vals = sum(input_list)
-            normalized_list = [val / sum_vals for val in input_list]
-        else:
-            # If there are negative values, normalize between abs(min) and max
-            abs_min = abs(min_val)
-            adjusted_values = [(val + abs_min) for val in input_list]
-            sum_adjusted = sum(adjusted_values)
-            normalized_list = [val / sum_adjusted for val in adjusted_values]
-    else:
-        normalized_list = [1.0]
-
-    return normalized_list
-
-
-def cleanup(variables: list = None):
-    """
-    This is a generic cleanup function
-    
-    Arguments:
-        variables:
-            A list containing variables to be cleaned.
-
-    Returns:
-        None
-    """
-    if variables:
-        for variable in variables:
-            variable = None
-            del variable
-
-    gc.collect()
-
 def timeout_decorator(timeout):
     """
     Uses asyncio to create an arbitrary timeout for an asynchronous

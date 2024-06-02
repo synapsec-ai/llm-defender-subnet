@@ -37,9 +37,9 @@ from llm_defender.core.validators.analyzers.sensitive_data import (
 
 
 # Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
+from llm_defender import ModuleConfig
 
-if wandb is True:
+if ModuleConfig().get_config(key="wandb_enabled") is True:
     from llm_defender.base.wandb_handler import WandbHandler
 
 
@@ -76,7 +76,7 @@ class LLMDefenderValidator(BaseNeuron):
         self.debug_mode = True
 
         # Enable wandb if it has been configured
-        if wandb is True:
+        if ModuleConfig().get_config(key="wandb_enabled") is True:
             self.wandb_enabled = True
             self.wandb_handler = WandbHandler()
         else:

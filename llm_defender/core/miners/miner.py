@@ -24,12 +24,12 @@ from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
 )
 
 # Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
+from llm_defender import ModuleConfig
 from llm_defender.core.miners.analyzers.sensitive_information.analyzer import (
     SensitiveInformationAnalyzer,
 )
 
-if wandb is True:
+if ModuleConfig().get_config(key="wandb_enabled") is True:
     from llm_defender.base.wandb_handler import WandbHandler
 
 
@@ -94,7 +94,7 @@ class LLMDefenderMiner(BaseNeuron):
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
         # Enable wandb if it has been configured
-        if wandb is True:
+        if ModuleConfig().get_config(key="wandb_enabled") is True:
             self.wandb_enabled = True
             self.wandb_handler = WandbHandler()
         else:

@@ -8,9 +8,7 @@ from llm_defender.base.utils import sign_data
 from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
 
 # Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
-if wandb is True:
-    from llm_defender.base.wandb_handler import WandbHandler
+from llm_defender import ModuleConfig
 
 
 class SensitiveInformationAnalyzer:
@@ -40,7 +38,7 @@ class SensitiveInformationAnalyzer:
         self.model, self.tokenizer = TokenClassificationEngine().initialize()
 
         # Enable wandb if it has been configured
-        if wandb is True:
+        if ModuleConfig().get_config(key="wandb_enabled") is True:
             self.wandb_enabled = True
             self.wandb_handler = wandb_handler
         else:

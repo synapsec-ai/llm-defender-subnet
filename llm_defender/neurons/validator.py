@@ -1,6 +1,8 @@
 """
 Validator docstring here
 """
+
+# Import standard modules
 import asyncio
 import hashlib
 import os
@@ -11,13 +13,17 @@ import traceback
 from argparse import ArgumentParser
 from uuid import uuid4
 
+# Import custom modules
 import bittensor as bt
 import torch
 
-from llm_defender import __version__ as version
-from llm_defender.base import utils
-from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.validators.validator import LLMDefenderValidator
+# Import subnet modules
+from llm_defender import (
+    ModuleConfig,
+    sign_data,
+    LLMDefenderProtocol,
+    LLMDefenderValidator
+)
 
 def update_metagraph(validator: LLMDefenderValidator) -> None:
     try:
@@ -85,7 +91,7 @@ def query_axons(synapse_uuid, uids_to_query, validator):
             analyzer=validator.query['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp
         ),
@@ -108,7 +114,7 @@ async def send_payload_message(synapse_uuid, uids_to_query, validator, prompt_to
             analyzer=prompt_to_analyze['analyzer'],
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
             synapse_prompts=prompts
@@ -131,7 +137,7 @@ def send_notification_synapse(synapse_uuid, validator, axons_with_valid_ip, prom
         LLMDefenderProtocol(
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
-            synapse_signature=utils.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+            synapse_signature=sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
             synapse_hash=prompt_hash
@@ -219,6 +225,9 @@ async def main(validator: LLMDefenderValidator):
     """
     This function executes the main function for the validator.
     """
+
+    # Get module version
+    version = ModuleConfig().get_config(key="module_version")
 
     # Step 7: The Main Validation Loop
     bt.logging.info(f"Starting validator loop with version: {version}")
