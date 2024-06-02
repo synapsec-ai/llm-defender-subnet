@@ -14,7 +14,7 @@ from argparse import ArgumentParser
 from os import path, makedirs, rename
 from datetime import datetime
 import bittensor as bt
-import torch
+import numpy as np
 
 import requests
 import secrets
@@ -23,17 +23,15 @@ import time
 import json
 import llm_defender as LLMDefender
 
-
-def convert_tensors(data):
+def convert_data(data):
     if isinstance(data, dict):
-        return {key: convert_tensors(value) for key, value in data.items()}
+        return {key: convert_data(value) for key, value in data.items()}
     elif isinstance(data, list):
-        return [convert_tensors(item) for item in data]
-    elif isinstance(data, torch.Tensor):
-        return data.item() if data.numel() == 1 else data.tolist()
+        return [convert_data(item) for item in data]
+    elif isinstance(data, np.ndarray):
+        return data.item() if data.size == 1 else data.tolist()
     else:
         return data
-
 
 class BaseNeuron:
     """Summary of the class
@@ -57,6 +55,8 @@ class BaseNeuron:
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
         self.subnet_version = LLMDefender.config["module_version"]
         self.used_nonces = []
+        self.cache_path = None
+        self.log_path = None
 
         # Load used nonces if they exists
         self.load_used_nonces()
@@ -106,16 +106,24 @@ class BaseNeuron:
 
         # Construct log path
         self.path_hotkey = config.wallet.hotkey
-        log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
+        self.log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
 
-        # Create the log path if it does not exists
+        # Construct cache path
+        self.cache_path = f"{self.base_path}/cache/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
+
+        # Create the OS paths if they do not exists
         try:
-            config.full_path = path.expanduser(log_path)
-            if not path.exists(config.full_path):
-                makedirs(config.full_path, exist_ok=True)
+            for os_path in [self.log_path, self.cache_path]:
+                full_path = path.expanduser(os_path)
+                if not path.exists(full_path):
+                    makedirs(full_path, exist_ok=True)
+                
+                if os_path == self.log_path:
+                    config.full_path = path.expanduser(os_path)
         except OSError as e:
             bt.logging.error(f"Unable to create log path: {e}")
             raise OSError from e
+        
 
         return config
 
@@ -157,7 +165,7 @@ class BaseNeuron:
     def requests_post(self, url, headers: dict, data: dict, timeout: int = 12) -> dict:
 
         try:
-            serializable_data = convert_tensors(data)
+            serializable_data = convert_data(data)
             serialized_data = json.dumps(serializable_data)
             # get prompt
             res = requests.post(
@@ -187,7 +195,7 @@ class BaseNeuron:
             self.used_nonces = self.used_nonces[-500000:]
             bt.logging.info("Truncated list of used_nonces")
         with open(
-            f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle",
+            f"{self.cache_path}/used_nonces.pickle",
             "wb",
         ) as pickle_file:
             pickle.dump(self.used_nonces, pickle_file)
@@ -197,7 +205,7 @@ class BaseNeuron:
     def load_used_nonces(self):
         """Loads used nonces from a file"""
         state_path = (
-            f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle"
+            f"{self.cache_path}used_nonces.pickle"
         )
         if path.exists(state_path):
             try:

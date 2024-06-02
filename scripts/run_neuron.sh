@@ -174,10 +174,11 @@ generate_pm2_launch_file() {
     local subtensor_chain_endpoint="${args['subtensor.chain_endpoint']}"
     local wallet_name="${args['wallet.name']}"
     local wallet_hotkey="${args['wallet.hotkey']}"
-    local logging_value="${args['logging']}"
+    local logging_value="${args['log_level']}"
     local subtensor_network="${args['subtensor.network']}"
     local axon_port="${args['axon.port']}"
     local axon_ip="${args['axon.ip']}"
+    local axon_max_workers="${args['axon_max_workers']}"
     local wallet_path="${args['wallet.path']}"
     local name="${args['name']}"
     local max_memory_restart="${args['max_memory_restart']}"
@@ -207,13 +208,16 @@ generate_pm2_launch_file() {
         args+=" --axon.ip $axon_ip"
     fi
 
+    if [[ -n "$axon_max_workers" ]]; then
+        args+=" --axon.max_workers $axon_max_workers"
+    fi
+
     if [[ -n "$wallet_path" ]]; then
         args+=" --wallet.path $wallet_path"
     fi
 
-
     if [[ -n "$logging_value" ]]; then
-        args+=" --logging.$logging_value"
+        args+=" --log_level $logging_value"
     fi
 
     if [[ -n "$validator_min_stake" ]]; then 

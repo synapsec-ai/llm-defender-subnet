@@ -15,7 +15,7 @@ from uuid import uuid4
 
 # Import custom modules
 import bittensor as bt
-import torch
+import numpy as np
 
 # Import subnet modules
 import llm_defender as LLMDefender
@@ -201,7 +201,6 @@ def format_responses(
     validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
 ):
     # Process the responses
-    # processed_uids = torch.nonzero(list_of_uids).squeeze()
     response_data = validator.process_responses(
         query=prompt_to_analyze,
         processed_uids=list_of_uids,
@@ -284,18 +283,11 @@ async def main(validator: LLMDefender.SubnetValidator):
                 bt.logging.info(
                     f"Discovered new Axons, current scores: {validator.scores}"
                 )
-                validator.scores = torch.cat(
-                    (
-                        validator.scores,
-                        torch.zeros(
-                            (
-                                len(validator.metagraph.uids.tolist())
-                                - len(validator.scores)
-                            ),
-                            dtype=torch.float32,
-                        ),
-                    )
+                additional_zeros = np.zeros(
+                    (len(validator.metagraph.uids.tolist()) - len(validator.scores)),
+                    dtype=np.float32
                 )
+                validator.scores = np.concatenate((validator.scores, additional_zeros))
                 bt.logging.info(f"Updated scores, new scores: {validator.scores}")
 
             # if there are more axons than prompt_injection_scores, append the prompt_injection_scores list
@@ -305,18 +297,11 @@ async def main(validator: LLMDefender.SubnetValidator):
                 bt.logging.info(
                     f"Discovered new Axons, current prompt_injection_scores: {validator.prompt_injection_scores}"
                 )
-                validator.prompt_injection_scores = torch.cat(
-                    (
-                        validator.prompt_injection_scores,
-                        torch.zeros(
-                            (
-                                len(validator.metagraph.uids.tolist())
-                                - len(validator.prompt_injection_scores)
-                            ),
-                            dtype=torch.float32,
-                        ),
-                    )
+                additional_zeros = np.zeros(
+                    (len(validator.metagraph.uids.tolist()) - len(validator.prompt_injection_scores)),
+                    dtype=np.float32
                 )
+                validator.prompt_injection_scores = np.concatenate((validator.prompt_injection_scores, additional_zeros))
                 bt.logging.info(
                     f"Updated prompt_injection_scores, new prompt_injection_scores: {validator.prompt_injection_scores}"
                 )
@@ -328,18 +313,11 @@ async def main(validator: LLMDefender.SubnetValidator):
                 bt.logging.info(
                     f"Discovered new Axons, current scores: {validator.scores}"
                 )
-                validator.sensitive_information_scores = torch.cat(
-                    (
-                        validator.sensitive_information_scores,
-                        torch.zeros(
-                            (
-                                len(validator.metagraph.uids.tolist())
-                                - len(validator.sensitive_information_scores)
-                            ),
-                            dtype=torch.float32,
-                        ),
-                    )
+                additional_zeros = np.zeros(
+                    (len(validator.metagraph.uids.tolist()) - len(validator.sensitive_information_scores)),
+                    dtype=np.float32
                 )
+                validator.sensitive_information_scores = np.concatenate((validator.sensitive_information_scores, additional_zeros))
                 bt.logging.info(
                     f"Updated sensitive_information_scores, new sensitive_information_scores: {validator.sensitive_information_scores}"
                 )
@@ -504,6 +482,14 @@ if __name__ == "__main__":
         "--debug_mode",
         action="store_true",
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
+    )
+
+    parser.add_argument(
+        "--log_level",
+        type=str,
+        default="INFO",
+        choices=["INFO", "DEBUG", "TRACE"],
+        help="Determine the logging level used by the subnet modules",
     )
 
     # Disable TOKENIZERS_PARALLELISM

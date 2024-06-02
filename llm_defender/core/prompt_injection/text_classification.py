@@ -2,7 +2,6 @@
 This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
-
 from typing import List
 
 import torch
@@ -14,7 +13,6 @@ from transformers import (
 from transformers import pipeline
 import bittensor as bt
 import llm_defender as LLMDefender
-
 
 class TextClassificationEngine(LLMDefender.BaseEngine):
     """Text classification engine for detecting prompt injection.
@@ -31,17 +29,17 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
     Attributes:
         prompt:
-            A str instance displaying the prompt to be analyzed by the
+            A str instance displaying the prompt to be analyzed by the 
             TextClassificationEngine.
         name (from the BaseEngine located at llm_defender/base/engine.py):
-            A str instance displaying the name of the engine.
+            A str instance displaying the name of the engine. 
         cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
-            The cache directory allocated for the engine.
+            The cache directory allocated for the engine. 
         output:
-            A dict instance with two flags--the 'outcome' flag is required and will
+            A dict instance with two flags--the 'outcome' flag is required and will 
             have a str instance for its value. The dict may also contain the flag 'score'
             if the model was able to come to a conclusion about the confidence score.
-
+            
             Please reference the _populate_data() method for more details on how this
             output is generated.
         confidence:
@@ -53,16 +51,16 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
     Methods:
         __init__():
-            Defines the name and prompt attributes for the TextClassificationEngine
+            Defines the name and prompt attributes for the TextClassificationEngine 
             object.
         _calculate_confidence():
-            Determines the confidence score for a given prompt being malicious &
+            Determines the confidence score for a given prompt being malicious & 
             returns the value which ranges from 0.0 (SAFE) to 1.0 (MALICIOUS).
         _populate_data():
-            Returns a dict instance that displays the outputs for the
+            Returns a dict instance that displays the outputs for the 
             TextClassificationEngine.
         prepare():
-            Checks and creates a cache directory if it doesn't exist, then
+            Checks and creates a cache directory if it doesn't exist, then 
             calls initialize() to set up the model and tokenizer.
         initialize():
             Loads the model and tokenizer used for the TextClassificationEngine.
@@ -73,17 +71,13 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(
-        self,
-        prompts: List[str] = None,
-        name: str = "prompt_injection:text_classification",
-    ):
+    def __init__(self, prompts: List[str] = None, name: str = "prompt_injection:text_classification"):
         """
         Initializes the TextClassificationEngine object with the name and prompt attributes.
 
         Arguments:
             prompt:
-                A str instance displaying the prompt to be analyzed by the
+                A str instance displaying the prompt to be analyzed by the 
                 TextClassificationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
@@ -91,21 +85,21 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
         Returns:
             None
-        """
+        """        
         super().__init__(name=name)
         self.prompts = prompts
 
     def _calculate_confidence(self):
         """
         Determines a confidence value based on the self.output attribute. This
-        value will be 0.0 if the 'outcome' flag in self.output is 'SAFE', 0.5 if
+        value will be 0.0 if the 'outcome' flag in self.output is 'SAFE', 0.5 if 
         the flag value is 'UNKNOWN', and 1.0 otherwise.
 
         Arguments:
             None
 
         Returns:
-            A float instance representing the confidence score, which is either
+            A float instance representing the confidence score, which is either 
             0.0, 0.5 or 1.0 depending on the state of the 'outcome' flag in the
             output attribute.
         """
@@ -121,17 +115,17 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
     def _populate_data(self, results):
         """
         Takes in the results from the text classification and outputs a properly
-        formatted dict instance which can later be used to generate a confidence
+        formatted dict instance which can later be used to generate a confidence 
         score with the _calculate_confidence() method.
-
+        
         Arguments:
             results:
-                A list instance depicting the results from the text classification
+                A list instance depicting the results from the text classification 
                 pipeline. The first element in the list (index=0) must be a dict
                 instance contaning the flag 'outcome', and possibly the flag 'score'.
 
         Returns:
-            A dict instance with two flags--the 'outcome' flag is required and will
+            A dict instance with two flags--the 'outcome' flag is required and will 
             have a str instance for its value. The dict may also contain the flag 'score'
             if the model was able to come to a conclusion about the confidence score.
 
@@ -145,7 +139,7 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
         """
         Checks if the cache directory specified by the cache_dir attribute exists,
         and makes the directory if it does not. It then runs the initialize() method.
-
+        
         Arguments:
             None
 
@@ -154,7 +148,7 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
         Raises:
             OSError:
-                The OSError is raised if a cache directory cannot be created from
+                The OSError is raised if a cache directory cannot be created from 
                 the self.cache_dir attribute.
         """
         # Check cache directory
@@ -163,7 +157,7 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
                 makedirs(self.cache_dir)
             except OSError as e:
                 raise OSError(f"Unable to create cache directory: {e}") from e
-
+            
         _, _ = self.initialize()
 
         return True
@@ -185,7 +179,7 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
         Raises:
             Exception:
-                The Exception is raised if there was a general error when initializing
+                The Exception is raised if there was a general error when initializing 
                 the model or tokenizer. This is conducted with try/except syntax.
             ValueError:
                 The ValueError is raised if the model or tokenizer is empty.
@@ -224,11 +218,11 @@ class TextClassificationEngine(LLMDefender.BaseEngine):
 
         Raises:
             ValueError:
-                The ValueError is raised if the model or tokenizer arguments are
+                The ValueError is raised if the model or tokenizer arguments are 
                 empty when the function is called.
             Exception:
-                The Exception will be raised if a general error occurs during the
-                execution of the text classification pipeline. This is based on
+                The Exception will be raised if a general error occurs during the 
+                execution of the text classification pipeline. This is based on 
                 try/except syntax.
         """
 

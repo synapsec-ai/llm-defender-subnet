@@ -17,12 +17,12 @@ from typing import Tuple
 from sys import getsizeof
 from datetime import datetime
 from os import path, rename
-import torch
 import secrets
 import time
 import bittensor as bt
 import requests
 import llm_defender as LLMDefender
+import numpy as np
 
 
 class SubnetValidator(LLMDefender.BaseNeuron):
@@ -118,10 +118,19 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         # Read command line arguments and perform actions based on them
         args = self._parse_args(parser=self.parser)
 
+        # Setup logging
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
+        if args.log_level == "DEBUG":
+            bt.logging.enable_debug()
+        elif args.log_level == "TRACE":
+            bt.logging.enable_trace()
+        else:
+            bt.logging.enable_default()
+        
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
+
 
         # Setup the bittensor objects
         wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
@@ -185,7 +194,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
 
     def process_responses(
         self,
-        processed_uids: torch.tensor,
+        processed_uids: np.ndarray,
         query: dict,
         responses: list,
         synapse_uuid: str,
@@ -283,15 +292,9 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         self, response_data, responses, specialization_bonus_n=5
     ):
 
-        _, top_prompt_injection_uids = torch.topk(
-            input=self.prompt_injection_scores, k=specialization_bonus_n, largest=True
-        )
+        top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
 
-        _, top_sensitive_information_uids = torch.topk(
-            input=self.sensitive_information_scores,
-            k=specialization_bonus_n,
-            largest=True,
-        )
+        top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
 
         for uid, _ in enumerate(responses):
 
@@ -444,7 +447,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
-        if self.hotkeys:
+        if self.hotkeys is None:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
                 current_hotkeys = self.metagraph.hotkeys
@@ -470,7 +473,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
     def save_miner_state(self):
         """Saves the miner state to a file."""
         with open(
-            f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle", "wb"
+            f"{self.cache_path}/miners.pickle", "wb"
         ) as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
@@ -478,8 +481,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
-        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_miners.pickle"
-        old_state_path = f"{self.base_path}/miners.pickle"
+        state_path = f"{self.cache_path}/miners.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
@@ -496,25 +498,6 @@ class SubnetValidator(LLMDefender.BaseNeuron):
                 rename(
                     state_path,
                     f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
-                )
-                self.miner_responses = None
-
-        elif path.exists(old_state_path):
-            try:
-                with open(old_state_path, "rb") as pickle_file:
-                    self.miner_responses = pickle.load(pickle_file)
-
-                bt.logging.debug("Loaded miner state from a file")
-            except Exception as e:
-                bt.logging.error(
-                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
-                )
-
-                # Rename the current miner state file if exception
-                # occurs and reset the default state
-                rename(
-                    old_state_path,
-                    f"{old_state_path}-{int(datetime.now().timestamp())}.autorecovery",
                 )
                 self.miner_responses = None
 
@@ -538,16 +521,14 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         bt.logging.info("Saving validator state.")
 
         # Save the state of the validator to file.
-        torch.save(
-            {
-                "step": self.step,
-                "scores": self.scores,
-                "prompt_injection_scores": self.prompt_injection_scores,
-                "sensitive_information_scores": self.sensitive_information_scores,
-                "hotkeys": self.hotkeys,
-                "last_updated_block": self.last_updated_block,
-            },
-            f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt",
+        np.savez_compressed(
+            f"{self.cache_path}/state.npz",
+            step=self.step,
+            scores=self.scores,
+            prompt_injection_scores=self.prompt_injection_scores,
+            sensitive_information_scores=self.sensitive_information_scores,
+            hotkeys=self.hotkeys,
+            last_updated_block=self.last_updated_block,
         )
 
         bt.logging.debug(
@@ -562,9 +543,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         bt.logging.info(
             "Initiating validator with default Prompt Injection Analyzer scores for each UID"
         )
-        self.prompt_injection_scores = torch.zeros_like(
-            self.metagraph.S, dtype=torch.float32
-        )
+        self.prompt_injection_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
         bt.logging.info(
             f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}"
         )
@@ -572,15 +551,13 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         bt.logging.info(
             "Initiating validator with default Sensiive Information Analyzer scores for each UID"
         )
-        self.sensitive_information_scores = torch.zeros_like(
-            self.metagraph.S, dtype=torch.float32
-        )
+        self.sensitive_information_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
         bt.logging.info(
             f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}"
         )
 
         bt.logging.info("Initiating validator with default overall scores for each UID")
-        self.scores = torch.zeros_like(self.metagraph.S, dtype=torch.float32)
+        self.scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
         bt.logging.info(
             f"Overall weights for validation have been initialized: {self.scores}"
         )
@@ -604,13 +581,12 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         """Loads the state of the validator from a file."""
 
         # Load the state of the validator from file.
-        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_state.pt"
-        old_state_path = f"{self.base_path}/state.pt"
+        state_path = f"{self.cache_path}/state.npz"
 
         if path.exists(state_path):
             try:
                 bt.logging.info("Loading validator state.")
-                state = torch.load(state_path)
+                state = np.load(state_path)
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
@@ -621,41 +597,12 @@ class SubnetValidator(LLMDefender.BaseNeuron):
                         "sensitive_information_scores"
                     ]
                     analyzer_scores_loaded = True
-                except:
-                    self.prompt_injection_scores = torch.zeros_like(
-                        self.metagraph.S, dtype=torch.float32
-                    )
-                    self.sensitive_information_scores = torch.zeros_like(
-                        self.metagraph.S, dtype=torch.float32
-                    )
+                except Exception as e:
+                    self.prompt_injection_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
+                    self.sensitive_information_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
-            except Exception as e:
-                bt.logging.error(
-                    f"Validator state reset because an exception occurred: {e}"
-                )
-                self.reset_validator_state(state_path=state_path)
-        # Load old state file if it exists if new path does not exists
-        elif path.exists(old_state_path):
-            try:
-                bt.logging.info("Loading validator state.")
-                state = torch.load(old_state_path)
-                bt.logging.debug(f"Loaded the following state from file: {state}")
-                self.step = state["step"]
-                self.scores = state["scores"]
-                self.prompt_injection_scores = torch.zeros_like(
-                    self.metagraph.S, dtype=torch.float32
-                )
-                self.sensitive_information_scores = torch.zeros_like(
-                    self.metagraph.S, dtype=torch.float32
-                )
-                self.hotkeys = state["hotkeys"]
-                self.last_updated_block = state["last_updated_block"]
-
-                bt.logging.info(
-                    f"Scores loaded from saved file: {self.scores} The following could not be loaded and have been reset: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}"
-                )
             except Exception as e:
                 bt.logging.error(
                     f"Validator state reset because an exception occurred: {e}"
@@ -681,7 +628,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        weights = torch.nn.functional.normalize(self.scores, p=1.0, dim=0)
+        weights = self.scores / np.sum(np.abs(self.scores), axis=0)
         bt.logging.info(f"Setting weights: {weights}")
 
         bt.logging.debug(

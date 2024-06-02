@@ -34,7 +34,7 @@ def main(miner: LLMDefender.SubnetMiner):
     axon.serve(netuid=miner.neuron_config.netuid, subtensor=miner.subtensor)
 
     bt.logging.info(
-        f"Axon {miner.forward} served on network: {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
+        f"Axon served on network: {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
     )
     # Activate the Miner on the network
     axon.start()
@@ -157,6 +157,14 @@ if __name__ == "__main__":
         type=float,
         default=10000.0,
         help="Determine the minimum stake the validator should have to accept requests",
+    )
+
+    parser.add_argument(
+        "--log_level",
+        type=str,
+        default="INFO",
+        choices=["INFO", "DEBUG", "TRACE"],
+        help="Determine the logging level used by the subnet modules",
     )
 
     # Create a miner based on the Class definitions

@@ -1,9 +1,10 @@
 """This module is responsble for managing the configuration parameters
 used by the llm_defender module"""
 
-import yaml
-import importlib.resources as pkg_resources
-import llm_defender as LLMDefender
+from os import environ
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class ModuleConfig:
@@ -29,25 +30,14 @@ class ModuleConfig:
             "module_version": self.__spec_version__,
         }
 
-    def load_default_config(self):
-        with pkg_resources.open_text(LLMDefender, "defaults.yaml") as f:
-            return yaml.safe_load(f)
+    def _read_environmental_variables(self) -> None:
+        """This module reads configuration parameters from environmental
+        variables and adjusts the default list accordingly."""
 
-    def _recursive_merge(self, default, user):
-        for key, value in user.items():
-            if isinstance(value, dict) and key in default:
-                default[key] = self._recursive_merge(default[key], value)
-            else:
-                default[key] = value
-        return default
-
-    def load_config(self, user_config_path=None):
-        config = self.load_default_config()
-        if user_config_path:
-            with open(user_config_path, "r", encoding="utf-8") as f:
-                user_config = yaml.safe_load(f)
-                config = self._recursive_merge(config, user_config)
-        return config
+        # Get wandb status
+        wandb_enabled = environ.get("WANDB_ENABLE")
+        if wandb_enabled is not None and int(wandb_enabled) == 1:
+            self.set_config(key="wandb_enabled", value=True)
 
     def get_full_config(self) -> dict:
         """Returns the full configuration data"""
