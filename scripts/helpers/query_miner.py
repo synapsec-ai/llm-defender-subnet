@@ -24,16 +24,16 @@ def send_notification_synapse(
     )
     responses = dendrite.query(
         axons_with_valid_ip,
-       LLMDefender.SubnetProtocol(
-            subnet_version=LLMDefender.config["module_version"],
-            synapse_uuid=synapse_uuid,
-            synapse_signature=LLMDefender.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
-            synapse_nonce=nonce,
-            synapse_timestamp=timestamp,
-            synapse_hash=prompt_hash,
-        ),
-        timeout=6.0,
-        deserialize=True,
+        LLMDefender.SubnetProtocol(
+                subnet_version=LLMDefender.config["module_version"],
+                synapse_uuid=synapse_uuid,
+                synapse_signature=LLMDefender.sign_data(hotkey=wallet.hotkey, data=data_to_sign),
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_hash=prompt_hash,
+            ),
+            timeout=6.0,
+            deserialize=True,
     )
     return responses
 

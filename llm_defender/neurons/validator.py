@@ -129,17 +129,17 @@ def send_notification_synapse(synapse_uuid, validator, axons_with_valid_ip, prom
     bt.logging.trace(f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}.")
     responses = validator.dendrite.query(
         axons_with_valid_ip,
-       LLMDefender.SubnetProtocol(
-            subnet_version=validator.subnet_version,
-            synapse_uuid=synapse_uuid,
-            synapse_signature=LLMDefender.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
-            synapse_nonce=nonce,
-            synapse_timestamp=timestamp,
-            synapse_hash=prompt_hash
-        ),
-        timeout=(validator.timeout/2),
-        deserialize=True,
-    )
+        LLMDefender.SubnetProtocol(
+                subnet_version=validator.subnet_version,
+                synapse_uuid=synapse_uuid,
+                synapse_signature=LLMDefender.sign_data(hotkey=validator.wallet.hotkey, data=data_to_sign),
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_hash=prompt_hash
+            ),
+            timeout=(validator.timeout/2),
+            deserialize=True,
+        )
     return responses
 
 
