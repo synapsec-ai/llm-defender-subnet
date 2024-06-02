@@ -1,7 +1,9 @@
 import bittensor as bt
-from llm_defender.base.utils import validate_uid
+from llm_defender import validate_uid
 import bittensor as bt
-from llm_defender.base.utils import validate_uid
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import CountVectorizer
+import numpy as np
 
 
 def check_similarity_penalty(uid, miner_responses):
@@ -34,6 +36,86 @@ def check_similarity_penalty(uid, miner_responses):
             is not inputted.
     """
 
+    def _check_response_history(
+        uid, miner_responses, engine, penalty_name="High-similarity score"
+    ):
+        """
+        This function assesses the similarity of responses from a specific
+        engine in a miner's response history. It calculates the average cosine
+        similarity of the engine's output data and applies a penalty based on the
+        level of similarity.
+
+        Arguments:
+            uid:
+                An int instance displaying a unique user id for a miner. Must be
+                between 0 and 255.
+        miner_responses:
+            A iterable instance where each element must be a dict instance
+            containing flag 'engine_data'. Each value associated with the 'engine_data'
+            key must itself be a dict instance containing the flags 'name' and 'data'.
+            The 'name' flag should have a value that is a str instance displaying
+            the name of the specific engine, and the 'data' flag should have a value
+            that contains the engine outputs.
+        engine:
+            A str instance displaying the name of the engine that we want to
+            calculate the penalty for.
+        penalty_name:
+            A str instance displaying the name of the penalty operation being performed.
+            Default is set to 'High-similarity score'.
+
+            This generally should not be modified.
+
+        Returns:
+            penalty:
+                A float instance representing the penalty score based on the similarity
+                of responses from a specific engine in a miner's response history.
+        """
+        # Isolate engine-specific data
+        penalty = 0.0
+        engine_data = [
+            entry
+            for item in miner_responses
+            for entry in item.get("engine_data", [])
+            if entry.get("name") == engine
+        ]
+        if not engine_data:
+            return penalty
+
+        # Calculate duplicsate percentage
+        engine_data_str = [str(entry["data"]) for entry in engine_data]
+
+        # Create a CountVectorizer to convert text to word count vectors
+        vectorizer = CountVectorizer()
+
+        # Fit and transform the documents into vectors
+        vectorized_docs = vectorizer.fit_transform(engine_data_str)
+
+        # Calculate pairwise cosine similarity for all combinations of documents
+        cosine_sim_matrix = cosine_similarity(vectorized_docs)
+
+        # Exclude self-similarity values (diagonal) and compute average
+        mask = np.triu(np.ones(cosine_sim_matrix.shape), k=1).astype(bool)
+        similarities = cosine_sim_matrix[mask]
+
+        if len(similarities) == 0:
+            return penalty
+
+        average_similarity = similarities.mean()
+        bt.logging.trace(f"Average similarity: {average_similarity}")
+
+        if average_similarity > 0.9:
+            penalty += 1.0
+        elif average_similarity > 0.8:
+            penalty += 0.66
+        elif average_similarity > 0.7:
+            penalty += 0.33
+        elif average_similarity > 0.6:
+            penalty += 0.10
+
+        bt.logging.trace(
+            f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}' for engine: '{engine}'. Average similarity: '{average_similarity}'"
+        )
+        return penalty
 
     penalty = 0.0
 
@@ -41,7 +123,10 @@ def check_similarity_penalty(uid, miner_responses):
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
-    # penalty += _check_response_history(uid, miner_responses, "prompt_injection:text_classification")
+    for engine in [
+        "sensitive_info:token_classification",
+    ]:
+        penalty += _check_response_history(uid, miner_responses, engine)
     # penalty += _check_confidence_history(uid, miner_responses)
 
     return penalty
@@ -83,14 +168,147 @@ def check_duplicate_penalty(uid, miner_responses, response):
             is not inputted.
     """
 
+    def _calculate_duplicate_percentage(
+        uid, miner_responses, engine, penalty_name="Duplicate percentage"
+    ):
+        """
+        Calculates the percentage of duplicate entries for a specific engine in the
+        miner responses & assigns a specific penalty for each engine depending on the
+        associated ercentage value, which is then outputted.
+
+        Arguments:
+            uid:
+                An int instance displaying a unique user id for a miner. Must be
+                between 0 and 255.
+            miner_responses:
+                A iterable instance where each element must be a dict instance
+                containing flag 'engine_data'.
+
+                Each value associated with the 'engine_data' key must itself be a
+                dict instance containing the flags 'name' and 'data'.
+
+                The 'name' flag should have a value that is a str instance displaying
+                the name of the specific engine, and the 'data' flag should have a
+                value that contains the engine outputs.
+            engine:
+                A str instance displaying the name of the engine that we want to
+                calculate the penalty for.
+            penalty_name:
+                A str instance displaying the name of the penalty operation being
+                performed. Default is set to 'Duplicate percentage'.
+
+                This generally should not be modified.
+
+        Returns:
+            penalty:
+                A float instance representing the penalty score based on the percent
+                amount of duplicate responses from a set of miner responses.
+        """
+        penalty = 0.0
+        # Isolate engine-specific data
+        engine_data = [
+            entry
+            for item in miner_responses
+            for entry in item.get("engine_data", [])
+            if entry.get("name") == engine
+        ]
+        if not engine_data:
+            return penalty
+
+        # Calculate duplicate percentage
+        engine_data_str = [str(entry) for entry in engine_data]
+        duplicates = {entry: engine_data_str.count(entry) for entry in engine_data_str}
+        if not duplicates:
+            return penalty
+        duplicate_percentage = (len(engine_data) - len(duplicates)) / len(engine_data)
+
+        if not duplicate_percentage:
+            return penalty
+
+        if "token_classification" in engine:
+            if duplicate_percentage > 0.7:
+                if duplicate_percentage > 0.95:
+                    penalty += 1.0
+                elif duplicate_percentage > 0.9:
+                    penalty += 0.66
+                elif duplicate_percentage > 0.8:
+                    penalty += 0.33
+                else:
+                    penalty += 0.15
+        bt.logging.trace(
+            f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Duplicate % for {engine}: {duplicate_percentage}"
+        )
+
+        return penalty
+
+    def _find_identical_reply(
+        uid, miner_responses, response, engine, penalty_name="Identical replies"
+    ):
+        """
+        Applies a penalty if identical replies are found for a specific engine.
+
+        Arguments:
+            uid:
+                An int instance displaying a unique user id for a miner. Must be between 0
+                and 255.
+            miner_responses:
+                A iterable instance where each element must be a dict instance containing flag
+                'engine_data'.
+
+                Each value associated with the 'engine_data' key must itself be a dict
+                instance containing the flags 'name' and 'data'.
+
+                The 'name' flag should have a value that is a str instance displaying
+                the name of the specific engine, and the 'data' flag should have a value
+                that contains the engine outputs.
+            response:
+                A dict instance which must have a flag 'engines' which is a list instance
+                where each element is a dict. This dict should have a flag 'name' which
+                is the name of a specific engine.
+            engine:
+                A str instance displaying the name of the engine that we want to calculate
+                the penalty for.
+            penalty_name:
+                A str instance displaying the name of the penalty operation being performed.
+                Default is set to 'Identical replies'.
+
+                This generally should not be modified.
+
+        Returns:
+            penalty:
+                A float instance representing the penalty score based whether or not identical
+                replies are found for a specific engine.
+        """
+        penalty = 0.0
+        engine_response = [
+            data for data in response["engines"] if data["name"] == engine
+        ]
+        if not engine_response:
+            return penalty
+        if len(engine_response) > 0:
+            engine_data_iterable = [
+                entry
+                for item in miner_responses
+                for entry in item.get("engine_data", [])
+            ]
+            if engine_response[0] in engine_data_iterable:
+                penalty += 0.25
+
+            bt.logging.trace(
+                f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
+            )
+        return penalty
+
     if not validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
     penalty = 0.0
-
-    # penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
-    # penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
+    for engine in [
+        "sensitive_info:token_classification",
+    ]:
+        penalty += _find_identical_reply(uid, miner_responses, response, engine)
+        penalty += _calculate_duplicate_percentage(uid, miner_responses, engine)
 
     return penalty
 
@@ -101,7 +319,7 @@ def check_base_penalty(uid, miner_responses, response):
     contains the methods:
 
         ---> _check_prompt_response_mismatch()
-        ---> _check_response_validity()
+        ---> _check_confidence_validity()
         ---> _check_response_history()
 
     It also applies a penalty of 10.0 if invalid values are provided to the function,
@@ -129,7 +347,9 @@ def check_base_penalty(uid, miner_responses, response):
             The total penalty score within the base category.
     """
 
-    def _check_response_validity(uid, response, penalty_name="Response Validity"):
+    def _check_confidence_validity(
+        uid, response, penalty_name="Confidence out-of-bounds"
+    ):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
         If this is the case, it applies a penalty of 20.0, and if this is not the case the penalty
@@ -144,7 +364,7 @@ def check_base_penalty(uid, miner_responses, response):
                 instance representing the confidence score for a given prompt.
             penalty_name:
                 A str instance displaying the name of the penalty being administered
-                by the _check_response_validity() method. Default is 'Confidence out-of-bounds'.
+                by the _check_confidence_validity() method. Default is 'Confidence out-of-bounds'.
 
                 This argument generally should not be altered.
 
@@ -157,26 +377,9 @@ def check_base_penalty(uid, miner_responses, response):
         penalty = 0.0
         if response["confidence"] > 1.0 or response["confidence"] < 0.0:
             penalty = 20.0
-
-        # Validate engine responses
-        if "engines" not in response.keys():
-            bt.logging.trace(f"No engines key in response: {response}")
-            penalty = 20.0
-        else:
-            for entry in response["engines"]:
-
-                # Check engine-specific confidence
-                if "confidence" not in entry.keys() or (
-                    entry["confidence"] > 1.0 or entry["confidence"] < 0.0
-                ):
-                    bt.logging.trace(f"Confidence out-of-bounds or missing: {response}")
-                    penalty = 20.0
-                    break
-
         bt.logging.trace(
             f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
         )
-
         return penalty
 
     def _check_response_history(
@@ -253,14 +456,11 @@ def check_base_penalty(uid, miner_responses, response):
         )
 
         return penalty
-    
+
     if not validate_uid(uid) or not miner_responses or not response:
         # Apply penalty if invalid values are provided to the function
-        bt.logging.debug(f'Validation failed: {uid}, {miner_responses}, {response}')
         return 10.0
 
-    bt.logging.trace(f'Miner responses length: {len(miner_responses)}')
-    bt.logging.trace(f'Miner responses: {miner_responses}')
     if len(miner_responses) < 15:
         # Apply base penalty if we do not have a sufficient number of responses to process
         bt.logging.trace(
@@ -269,7 +469,7 @@ def check_base_penalty(uid, miner_responses, response):
         return 5.0
 
     penalty = 0.0
-    penalty += _check_response_validity(uid, response)
+    penalty += _check_confidence_validity(uid, response)
     penalty += _check_response_history(uid, miner_responses)
 
     return penalty

@@ -1,10 +1,12 @@
 """This module processes the incoming response from the miner"""
 
+from copy import deepcopy
 from bittensor import logging
 from torch import Tensor
-from copy import deepcopy
-import llm_defender.base.utils as utils
 from numpy import cbrt, log
+
+import llm_defender as LLMDefender
+
 
 def calculate_distance_score(target: float, engine_response: dict) -> float:
     """This function calculates the distance score for a response
@@ -26,7 +28,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
             A dict containing the scores associated with the engine
     """
 
-    if not utils.validate_numerical_value(
+    if not LLMDefender.validate_numerical_value(
         engine_response["confidence"], float, 0.0, 1.0
     ):
         return 1.0
@@ -82,7 +84,7 @@ def calculate_subscore_distance(response, target) -> float:
         return None
 
     for _, engine_response in enumerate(response["engines"]):
-        if not utils.validate_response_data(engine_response):
+        if not LLMDefender.validate_response_data(engine_response):
             return None
 
         distance_scores.append(calculate_distance_score(target, engine_response))
@@ -159,7 +161,7 @@ def validate_response(hotkey, response) -> bool:
     data = (
         f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     )
-    if not utils.validate_signature(
+    if not LLMDefender.validate_signature(
         hotkey=hotkey, data=data, signature=response["signature"]
     ):
         logging.debug(
@@ -232,7 +234,7 @@ def assign_score_for_uid(
         )
 
     # Ensure the response score is correctly defined
-    if not utils.validate_numerical_value(
+    if not LLMDefender.validate_numerical_value(
         value=response_score, value_type=float, min_value=0.0, max_value=1.0
     ):
         logging.error(f"Value for response_score is incorrect: {response_score}")
@@ -241,7 +243,7 @@ def assign_score_for_uid(
         )
 
     # Ensure UID is correctly defined
-    if not utils.validate_uid(uid):
+    if not LLMDefender.validate_uid(uid):
         logging.error(f"Value for UID is incorrect: {uid}")
         raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
 
@@ -275,6 +277,7 @@ def assign_score_for_uid(
 
     return scores, old_score, unweighted_new_score.item()
 
+
 def get_normalized_and_binned_scores(total_analyzer_raw_score):
     """
     This function normalizes the analyzer's score using the abs(ln(x)) curve,
@@ -283,7 +286,7 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
     Inputs:
         total_analyzer_raw_score: float
             - The score obtained from the summation of distance/speed scores with
-            penalties applied.= 
+            penalties applied.=
 
     Outputs:
         normalized_analyzer_score: float
@@ -298,7 +301,7 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
     else:
         normalized_analyzer_score = abs(log(total_analyzer_raw_score))
 
-    score_bins = [ # [range_low, range_high, binned_score]
+    score_bins = [  # [range_low, range_high, binned_score]
         [0, 0.03, 1],
         [0.03, 0.11, 0.9],
         [0.11, 0.22, 0.8],
@@ -308,7 +311,7 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
         [0.69, 0.91, 0.4],
         [0.91, 1.2, 0.3],
         [1.2, 1.6, 0.2],
-        [1.6, 2.3, 0.1]
+        [1.6, 2.3, 0.1],
     ]
     binned_analyzer_score = 0.0
 
@@ -319,10 +322,11 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
 
     return normalized_analyzer_score, binned_analyzer_score
 
+
 def get_engine_response_object(
     normalized_analyzer_score: float = 0.0,
     binned_analyzer_score: float = 0.0,
-    total_analyzer_raw_score: float = 0.0, 
+    total_analyzer_raw_score: float = 0.0,
     final_analyzer_distance_score: float = 0.0,
     final_analyzer_speed_score: float = 0.0,
     distance_penalty: float = 0.0,

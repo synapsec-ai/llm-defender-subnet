@@ -16,6 +16,6 @@ def parser():
 
 @pytest.mark.skip(reason="Test not yet implemented")
 def test_init(parser, mock_prompt_injection_analyzer):
-    from llm_defender.core.miners.miner import LLMDefenderMiner
-    miner = LLMDefenderMiner(parser)
+    import llm_defender as LLMDefender
+    miner = LLMDefender.SubnetMiner(parser)
     assert miner.neuron_config is not None

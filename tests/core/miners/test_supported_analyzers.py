@@ -1,4 +1,4 @@
-from llm_defender.core.miners.analyzers import SupportedAnalyzers
+from llm_defender import SupportedAnalyzers
 
 
 def test_is_valid():

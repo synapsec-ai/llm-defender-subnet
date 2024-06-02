@@ -9,20 +9,19 @@ Typical example usage:
     miner = MinerNeuron(profile="miner")
     miner.run()
 """
-import traceback
+
 from argparse import ArgumentParser
 from os import path, makedirs, rename
 from datetime import datetime
 import bittensor as bt
 import torch
 
-from llm_defender.base.utils import sign_data
 import requests
 import secrets
 import pickle
 import time
 import json
-from llm_defender import __spec_version__ as subnet_version
+import llm_defender as LLMDefender
 
 
 def convert_tensors(data):
@@ -56,11 +55,19 @@ class BaseNeuron:
         self.step = 0
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
-        self.subnet_version = subnet_version
+        self.subnet_version = LLMDefender.config["module_version"]
         self.used_nonces = []
 
         # Load used nonces if they exists
         self.load_used_nonces()
+
+        # Enable wandb if it has been configured
+        if LLMDefender.config["wandb_enabled"] is True:
+            self.wandb_enabled = True
+            self.wandb_handler = LLMDefender.WandbHandler()
+        else:
+            self.wandb_enabled = False
+            self.wandb_handler = None
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -115,7 +122,7 @@ class BaseNeuron:
     def remote_logger(self, hotkey, message: dict) -> bool:
         """This function is responsible for sending validation metrics
         and miner response data to centralized log repository.
-        
+
         The data is used to construct a dashboard to measure the
         performance of the subnet. It is important for all validators to
         send out the metrics towards the centralized logger.
@@ -127,36 +134,42 @@ class BaseNeuron:
         nonce = str(secrets.token_hex(24))
         timestamp = str(int(time.time()))
 
-        signature = sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
+        signature = LLMDefender.sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
 
         headers = {
             "X-Hotkey": hotkey.ss58_address,
             "X-Signature": signature,
             "X-Nonce": nonce,
             "X-Timestamp": timestamp,
-            "X-API-Key":hotkey.ss58_address
+            "X-API-Key": hotkey.ss58_address,
         }
 
         data = message
 
-        res = self.requests_post(url="https://logger.synapsec.ai/logger", headers=headers, data=data)
+        res = self.requests_post(
+            url="https://logger.synapsec.ai/logger", headers=headers, data=data
+        )
 
         if res:
             return True
         return False
-  
+
     def requests_post(self, url, headers: dict, data: dict, timeout: int = 12) -> dict:
 
         try:
             serializable_data = convert_tensors(data)
             serialized_data = json.dumps(serializable_data)
             # get prompt
-            res = requests.post(url=url, headers=headers, data=serialized_data, timeout=timeout)
+            res = requests.post(
+                url=url, headers=headers, data=serialized_data, timeout=timeout
+            )
             # check for correct status code
             if res.status_code == 200:
                 return res.json()
-            
-            bt.logging.warning(f"Unable to connect to remote host: {url}: HTTP/{res.status_code} - {res.json()}")
+
+            bt.logging.warning(
+                f"Unable to connect to remote host: {url}: HTTP/{res.status_code} - {res.json()}"
+            )
             return {}
         except requests.exceptions.ReadTimeout as e:
             bt.logging.error(f"Remote API request timed out: {e}")
@@ -165,22 +178,27 @@ class BaseNeuron:
         except requests.exceptions.ConnectionError as e:
             bt.logging.error(f"Unable to connect to the remote API: {e}")
         except Exception as e:
-            bt.logging.error(f'Generic error during request: {e}')
-    
+            bt.logging.error(f"Generic error during request: {e}")
+
     def save_used_nonces(self):
         """Saves used nonces to a local file"""
 
         if len(self.used_nonces) > 1000000:
             self.used_nonces = self.used_nonces[-500000:]
             bt.logging.info("Truncated list of used_nonces")
-        with open(f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle", "wb") as pickle_file:
+        with open(
+            f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle",
+            "wb",
+        ) as pickle_file:
             pickle.dump(self.used_nonces, pickle_file)
 
         bt.logging.info("Saved used nonces to a file")
-    
+
     def load_used_nonces(self):
         """Loads used nonces from a file"""
-        state_path = f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle"
+        state_path = (
+            f"{self.base_path}/{self.path_hotkey}_{self.profile}_used_nonces.pickle"
+        )
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:

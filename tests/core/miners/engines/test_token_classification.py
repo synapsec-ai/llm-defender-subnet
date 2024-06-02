@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
+from llm_defender import TokenClassificationEngine
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def test_execute(mock_transformers):
     mock_tokenizer.from_pretrained.return_value = MagicMock()
     mock_pipeline.return_value = MagicMock(return_value=[{"start": "now", "end": "later", "entity": "PERSON", "score": 0.95}])
 
-    engine = TokenClassificationEngine(prompt="Some sensitive data.")
+    engine = TokenClassificationEngine(prompts=["Some sensitive data."])
     engine.initialize()
     engine.execute(mock_model, mock_tokenizer)
 

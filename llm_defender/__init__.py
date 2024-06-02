@@ -1,28 +1,46 @@
-import configparser
-from os import path, environ
-from dotenv import load_dotenv
-import bittensor as bt
-
-load_dotenv()
-
-# Read version
-config = configparser.ConfigParser()
-setup_file = path.dirname(path.dirname(path.abspath(__file__))) + "/setup.cfg"
-
-config.read(setup_file)
-
-__version__ = config["metadata"]["version"]
-
-version_split = __version__.split(".")
-__spec_version__ = (
-    (1000 * int(version_split[0]))
-    + (10 * int(version_split[1]))
-    + (1 * int(version_split[2]))
+# Base modules
+from .base.utils import (
+    EngineResponse,
+    validate_numerical_value,
+    timeout_decorator,
+    validate_uid,
+    validate_response_data,
+    validate_signature,
+    sign_data,
+    validate_prompt,
+    validate_validator_api_prompt_output,
 )
 
-# Read wandb status
-wandb_enabled = environ.get("WANDB_ENABLE")
-if wandb_enabled is not None and int(wandb_enabled) == 1:
-    __wandb__ = True
-else:
-    __wandb__ = False
+from .base.config import ModuleConfig
+
+from .base.protocol import SubnetProtocol
+
+from .base.neuron import BaseNeuron
+
+from .base.engine import BaseEngine
+
+# Core modules
+from .core.validator import SubnetValidator
+
+from .core.miner import SubnetMiner
+
+from .core import SupportedAnalyzers
+
+from .core import (
+    prompt_injection_process,
+    sensitive_information_process,
+    prompt_injection_scoring,
+    prompt_injection_penalty,
+    sensitive_information_scoring,
+    sensitive_information_penalty,
+    TokenClassificationEngine,
+    TextClassificationEngine,
+    PromptInjectionAnalyzer,
+    SensitiveInformationAnalyzer,
+)
+
+# Import wandb handler only if it enabled
+if ModuleConfig().get_config(key="wandb_enabled") is True:
+    from .base.wandb_handler import WandbHandler
+
+config = ModuleConfig().get_full_config()

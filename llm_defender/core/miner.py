@@ -9,34 +9,20 @@ Typical example usage:
     foo.bar()
 """
 
-import hashlib
 from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Tuple
 import sys
 import bittensor as bt
-from llm_defender.base.neuron import BaseNeuron
-from llm_defender.base.protocol import LLMDefenderProtocol
-from llm_defender.core.miners.analyzers import SupportedAnalyzers
-from llm_defender.base.utils import validate_signature
-from llm_defender.core.miners.analyzers.prompt_injection.analyzer import (
-    PromptInjectionAnalyzer,
-)
 
-# Load wandb library only if it is enabled
-from llm_defender import __wandb__ as wandb
-from llm_defender.core.miners.analyzers.sensitive_information.analyzer import (
-    SensitiveInformationAnalyzer,
-)
-
-if wandb is True:
-    from llm_defender.base.wandb_handler import WandbHandler
+# Import custom modules
+import llm_defender as LLMDefender
 
 
-class LLMDefenderMiner(BaseNeuron):
-    """LLMDefenderMiner class for LLM Defender Subnet
+class SubnetMiner(LLMDefender.BaseNeuron):
+    """SubnetMiner class for LLM Defender Subnet
 
-    The LLMDefenderMiner class contains all of the code for a Miner neuron
+    The SubnetMiner class contains all of the code for a Miner neuron
 
     Attributes:
         neuron_config:
@@ -70,7 +56,7 @@ class LLMDefenderMiner(BaseNeuron):
 
     def __init__(self, parser: ArgumentParser):
         """
-        Initializes the LLMDefenderMiner class with attributes
+        Initializes the SubnetMiner class with attributes
         neuron_config, model, tokenizer, wallet, subtensor, metagraph,
         miner_uid
 
@@ -93,23 +79,19 @@ class LLMDefenderMiner(BaseNeuron):
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
-        # Enable wandb if it has been configured
-        if wandb is True:
-            self.wandb_enabled = True
-            self.wandb_handler = WandbHandler()
-        else:
-            self.wandb_enabled = False
-            self.wandb_handler = None
-
         # Initialize the analyzers
         self.analyzers = {
-            str(SupportedAnalyzers.PROMPT_INJECTION): PromptInjectionAnalyzer(
+            str(
+                LLMDefender.SupportedAnalyzers.PROMPT_INJECTION
+            ): LLMDefender.PromptInjectionAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
                 miner_uid=self.miner_uid,
             ),
-            str(SupportedAnalyzers.SENSITIVE_INFORMATION): SensitiveInformationAnalyzer(
+            str(
+                LLMDefender.SupportedAnalyzers.SENSITIVE_INFORMATION
+            ): LLMDefender.SensitiveInformationAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
@@ -132,7 +114,7 @@ class LLMDefenderMiner(BaseNeuron):
         else:
             self.validator_stats[hotkey] = {}
             self.validator_stats[hotkey][stat_type] = 1
-    
+
     def _clean_prompt_hashes(self):
         """Truncates the local hash list to latest 100 prompts"""
 
@@ -246,7 +228,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         return False
 
-    def blacklist(self, synapse: LLMDefenderProtocol) -> Tuple[bool, str]:
+    def blacklist(self, synapse: LLMDefender.SubnetProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -306,7 +288,7 @@ class LLMDefenderMiner(BaseNeuron):
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
-    def priority(self, synapse: LLMDefenderProtocol) -> float:
+    def priority(self, synapse: LLMDefender.SubnetProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -314,7 +296,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         Inputs:
             synapse:
-                The synapse should be the LLMDefenderProtocol class
+                The synapse should be theLLMDefender.SubnetProtocol class
                 (from llm_defender/base/protocol.py)
 
         Returns:
@@ -336,7 +318,9 @@ class LLMDefenderMiner(BaseNeuron):
 
         return stake
 
-    def forward(self, synapse: LLMDefenderProtocol) -> LLMDefenderProtocol:
+    def forward(
+        self, synapse: LLMDefender.SubnetProtocol
+    ) -> LLMDefender.SubnetProtocol:
         """
         The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
@@ -346,17 +330,17 @@ class LLMDefenderMiner(BaseNeuron):
 
         Inputs:
             synapse:
-                The synapse should be the LLMDefenderProtocol class
+                The synapse should be theLLMDefender.SubnetProtocol class
                 (from llm_defender/base/protocol.py)
 
         Returns:
             synapse:
-                The synapse should be the LLMDefenderProtocol class
+                The synapse should be theLLMDefender.SubnetProtocol class
                 (from llm_defender/base/protocol.py)
         """
 
         is_notification_message = (
-                synapse.synapse_prompts is None and synapse.synapse_hash is not None
+            synapse.synapse_prompts is None and synapse.synapse_hash is not None
         )
 
         # synapse_hash = synapse.synapse_hash
@@ -364,7 +348,7 @@ class LLMDefenderMiner(BaseNeuron):
         # synapse_uuid = synapse.synapse_uuid
 
         if is_notification_message:
-            # If it's a notification synapse we can just ignore it 
+            # If it's a notification synapse we can just ignore it
             bt.logging.debug("Received notification synapse. Ignoring.")
             return synapse
         #     bt.logging.debug(f"Processing notification synapse: {synapse}")
@@ -407,7 +391,7 @@ class LLMDefenderMiner(BaseNeuron):
 
         # Synapse signature verification
         data = f"{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}"
-        if not validate_signature(
+        if not LLMDefender.validate_signature(
             hotkey=synapse.dendrite.hotkey,
             data=data,
             signature=synapse.synapse_signature,
@@ -473,7 +457,7 @@ class LLMDefenderMiner(BaseNeuron):
         # self.used_prompt_hashes.append(prompt_hash)
 
         # Execute the correct analyzer
-        if not SupportedAnalyzers.is_valid(synapse.analyzer):
+        if not LLMDefender.SupportedAnalyzers.is_valid(synapse.analyzer):
             bt.logging.error(
                 f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
             )

@@ -2,11 +2,11 @@ from os import path
 
 import pytest
 
-from llm_defender.base.engine import BaseEngine
+import llm_defender as LLMDefender
 
 
 def test_init():
-    engine = BaseEngine()
+    engine = LLMDefender.BaseEngine()
     assert engine.name == "BaseEngine"
     assert engine.prompt is None
     assert engine.confidence is None
@@ -16,7 +16,7 @@ def test_init():
 
 def test_confidence_validation():
 
-    @BaseEngine.confidence_validation
+    @LLMDefender.BaseEngine.confidence_validation
     def mock_confidence_function(score):
         return score
 
@@ -27,7 +27,7 @@ def test_confidence_validation():
 
 
 def test_data_validation():
-    @BaseEngine.data_validation
+    @LLMDefender.BaseEngine.data_validation
     def mock_data_function(data):
         return data
 
@@ -37,7 +37,7 @@ def test_data_validation():
         mock_data_function({})
 
 
-class ConcreteEngine(BaseEngine):
+class ConcreteEngine(LLMDefender.BaseEngine):
     def _calculate_confidence(self) -> float:
         return 0.75
 

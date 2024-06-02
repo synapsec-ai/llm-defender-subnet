@@ -1,4 +1,4 @@
-from llm_defender.base.utils import (
+from llm_defender import (
     EngineResponse, validate_numerical_value, normalize_list, validate_miner_blacklist,
     validate_uid, validate_response_data, validate_prompt
 )

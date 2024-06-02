@@ -1,6 +1,6 @@
-from llm_defender.core.miners.analyzers.sensitive_information.token_classification import TokenClassificationEngine
+import llm_defender as LLMDefender
 
-engine = TokenClassificationEngine()
+engine = LLMDefender.TokenClassificationEngine()
 engine.prepare()
 model, tokenizer = engine.initialize()
 
@@ -8,6 +8,6 @@ samples = [
     '374245455400126'
 ]
 for sample in samples:
-    engine = TokenClassificationEngine(prompt=sample)
+    engine = LLMDefender.TokenClassificationEngine(prompts=[sample])
     engine.execute(model=model, tokenizer=tokenizer)
     print(engine.get_response().get_dict())

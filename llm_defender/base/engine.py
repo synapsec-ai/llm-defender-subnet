@@ -6,10 +6,13 @@ well as providing abstract methods the engine classes must implement.
 
 This BaseEngine should be used by all the analyzers. 
 """
+
 from os import path
 from typing import Callable
 from abc import abstractmethod
-from llm_defender.base.utils import EngineResponse
+
+# Import custom modules
+import llm_defender as LLMDefender
 
 
 class BaseEngine:
@@ -51,24 +54,22 @@ class BaseEngine:
 
     def __init__(self, name: str = "BaseEngine"):
         """
-        Initializes the prompt, confidence, output, name & cache_dir 
+        Initializes the prompt, confidence, output, name & cache_dir
         attributes for the BaseEngine class.
 
         Arguments:
             name:
                 A str instance that describes the name of the Engine.
                 Default: 'BaseEngine'
-        
+
         Returns:
             None
-        """        
+        """
         self.prompts = None
         self.confidence = None
         self.output = {}
         self.name = name
-        self.cache_dir = (
-            f"{path.expanduser('~')}/.llm-defender-subnet/cache"
-        )
+        self.cache_dir = f"{path.expanduser('~')}/.llm-defender-subnet/cache"
 
     @staticmethod
     def confidence_validation(func: Callable) -> Callable:
@@ -175,7 +176,7 @@ class BaseEngine:
                 Return value is not in range of (0.0, 1.0)
         """
 
-    def get_response(self) -> EngineResponse:
+    def get_response(self) -> LLMDefender.EngineResponse:
         """Returns the outcome of the object.
 
         This method returns the response from the engine in a correct
@@ -201,7 +202,7 @@ class BaseEngine:
         if not isinstance(self.output, dict):
             raise TypeError("Output must be a dict")
 
-        return EngineResponse(
+        return LLMDefender.EngineResponse(
             name=self.name, confidence=self.confidence, data=self.output
         )
 
