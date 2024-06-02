@@ -1,3 +1,46 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm_defender"
+version = "0.8.0"
+description = "This project implements the llm-defender subnet for Bittensor"
+authors = [
+    { name = "synapsec.ai", email = "contact@synapsec.ai" }
+]
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 3 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+requires-python = ">=3.10,<3.12"
+
+dependencies = [
+    "bittensor==7.0.0",
+    "gitpython==3.1.43",
+    "python-dotenv==1.0.1",
+    "torch==2.3.0"
+]
+
+[project.urls]
+homepage = "https://github.com/synapsec-ai/llm-defender-subnet"
+
+[project.optional-dependencies]
+wandb = ["wandb==0.17.0"]
+miner = ["transformers==4.41.2", "datasets==2.19.1"]
+validator = ["scikit-learn==1.5.0", "numpy==1.26.4"]
+
+[tool.setuptools.packages.find]
+include = ["llm_defender"]

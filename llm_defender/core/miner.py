@@ -73,7 +73,19 @@ class SubnetMiner(LLMDefender.BaseNeuron):
             bt_classes=[bt.subtensor, bt.logging, bt.wallet, bt.axon]
         )
 
+        # Read command line arguments and perform actions based on them
         args = parser.parse_args()
+
+        # Setup logging
+        bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
+        if args.log_level == "DEBUG":
+            bt.logging.enable_debug()
+        elif args.log_level == "TRACE":
+            bt.logging.enable_trace()
+        else:
+            bt.logging.enable_default()
+
+
 
         self.validator_min_stake = args.validator_min_stake
 

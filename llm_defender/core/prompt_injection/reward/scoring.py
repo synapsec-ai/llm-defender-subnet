@@ -2,8 +2,7 @@
 
 from copy import deepcopy
 from bittensor import logging
-from torch import Tensor
-from numpy import cbrt, log
+from numpy import cbrt, log, ndarray
 
 import llm_defender as LLMDefender
 
@@ -192,13 +191,13 @@ def validate_response(hotkey, response) -> bool:
 
 
 def assign_score_for_uid(
-    scores: Tensor, uid: int, alpha: float, response_score: float, prompt_weight: float
+    scores: ndarray, uid: int, alpha: float, response_score: float, prompt_weight: float
 ):
     """Assigns a score to an UID
 
     Arguments:
         scores:
-            Current Tensor of scores
+            Current ndarray of scores
         uid:
             UID of the neuron to set the score for
         alpha:
@@ -208,7 +207,7 @@ def assign_score_for_uid(
 
     Returns:
         scores:
-            An updated Tensor of the scores
+            An updated ndarray of the scores
     """
 
     # Ensure the alpha is correctly defined
