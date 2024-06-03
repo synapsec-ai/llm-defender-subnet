@@ -13,9 +13,16 @@ from .sensitive_information import (
     TokenClassificationEngine
 )
 
+from .moderation import (
+    ModerationAnalyzer,
+    ModerationClassificationEngine
+)
+
 class SupportedAnalyzers(Enum):
     PROMPT_INJECTION = "Prompt Injection"
     SENSITIVE_INFORMATION = "Sensitive Information"
+    MODERATION = "Moderation"
+
 
     @classmethod
     def is_valid(cls, value):

@@ -1,2 +1,2 @@
 from .analyzer import ModerationAnalyzer
-from .moderation import ModerationEngine
+from .moderation_classification import ModerationEngine

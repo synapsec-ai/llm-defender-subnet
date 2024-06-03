@@ -12,10 +12,10 @@ import llm_defender.core.miner as LLMDefenderCore
 
 
 class ModerationAnalyzer:
-    """This class is responsible for handling the analysis for prompt injection
+    """This class is responsible for handling the analysis for toxicity moderation
 
-    The PromptInjectionAnalyzer class contains all the code for a Miner neuron
-    to generate a confidence score for a Prompt Injection Attack.
+    The ModerationAnalyzer class contains all the code for a Miner neuron
+    to generate a confidence score for a prompt being toxic.
 
     Attributes:
         model:
@@ -39,7 +39,7 @@ class ModerationAnalyzer:
         self.miner_uid = miner_uid
 
         # Configuration options for the analyzer
-        self.model, self.tokenizer = LLMDefenderCore.ModerationEngine().initialize()
+        self.model, self.tokenizer = LLMDefenderCore.ModerationClassificationEngine().initialize()
 
         self.wandb_handler = wandb_handler
         if self.wandb_handler:
@@ -49,20 +49,20 @@ class ModerationAnalyzer:
 
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
         # Responses are stored in a dict
-        output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
+        output = {"analyzer": "Moderation", "confidence": None, "engines": []}
 
-        # Execute Text Classification engine
-        text_classification_engine = LLMDefenderCore.TextClassificationEngine(
+        # Execute Moderation engine
+        moderation_engine = LLMDefenderCore.ModerationEngine(
             prompts=prompts
         )
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        text_classification_response = (
-            text_classification_engine.get_response().get_dict()
+        moderation_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        moderation_response = (
+            moderation_engine.get_response().get_dict()
         )
-        output["engines"].append(text_classification_response)
+        output["engines"].append(moderation_response)
 
         # Calculate confidence score
-        output["confidence"] = text_classification_response["confidence"]
+        output["confidence"] = moderation_response["confidence"]
 
         # Add subnet version and UUID to the output
         output["subnet_version"] = self.subnet_version
@@ -81,7 +81,7 @@ class ModerationAnalyzer:
 
             wandb_logs = [
                 {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response[
+                    f"{self.miner_uid}:{self.miner_hotkey}_Moderation Confidence": moderation_response[
                         "confidence"
                     ]
                 },

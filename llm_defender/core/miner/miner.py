@@ -86,8 +86,6 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         else:
             bt.logging.enable_default()
 
-
-
         self.validator_min_stake = args.validator_min_stake
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
@@ -105,6 +103,14 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             str(
                 LLMDefenderCore.SupportedAnalyzers.SENSITIVE_INFORMATION
             ): LLMDefenderCore.SensitiveInformationAnalyzer(
+                wallet=self.wallet,
+                subnet_version=self.subnet_version,
+                wandb_handler=self.wandb_handler,
+                miner_uid=self.miner_uid,
+            ),
+            str(
+                LLMDefenderCore.SupportedAnalyzers.MODERATION
+            ): LLMDefenderCore.ModerationAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,

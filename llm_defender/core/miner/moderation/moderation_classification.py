@@ -16,23 +16,13 @@ import bittensor as bt
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 
-class TextClassificationEngine(LLMDefenderBase.BaseEngine):
-    """Text classification engine for detecting prompt injection.
-
-    This class implements an engine that uses text classification to
-    identity prompt injection attacks. The text classification engine is
-    the primary detection method along with the heuristics engine
-    detecting prompt injection attacks.
-
-    Whereas the heuristics engine is a collection of specialized
-    sub-engines the text-classification engine focuses on analyzing the
-    prompt as a whole and thus has a potential to yield better results
-    than the heuristic based approaches.
+class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
+    """Moderation engine for detecting toxicity.
 
     Attributes:
         prompt:
             A str instance displaying the prompt to be analyzed by the 
-            TextClassificationEngine.
+            ModerationEngine.
         name (from the BaseEngine located at llm_defender/base/engine.py):
             A str instance displaying the name of the engine. 
         cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
@@ -53,19 +43,19 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
 
     Methods:
         __init__():
-            Defines the name and prompt attributes for the TextClassificationEngine 
+            Defines the name and prompt attributes for the ModerationEngine 
             object.
         _calculate_confidence():
             Determines the confidence score for a given prompt being malicious & 
             returns the value which ranges from 0.0 (SAFE) to 1.0 (MALICIOUS).
         _populate_data():
             Returns a dict instance that displays the outputs for the 
-            TextClassificationEngine.
+            ModerationEngine.
         prepare():
             Checks and creates a cache directory if it doesn't exist, then 
             calls initialize() to set up the model and tokenizer.
         initialize():
-            Loads the model and tokenizer used for the TextClassificationEngine.
+            Loads the model and tokenizer used for the ModerationEngine.
         execute():
             This function performs classification of the given prompt to
             enable it to detect prompt injection. The function returns the
@@ -75,12 +65,12 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
 
     def __init__(self, prompts: List[str] = None, name: str = "prompt_injection:text_classification"):
         """
-        Initializes the TextClassificationEngine object with the name and prompt attributes.
+        Initializes the ModerationEngine object with the name and prompt attributes.
 
         Arguments:
             prompt:
                 A str instance displaying the prompt to be analyzed by the 
-                TextClassificationEngine.
+                ModerationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
                 'prompt_injection:text_classification'
@@ -166,7 +156,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
 
     def initialize(self):
         """
-        Initializes the model and tokenizer for the TextClassificationEngine.
+        Initializes the model and tokenizer for the ModerationEngine.
 
         Arguments:
             None
@@ -175,9 +165,9 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             tuple:
                 A tuple instance. The elements of the tuple are, in order:
                     model:
-                        The model for the TextClassificationEngine.
+                        The model for the ModerationEngine.
                     tokenizer:
-                        The tokenizer for the TextClassificationEngine.
+                        The tokenizer for the ModerationEngine.
 
         Raises:
             Exception:
@@ -232,7 +222,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "text-classification",
+                "moderation",
                 model=model,
                 tokenizer=tokenizer,
                 truncation=True,
@@ -249,6 +239,6 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
         self.confidence = self._calculate_confidence()
 
         bt.logging.debug(
-            f"Text Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
+            f"Moderation engine executed (Confidence: {self.confidence} - Output: {self.output})"
         )
         return True
