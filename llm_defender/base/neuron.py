@@ -21,7 +21,9 @@ import secrets
 import pickle
 import time
 import json
-import llm_defender as LLMDefender
+
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
 
 def convert_data(data):
     if isinstance(data, dict):
@@ -55,7 +57,7 @@ class BaseNeuron:
         self.step = 0
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
-        self.subnet_version = LLMDefender.config["module_version"]
+        self.subnet_version = LLMDefenderBase.config["module_version"]
         self.used_nonces = []
         self.cache_path = None
         self.log_path = None
@@ -64,9 +66,9 @@ class BaseNeuron:
         self.load_used_nonces()
 
         # Enable wandb if it has been configured
-        if LLMDefender.config["wandb_enabled"] is True:
+        if LLMDefenderBase.config["wandb_enabled"] is True:
             self.wandb_enabled = True
-            self.wandb_handler = LLMDefender.WandbHandler()
+            self.wandb_handler = LLMDefenderBase.WandbHandler()
         else:
             self.wandb_enabled = False
             self.wandb_handler = None
@@ -144,7 +146,7 @@ class BaseNeuron:
         nonce = str(secrets.token_hex(24))
         timestamp = str(int(time.time()))
 
-        signature = LLMDefender.sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
+        signature = LLMDefenderBase.sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
 
         headers = {
             "X-Hotkey": hotkey.ss58_address,

@@ -6,7 +6,9 @@ from typing import List
 
 import bittensor as bt
 
-import llm_defender as LLMDefender
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
+import llm_defender.core.miner as LLMDefenderCore
 
 
 class PromptInjectionAnalyzer:
@@ -37,7 +39,7 @@ class PromptInjectionAnalyzer:
         self.miner_uid = miner_uid
 
         # Configuration options for the analyzer
-        self.model, self.tokenizer = LLMDefender.TextClassificationEngine().initialize()
+        self.model, self.tokenizer = LLMDefenderCore.TextClassificationEngine().initialize()
 
         self.wandb_handler = wandb_handler
         if self.wandb_handler:
@@ -45,12 +47,12 @@ class PromptInjectionAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(self, synapse: LLMDefender.SubnetProtocol, prompts: List[str]) -> dict:
+    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
         # Responses are stored in a dict
         output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
         # Execute Text Classification engine
-        text_classification_engine = LLMDefender.TextClassificationEngine(
+        text_classification_engine = LLMDefenderCore.TextClassificationEngine(
             prompts=prompts
         )
         text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
@@ -71,7 +73,7 @@ class PromptInjectionAnalyzer:
         data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = LLMDefender.sign_data(self.wallet.hotkey, data_to_sign)
+        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
 
         # Wandb logging
         if self.wandb_enabled:

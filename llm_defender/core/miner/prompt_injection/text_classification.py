@@ -1,5 +1,5 @@
 """
-This module implements the base-engine used by the sensitive-data
+This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 from typing import List
@@ -8,30 +8,31 @@ import torch
 from os import path, makedirs
 from transformers import (
     AutoTokenizer,
-    AutoModelForTokenClassification,
+    AutoModelForSequenceClassification,
 )
 from transformers import pipeline
 import bittensor as bt
-import llm_defender as LLMDefender
 
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
 
-class TokenClassificationEngine(LLMDefender.BaseEngine):
-    """Token classification engine for detecting sensitive data exposure.
+class TextClassificationEngine(LLMDefenderBase.BaseEngine):
+    """Text classification engine for detecting prompt injection.
 
-    This class implements an engine that uses token classification to
-    identity sensitive data exposure. The token classification engine is
+    This class implements an engine that uses text classification to
+    identity prompt injection attacks. The text classification engine is
     the primary detection method along with the heuristics engine
-    detecting sensitive data exposure.
+    detecting prompt injection attacks.
 
     Whereas the heuristics engine is a collection of specialized
-    sub-engines the token-classification engine focuses on analyzing the
+    sub-engines the text-classification engine focuses on analyzing the
     prompt as a whole and thus has a potential to yield better results
     than the heuristic based approaches.
 
     Attributes:
         prompt:
             A str instance displaying the prompt to be analyzed by the 
-            TokenClassificationEngine.
+            TextClassificationEngine.
         name (from the BaseEngine located at llm_defender/base/engine.py):
             A str instance displaying the name of the engine. 
         cache_dir (from the BaseEngine located at llm_defender/base/engine.py):
@@ -52,37 +53,37 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
 
     Methods:
         __init__():
-            Defines the name and prompt attributes for the TokenClassificationEngine 
+            Defines the name and prompt attributes for the TextClassificationEngine 
             object.
         _calculate_confidence():
             Determines the confidence score for a given prompt being malicious & 
             returns the value which ranges from 0.0 (SAFE) to 1.0 (MALICIOUS).
         _populate_data():
             Returns a dict instance that displays the outputs for the 
-            TokenClassificationEngine.
+            TextClassificationEngine.
         prepare():
             Checks and creates a cache directory if it doesn't exist, then 
             calls initialize() to set up the model and tokenizer.
         initialize():
-            Loads the model and tokenizer used for the TokenClassificationEngine.
+            Loads the model and tokenizer used for the TextClassificationEngine.
         execute():
             This function performs classification of the given prompt to
-            enable it to detect sensitive data exposure. The function returns the
+            enable it to detect prompt injection. The function returns the
             label and score provided by the classifier and defines the class
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompts: List[str] = None, name: str = "sensitive_info:token_classification"):
+    def __init__(self, prompts: List[str] = None, name: str = "prompt_injection:text_classification"):
         """
-        Initializes the TokenClassificationEngine object with the name and prompt attributes.
+        Initializes the TextClassificationEngine object with the name and prompt attributes.
 
         Arguments:
             prompt:
                 A str instance displaying the prompt to be analyzed by the 
-                TokenClassificationEngine.
+                TextClassificationEngine.
             name:
                 A str instance displaying the name of the engine. Default is
-                'sensitive_info:token_classification'
+                'prompt_injection:text_classification'
 
         Returns:
             None
@@ -91,24 +92,39 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
         self.prompts = prompts
 
     def _calculate_confidence(self):
+        """
+        Determines a confidence value based on the self.output attribute. This
+        value will be 0.0 if the 'outcome' flag in self.output is 'SAFE', 0.5 if 
+        the flag value is 'UNKNOWN', and 1.0 otherwise.
+
+        Arguments:
+            None
+
+        Returns:
+            A float instance representing the confidence score, which is either 
+            0.0, 0.5 or 1.0 depending on the state of the 'outcome' flag in the
+            output attribute.
+        """
         # Determine the confidence based on the score
-        if self.output["token_data"]:
-            highest_score_entity = max(self.output["token_data"], key=lambda x: x['score'])
-            return float(highest_score_entity["score"])
-        
-        return 0.0
+        if self.output["outcome"] != "UNKNOWN":
+            if self.output["outcome"] == "SAFE":
+                return 0.0
+            else:
+                return 1.0
+        else:
+            return 0.5
 
     def _populate_data(self, results):
         """
-        Takes in the results from the token classification and outputs a properly
+        Takes in the results from the text classification and outputs a properly
         formatted dict instance which can later be used to generate a confidence 
         score with the _calculate_confidence() method.
         
         Arguments:
             results:
-                A list instance depicting the results from the token classification 
+                A list instance depicting the results from the text classification 
                 pipeline. The first element in the list (index=0) must be a dict
-                instance containing the flag 'outcome', and possibly the flag 'score'.
+                instance contaning the flag 'outcome', and possibly the flag 'score'.
 
         Returns:
             A dict instance with two flags--the 'outcome' flag is required and will 
@@ -118,15 +134,8 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
             This dict instance is later saved to the output attribute.
         """
         if results:
-
-            # Clean extra data
-            for result in results:
-                result.pop("start")
-                result.pop("end")
-                result["score"] = float(result["score"])
-
-            return {"outcome": "ResultsFound", "token_data": results}
-        return {"outcome": "NoResultsFound", "token_data": []}
+            return {"outcome": results[0]["label"], "score": results[0]["score"]}
+        return {"outcome": "UNKNOWN"}
 
     def prepare(self) -> bool:
         """
@@ -157,7 +166,7 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
 
     def initialize(self):
         """
-        Initializes the model and tokenizer for the TokenClassificationEngine.
+        Initializes the model and tokenizer for the TextClassificationEngine.
 
         Arguments:
             None
@@ -166,9 +175,9 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
             tuple:
                 A tuple instance. The elements of the tuple are, in order:
                     model:
-                        The model for the TokenClassificationEngine.
+                        The model for the TextClassificationEngine.
                     tokenizer:
-                        The tokenizer for the TokenClassificationEngine.
+                        The tokenizer for the TextClassificationEngine.
 
         Raises:
             Exception:
@@ -178,12 +187,12 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
                 The ValueError is raised if the model or tokenizer is empty.
         """
         try:
-            model = AutoModelForTokenClassification.from_pretrained(
-                "lakshyakh93/deberta_finetuned_pii", cache_dir=self.cache_dir
+            model = AutoModelForSequenceClassification.from_pretrained(
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
             )
 
             tokenizer = AutoTokenizer.from_pretrained(
-                "lakshyakh93/deberta_finetuned_pii", cache_dir=self.cache_dir
+                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
             )
         except Exception as e:
             raise Exception(
@@ -196,10 +205,10 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
         return model, tokenizer
 
     def execute(self, model, tokenizer):
-        """Perform token-classification for the prompt.
+        """Perform text-classification for the prompt.
 
         This function performs classification of the given prompt to
-        enable it to detect sensitive data exposure. The function returns the
+        enable it to detect prompt injection. The function returns the
         label and score provided by the classifier and defines the class
         attributes based on the outcome of the classifier.
 
@@ -215,7 +224,7 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
                 empty when the function is called.
             Exception:
                 The Exception will be raised if a general error occurs during the 
-                execution of the token classification pipeline. This is based on 
+                execution of the text classification pipeline. This is based on 
                 try/except syntax.
         """
 
@@ -223,22 +232,23 @@ class TokenClassificationEngine(LLMDefender.BaseEngine):
             raise ValueError("Model or tokenizer is empty")
         try:
             pipe = pipeline(
-                "token-classification",
+                "text-classification",
                 model=model,
                 tokenizer=tokenizer,
+                truncation=True,
+                max_length=512,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            nested_results = pipe([self.prompts[0], self.prompts[0]], aggregation_strategy="first")
-            results = [item for sublist in nested_results if isinstance(sublist, list) for item in sublist]
+            results = pipe(self.prompts)
         except Exception as e:
             raise Exception(
-                f"Error occurred during token classification pipeline execution: {e}"
+                f"Error occurred during text classification pipeline execution: {e}"
             ) from e
 
         self.output = self._populate_data(results)
         self.confidence = self._calculate_confidence()
 
         bt.logging.debug(
-            f"Token Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
+            f"Text Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
         )
         return True

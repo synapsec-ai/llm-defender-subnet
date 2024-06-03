@@ -12,7 +12,7 @@ from typing import Callable
 from abc import abstractmethod
 
 # Import custom modules
-import llm_defender as LLMDefender
+import llm_defender.base as LLMDefenderBase
 
 
 class BaseEngine:
@@ -176,7 +176,7 @@ class BaseEngine:
                 Return value is not in range of (0.0, 1.0)
         """
 
-    def get_response(self) -> LLMDefender.EngineResponse:
+    def get_response(self) -> LLMDefenderBase.EngineResponse:
         """Returns the outcome of the object.
 
         This method returns the response from the engine in a correct
@@ -202,7 +202,7 @@ class BaseEngine:
         if not isinstance(self.output, dict):
             raise TypeError("Output must be a dict")
 
-        return LLMDefender.EngineResponse(
+        return LLMDefenderBase.EngineResponse(
             name=self.name, confidence=self.confidence, data=self.output
         )
 

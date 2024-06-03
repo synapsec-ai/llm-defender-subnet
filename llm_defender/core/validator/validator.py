@@ -21,11 +21,14 @@ import secrets
 import time
 import bittensor as bt
 import requests
-import llm_defender as LLMDefender
 import numpy as np
 
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
+import llm_defender.core.validator as LLMDefenderCore
 
-class SubnetValidator(LLMDefender.BaseNeuron):
+
+class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
 
     Class description
@@ -230,7 +233,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
                 response_object, responses_invalid_uids, responses_valid_uids = (
-                    LLMDefender.prompt_injection_process.process_response(
+                    LLMDefenderCore.prompt_injection_process.process_response(
                         prompt=query["prompt"],
                         response=response,
                         uid=processed_uids[i],
@@ -244,7 +247,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
                 )
             elif query["analyzer"] == "Sensitive Information":
                 response_object, responses_invalid_uids, responses_valid_uids = (
-                    LLMDefender.sensitive_information_process.process_response(
+                    LLMDefenderCore.sensitive_information_process.process_response(
                         prompt=query["prompt"],
                         response=response,
                         uid=processed_uids[i],
@@ -387,7 +390,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
                 # get prompt entry from the API output
                 prompt_entry = res.json()
                 # check to make sure prompt is valid
-                if LLMDefender.validate_validator_api_prompt_output(prompt_entry):
+                if LLMDefenderBase.validate_validator_api_prompt_output(prompt_entry):
                     bt.logging.trace(
                         f"Loaded remote prompt to serve to miners: {prompt_entry}"
                     )
@@ -432,7 +435,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
 
         entry = self.get_api_prompt(
             hotkey=self.wallet.hotkey.ss58_address,
-            signature=LLMDefender.sign_data(hotkey=self.wallet.hotkey, data=data),
+            signature=LLMDefenderBase.sign_data(hotkey=self.wallet.hotkey, data=data),
             synapse_uuid=synapse_uuid,
             timestamp=timestamp,
             nonce=nonce,
@@ -611,7 +614,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
         else:
             self.init_default_scores()
 
-    @LLMDefender.timeout_decorator(timeout=30)
+    @LLMDefenderBase.timeout_decorator(timeout=30)
     async def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
 
@@ -624,7 +627,7 @@ class SubnetValidator(LLMDefender.BaseNeuron):
 
         return metagraph
 
-    @LLMDefender.timeout_decorator(timeout=30)
+    @LLMDefenderBase.timeout_decorator(timeout=30)
     async def set_weights(self):
         """Sets the weights for the subnet"""
 

@@ -1,6 +1,8 @@
 import bittensor as bt
-import llm_defender as LLMDefender
 
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
+import llm_defender.core.validator as LLMDefenderCore
 
 def process_response(
     prompt,
@@ -13,12 +15,12 @@ def process_response(
     responses_invalid_uids,
     responses_valid_uids,
 ):
-    # Get the hotkey for the response
+    # Get the hotkey and coldkey for the response
     hotkey = validator.metagraph.hotkeys[uid]
     coldkey = validator.metagraph.coldkeys[uid]
 
     # Get the default response object
-    response_object = LLMDefender.sensitive_information_scoring.get_response_object(
+    response_object = LLMDefenderCore.prompt_injection_scoring.get_response_object(
         uid,
         hotkey,
         coldkey,
@@ -30,13 +32,13 @@ def process_response(
     )
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
-    if not LLMDefender.sensitive_information_scoring.validate_response(
+    if not LLMDefenderCore.prompt_injection_scoring.validate_response(
         hotkey, response.output
     ) or not validator.validate_nonce(response.output["nonce"]):
         bt.logging.debug(f"Empty response or nonce validation failed: {response}")
-        validator.scores, old_score, unweighted_new_score = (
-            LLMDefender.sensitive_information_scoring.assign_score_for_uid(
-                validator.scores,
+        validator.prompt_injection_scores, old_score, unweighted_new_score = (
+            LLMDefenderCore.prompt_injection_scoring.assign_score_for_uid(
+                validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
                 0.0,
@@ -49,16 +51,16 @@ def process_response(
     else:
         response_time = response.dendrite.process_time
 
-        scored_response = calculate_score(
+        scored_response = calculate_analyzer_score(
             prompt, validator, response.output, target, response_time, hotkey
         )
 
-        validator.scores, old_score, unweighted_new_score = (
-            LLMDefender.sensitive_information_scoring.assign_score_for_uid(
-                validator.scores,
+        validator.prompt_injection_scores, old_score, unweighted_new_score = (
+            LLMDefenderCore.prompt_injection_scoring.assign_score_for_uid(
+                validator.prompt_injection_scores,
                 uid,
                 validator.neuron_config.alpha,
-                scored_response["scores"]["total"],
+                scored_response["scores"]["binned_analyzer_score"],
                 query["weight"],
             )
         )
@@ -70,17 +72,17 @@ def process_response(
             "response_time": response_time,
         }
 
-        token_class = [
+        text_class = [
             data
             for data in response.output["engines"]
-            if "token_classification" in data["name"]
+            if "text_classification" in data["name"]
         ]
 
         engine_data = []
 
-        if token_class:
-            if len(token_class) > 0:
-                engine_data.append(token_class[0])
+        if text_class:
+            if len(text_class) > 0:
+                engine_data.append(text_class[0])
 
         responses_valid_uids.append(uid)
 
@@ -93,11 +95,11 @@ def process_response(
         # Populate response data
         response_object["response"] = miner_response
         response_object["engine_data"] = engine_data
-        response_object["scored_response"] = scored_response
-        response_object["weight_scores"] = {
-            "new": float(validator.scores[uid]),
+        response_object["analyzer_scored_response"] = scored_response
+        response_object["analyzer_weight_scores"] = {
+            "new": float(validator.prompt_injection_scores[uid]),
             "old": float(old_score),
-            "change": float(validator.scores[uid]) - float(old_score),
+            "change": float(validator.prompt_injection_scores[uid]) - float(old_score),
             "unweighted": unweighted_new_score,
             "weight": query["weight"],
         }
@@ -113,7 +115,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -122,7 +124,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -131,7 +133,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "scores"
                     ][
@@ -140,7 +142,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "raw_scores"
                     ][
@@ -149,7 +151,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                        "scored_response"
+                        "analyzer_scored_response"
                     ][
                         "raw_scores"
                     ][
@@ -158,21 +160,21 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "new"
                     ]
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "old"
                     ]
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
-                        "weight_scores"
+                        "analyzer_weight_scores"
                     ][
                         "change"
                     ]
@@ -199,7 +201,7 @@ def process_response(
     return response_object, responses_invalid_uids, responses_valid_uids
 
 
-def calculate_score(
+def calculate_analyzer_score(
     prompt, validator, response, target: float, response_time: float, hotkey: str
 ) -> dict:
     """This function sets the score based on the response.
@@ -210,10 +212,8 @@ def calculate_score(
     """
 
     # Calculate distance score
-    distance_score = (
-        LLMDefender.sensitive_information_scoring.calculate_subscore_distance(
-            response, target
-        )
+    distance_score = LLMDefenderCore.prompt_injection_scoring.calculate_subscore_distance(
+        response, target
     )
     if distance_score is None:
         bt.logging.debug(
@@ -222,7 +222,7 @@ def calculate_score(
         distance_score = 0.0
 
     # Calculate speed score
-    speed_score = LLMDefender.sensitive_information_scoring.calculate_subscore_speed(
+    speed_score = LLMDefenderCore.prompt_injection_scoring.calculate_subscore_speed(
         validator.timeout, response_time
     )
     if speed_score is None:
@@ -232,25 +232,25 @@ def calculate_score(
         speed_score = 0.0
 
     # Validate individual scores
-    if not LLMDefender.validate_numerical_value(
+    if not LLMDefenderBase.validate_numerical_value(
         distance_score, float, 0.0, 1.0
-    ) or not LLMDefender.validate_numerical_value(speed_score, float, 0.0, 1.0):
+    ) or not LLMDefenderBase.validate_numerical_value(speed_score, float, 0.0, 1.0):
         bt.logging.error(
             f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
-        return LLMDefender.sensitive_information_scoring.get_engine_response_object()
+        return LLMDefenderCore.prompt_injection_scoring.get_engine_response_object()
 
     # Set weights for scores
     score_weights = {"distance": 0.85, "speed": 0.15}
 
     # Get penalty multipliers
     distance_penalty, speed_penalty = get_response_penalties(
-        validator, response, hotkey
+        prompt, validator, response, hotkey
     )
 
     # Apply penalties to scores
     (
-        total_score,
+        total_analyzer_raw_score,
         final_distance_score,
         final_speed_score,
     ) = validator.calculate_penalized_scores(
@@ -259,16 +259,24 @@ def calculate_score(
 
     # Validate individual scores
     if (
-        not LLMDefender.validate_numerical_value(total_score, float, 0.0, 1.0)
-        or not LLMDefender.validate_numerical_value(
+        not LLMDefenderBase.validate_numerical_value(
+            total_analyzer_raw_score, float, 0.0, 1.0
+        )
+        or not LLMDefenderBase.validate_numerical_value(
             final_distance_score, float, 0.0, 1.0
         )
-        or not LLMDefender.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
+        or not LLMDefenderBase.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
-            f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
+            f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
-        return LLMDefender.sensitive_information_scoring.get_engine_response_object()
+        return LLMDefenderCore.prompt_injection_scoring.get_engine_response_object()
+
+    normalized_analyzer_score, binned_analyzer_score = (
+        LLMDefenderCore.prompt_injection_scoring.get_normalized_and_binned_scores(
+            total_analyzer_raw_score
+        )
+    )
 
     # Log the scoring data
     score_logger = {
@@ -278,19 +286,29 @@ def calculate_score(
         "score_weights": score_weights,
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
         "raw_scores": {"distance": distance_score, "speed": speed_score},
-        "final_scores": {
-            "total": total_score,
+        "analyzer_scores": {
+            "binned_analyzer_score": binned_analyzer_score,
+            "normalized_analyzer_score": normalized_analyzer_score,
+            "total_analyzer_raw": total_analyzer_raw_score,
             "distance": final_distance_score,
             "speed": final_speed_score,
         },
     }
 
-    bt.logging.debug(f"Calculated score: {score_logger}")
+    bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
-    return LLMDefender.sensitive_information_scoring.get_engine_response_object(
-        total_score=total_score,
-        final_distance_score=final_distance_score,
-        final_speed_score=final_speed_score,
+    normalized_analyzer_score, binned_analyzer_score = (
+        LLMDefenderCore.prompt_injection_scoring.get_normalized_and_binned_scores(
+            total_analyzer_raw_score
+        )
+    )
+
+    return LLMDefenderCore.prompt_injection_scoring.get_engine_response_object(
+        normalized_analyzer_score=normalized_analyzer_score,
+        binned_analyzer_score=binned_analyzer_score,
+        total_analyzer_raw_score=total_analyzer_raw_score,
+        final_analyzer_distance_score=final_distance_score,
+        final_analyzer_speed_score=final_speed_score,
         distance_penalty=distance_penalty,
         speed_penalty=speed_penalty,
         raw_distance_score=distance_score,
@@ -298,7 +316,7 @@ def calculate_score(
     )
 
 
-def apply_penalty(validator, response, hotkey) -> tuple:
+def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -316,13 +334,13 @@ def apply_penalty(validator, response, hotkey) -> tuple:
 
     similarity = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    similarity += LLMDefender.sensitive_information_penalty.check_similarity_penalty(
+    similarity += LLMDefenderCore.prompt_injection_penalty.check_similarity_penalty(
         uid, validator.miner_responses[hotkey]
     )
-    base += LLMDefender.sensitive_information_penalty.check_base_penalty(
+    base += LLMDefenderCore.prompt_injection_penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
     )
-    duplicate += LLMDefender.sensitive_information_penalty.check_duplicate_penalty(
+    duplicate += LLMDefenderCore.prompt_injection_penalty.check_duplicate_penalty(
         uid, validator.miner_responses[hotkey], response
     )
 
@@ -332,11 +350,11 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     return similarity, base, duplicate
 
 
-def get_response_penalties(validator, response, hotkey):
+def get_response_penalties(prompt, validator, response, hotkey):
     """This function resolves the penalties for the response"""
 
     similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(
-        validator, response, hotkey
+        prompt, validator, response, hotkey
     )
 
     distance_penalty_multiplier = 1.0

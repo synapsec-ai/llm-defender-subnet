@@ -4,11 +4,13 @@ can be used for troubleshooting purposes."""
 import argparse
 import bittensor as bt
 import uuid
-import llm_defender as LLMDefender
 import secrets
 import hashlib
 import time
 import asyncio
+
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
 
 
 def send_notification_synapse(
@@ -24,10 +26,10 @@ def send_notification_synapse(
     )
     responses = dendrite.query(
         axons_with_valid_ip,
-        LLMDefender.SubnetProtocol(
-            subnet_version=LLMDefender.config["module_version"],
+        LLMDefenderBase.SubnetProtocol(
+            subnet_version=LLMDefenderBase.config["module_version"],
             synapse_uuid=synapse_uuid,
-            synapse_signature=LLMDefender.sign_data(
+            synapse_signature=LLMDefenderBase.sign_data(
                 hotkey=wallet.hotkey, data=data_to_sign
             ),
             synapse_nonce=nonce,
@@ -52,11 +54,11 @@ async def send_payload_message(
     )
     responses = await dendrite.forward(
         uids_to_query,
-        LLMDefender.SubnetProtocol(
+        LLMDefenderBase.SubnetProtocol(
             analyzer=prompt_to_analyze["analyzer"],
-            subnet_version=LLMDefender.config["module_version"],
+            subnet_version=LLMDefenderBase.config["module_version"],
             synapse_uuid=synapse_uuid,
-            synapse_signature=LLMDefender.sign_data(
+            synapse_signature=LLMDefenderBase.sign_data(
                 hotkey=wallet.hotkey, data=data_to_sign
             ),
             synapse_nonce=nonce,

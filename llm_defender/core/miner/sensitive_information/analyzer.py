@@ -3,7 +3,10 @@ import time
 from typing import List
 
 import bittensor as bt
-import llm_defender as LLMDefender
+
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
+import llm_defender.core.miner as LLMDefenderCore
 
 
 class SensitiveInformationAnalyzer:
@@ -33,7 +36,7 @@ class SensitiveInformationAnalyzer:
         self.miner_uid = miner_uid
 
         self.model, self.tokenizer = (
-            LLMDefender.TokenClassificationEngine().initialize()
+            LLMDefenderCore.TokenClassificationEngine().initialize()
         )
 
         self.wandb_handler = wandb_handler
@@ -42,7 +45,7 @@ class SensitiveInformationAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(self, synapse: LLMDefender.SubnetProtocol, prompts: List[str]):
+    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]):
         output = {
             "analyzer": "Sensitive Information",
             "confidence": None,
@@ -51,7 +54,7 @@ class SensitiveInformationAnalyzer:
         engine_confidences = []
 
         # Execute Token Classification engine
-        token_classification_engine = LLMDefender.TokenClassificationEngine(
+        token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
             prompts=prompts
         )
         token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
@@ -73,7 +76,7 @@ class SensitiveInformationAnalyzer:
         data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = LLMDefender.sign_data(self.wallet.hotkey, data_to_sign)
+        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
 
         # Wandb logging
         if self.wandb_enabled:

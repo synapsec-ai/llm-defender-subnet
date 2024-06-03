@@ -16,10 +16,11 @@ import sys
 import bittensor as bt
 
 # Import custom modules
-import llm_defender as LLMDefender
+import llm_defender.base as LLMDefenderBase
+import llm_defender.core.miner as LLMDefenderCore
 
 
-class SubnetMiner(LLMDefender.BaseNeuron):
+class SubnetMiner(LLMDefenderBase.BaseNeuron):
     """SubnetMiner class for LLM Defender Subnet
 
     The SubnetMiner class contains all of the code for a Miner neuron
@@ -94,16 +95,16 @@ class SubnetMiner(LLMDefender.BaseNeuron):
         # Initialize the analyzers
         self.analyzers = {
             str(
-                LLMDefender.SupportedAnalyzers.PROMPT_INJECTION
-            ): LLMDefender.PromptInjectionAnalyzer(
+                LLMDefenderCore.SupportedAnalyzers.PROMPT_INJECTION
+            ): LLMDefenderCore.PromptInjectionAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
                 miner_uid=self.miner_uid,
             ),
             str(
-                LLMDefender.SupportedAnalyzers.SENSITIVE_INFORMATION
-            ): LLMDefender.SensitiveInformationAnalyzer(
+                LLMDefenderCore.SupportedAnalyzers.SENSITIVE_INFORMATION
+            ): LLMDefenderCore.SensitiveInformationAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
                 wandb_handler=self.wandb_handler,
@@ -240,7 +241,7 @@ class SubnetMiner(LLMDefender.BaseNeuron):
 
         return False
 
-    def blacklist(self, synapse: LLMDefender.SubnetProtocol) -> Tuple[bool, str]:
+    def blacklist(self, synapse: LLMDefenderBase.SubnetProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -300,7 +301,7 @@ class SubnetMiner(LLMDefender.BaseNeuron):
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
-    def priority(self, synapse: LLMDefender.SubnetProtocol) -> float:
+    def priority(self, synapse: LLMDefenderBase.SubnetProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -331,8 +332,8 @@ class SubnetMiner(LLMDefender.BaseNeuron):
         return stake
 
     def forward(
-        self, synapse: LLMDefender.SubnetProtocol
-    ) -> LLMDefender.SubnetProtocol:
+        self, synapse: LLMDefenderBase.SubnetProtocol
+    ) -> LLMDefenderBase.SubnetProtocol:
         """
         The function is executed once the data from the
         validator has been deserialized, which means we can utilize the
@@ -403,7 +404,7 @@ class SubnetMiner(LLMDefender.BaseNeuron):
 
         # Synapse signature verification
         data = f"{synapse.synapse_uuid}{synapse.synapse_nonce}{synapse.dendrite.hotkey}{synapse.synapse_timestamp}"
-        if not LLMDefender.validate_signature(
+        if not LLMDefenderBase.validate_signature(
             hotkey=synapse.dendrite.hotkey,
             data=data,
             signature=synapse.synapse_signature,
@@ -469,7 +470,7 @@ class SubnetMiner(LLMDefender.BaseNeuron):
         # self.used_prompt_hashes.append(prompt_hash)
 
         # Execute the correct analyzer
-        if not LLMDefender.SupportedAnalyzers.is_valid(synapse.analyzer):
+        if not LLMDefenderCore.SupportedAnalyzers.is_valid(synapse.analyzer):
             bt.logging.error(
                 f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
             )
