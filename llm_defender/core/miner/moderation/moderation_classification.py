@@ -3,12 +3,12 @@ This module implements the base-engine used by the prompt-injection
 feature of the llm-defender-subnet.
 """
 from typing import List
-
+import numpy as np
 import torch
 from os import path, makedirs
 from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification,
+    AutoModelForTokenClassification,
+    AutoTokenizer
 )
 from transformers import pipeline
 import bittensor as bt
@@ -96,13 +96,11 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
             output attribute.
         """
         # Determine the confidence based on the score
-        if self.output["outcome"] != "UNKNOWN":
-            if self.output["outcome"] == "SAFE":
-                return 0.0
-            else:
-                return 1.0
-        else:
-            return 0.5
+        if self.output["token_data"]:
+            highest_score_entity = max(self.output["token_data"], key=lambda x: x['score'])
+            return float(highest_score_entity["score"])
+        
+        return 0.0
 
     def _populate_data(self, results):
         """
@@ -124,8 +122,14 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
             This dict instance is later saved to the output attribute.
         """
         if results:
-            return {"outcome": results[0]["label"], "score": results[0]["score"]}
-        return {"outcome": "UNKNOWN"}
+            # Clean extra data
+            for result in results:
+                result.pop("start")
+                result.pop("end")
+                result["score"] = float(result["score"])
+
+            return {"outcome": "ResultsFound", "token_data": results}
+        return {"outcome": "NoResultsFound", "token_data": []}
 
     def prepare(self) -> bool:
         """
@@ -177,12 +181,12 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
                 The ValueError is raised if the model or tokenizer is empty.
         """
         try:
-            model = AutoModelForSequenceClassification.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+            model = AutoModelForTokenClassification.from_pretrained(
+                "Sinanmz/toxicity_token_classifier", cache_dir=self.cache_dir
             )
 
             tokenizer = AutoTokenizer.from_pretrained(
-                "laiyer/deberta-v3-base-prompt-injection", cache_dir=self.cache_dir
+                "Sinanmz/toxicity_token_classifier", cache_dir=self.cache_dir
             )
         except Exception as e:
             raise Exception(
@@ -221,15 +225,23 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
         if not model or not tokenizer:
             raise ValueError("Model or tokenizer is empty")
         try:
-            pipe = pipeline(
-                "moderation",
-                model=model,
-                tokenizer=tokenizer,
-                truncation=True,
-                max_length=512,
-                device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-            )
-            results = pipe(self.prompts)
+            inputs = tokenizer(self.prompts[0], return_tensors='pt')
+            with torch.no_grad():
+                outputs = model(**inputs)
+            logits = outputs.logits
+            predictions = np.argmax(logits.detach().numpy(), axis=2)
+            tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])[1:-1]
+            labels = predictions[0][1:-1]
+            results = []
+            for i in range(len(labels)):
+                if i > 0 and inputs.word_ids()[i+1] == inputs.word_ids()[i]:
+                    results.popitem()
+                    if model.config.id2label[labels[i-1]] != "none":
+                        results.append((tokens[i-1] + tokens[i][2:], model.config.id2label[labels[i-1]]))
+                else:
+                    if model.config.id2label[labels[i]] != "none":
+                        results.append((tokens[i], model.config.id2label[labels[i]]))
+            
         except Exception as e:
             raise Exception(
                 f"Error occurred during text classification pipeline execution: {e}"
