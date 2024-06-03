@@ -23,7 +23,6 @@ class SupportedAnalyzers(Enum):
     SENSITIVE_INFORMATION = "Sensitive Information"
     MODERATION = "Moderation"
 
-
     @classmethod
     def is_valid(cls, value):
         return any(value == item.value for item in cls)
