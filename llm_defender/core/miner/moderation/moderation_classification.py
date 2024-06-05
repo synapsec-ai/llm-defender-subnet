@@ -124,8 +124,6 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
         if results:
             # Clean extra data
             for result in results:
-                result.pop("start")
-                result.pop("end")
                 result["score"] = float(result["score"])
 
             return {"outcome": "ResultsFound", "token_data": results}
@@ -202,7 +200,7 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
         """Perform text-classification for the prompt.
 
         This function performs classification of the given prompt to
-        enable it to detect prompt injection. The function returns the
+        enable it to detect toxicity. The function returns the
         label and score provided by the classifier and defines the class
         attributes based on the outcome of the classifier.
 
@@ -224,27 +222,45 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
 
         if not model or not tokenizer:
             raise ValueError("Model or tokenizer is empty")
+        
         try:
-            inputs = tokenizer(self.prompts[0], return_tensors='pt')
+            inputs = tokenizer(self.prompt, return_tensors='pt')
             with torch.no_grad():
                 outputs = model(**inputs)
+
             logits = outputs.logits
-            predictions = np.argmax(logits.detach().numpy(), axis=2)
-            tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])[1:-1]
-            labels = predictions[0][1:-1]
+            softmax = torch.nn.functional.softmax(logits, dim=2)
+            confidence_scores = softmax.detach().numpy()
+            predictions = np.argmax(confidence_scores, axis=2)
+            tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+            labels = predictions[0]
+            tokens = tokens[1:-1]
+            labels = labels[1:-1]
+            confidence_scores = confidence_scores[0][1:-1]
+
             results = []
             for i in range(len(labels)):
+                score = (1 - confidence_scores[i][labels[i]])
+
                 if i > 0 and inputs.word_ids()[i+1] == inputs.word_ids()[i]:
-                    results.popitem()
-                    if model.config.id2label[labels[i-1]] != "none":
-                        results.append((tokens[i-1] + tokens[i][2:], model.config.id2label[labels[i-1]]))
+                    if score >= 0.5:
+                        results.append({
+                            "entity_group":tokens[i-1] + tokens[i][2:],
+                            "classification":model.config.id2label[labels[i-1]],
+                            "score":score
+                        })
+
                 else:
-                    if model.config.id2label[labels[i]] != "none":
-                        results.append((tokens[i], model.config.id2label[labels[i]]))
+                    if score >= 0.5:
+                        results.append({
+                            "entity_group":tokens[i],
+                            "classification":model.config.id2label[labels[i]],
+                            "score":score
+                        })
             
         except Exception as e:
             raise Exception(
-                f"Error occurred during text classification pipeline execution: {e}"
+                f"Error occurred during moderation classification pipeline execution: {e}"
             ) from e
 
         self.output = self._populate_data(results)
