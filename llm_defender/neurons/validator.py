@@ -66,12 +66,12 @@ async def save_miner_state_async(validator: LLMDefenderCore.SubnetValidator):
     await asyncio.to_thread(save_miner_state, validator)
 
 
-def truncate_miner_state(validator: LLMDefenderCore.SubnetValidator):
-    validator.truncate_miner_state()
+def truncate_miner_state(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
+    validator.truncate_miner_state(max_number_of_responses_per_miner)
 
 
-async def truncate_miner_state_async(validator: LLMDefenderCore.SubnetValidator):
-    await asyncio.to_thread(truncate_miner_state, validator)
+async def truncate_miner_state_async(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
+    await asyncio.to_thread(truncate_miner_state, validator, max_number_of_responses_per_miner)
 
 
 def save_used_nonces(validator: LLMDefenderCore.SubnetValidator):
@@ -260,6 +260,17 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
+            # ensure that the number of responses per miner is below a number
+            max_number_of_responses_per_miner = 100
+            truncate_miner_state(validator, max_number_of_responses_per_miner)
+            for hotkey, responses in validator.miner_responses.items():
+                bt.logging.debug(f"hotkey: {hotkey}, responses_counter: {len(responses)}")
+                if len(responses) > max_number_of_responses_per_miner:
+                    print(hotkey, len(responses))
+                    await asyncio.sleep(20)
+                    exit(0)
+
+
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
                 await update_metagraph_async(validator)
@@ -270,7 +281,6 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 )
             if validator.step % 20 == 0:
                 await asyncio.gather(
-                    truncate_miner_state_async(validator),
                     save_used_nonces_async(validator),
                 )
 
