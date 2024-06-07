@@ -505,8 +505,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 self.miner_responses = {}
 
     def truncate_miner_state(self, max_number_of_responses_per_miner: int):
-        """Truncates the local miner state to limit the number of responses per analyzer under each hotkey."""
-
         if self.miner_responses:
             old_size = getsizeof(self.miner_responses) + sum(
                 getsizeof(key) + sum(getsizeof(analyzer_key) + getsizeof(analyzer_value)
