@@ -264,12 +264,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             max_number_of_responses_per_miner = 100
             truncate_miner_state(validator, max_number_of_responses_per_miner)
             for hotkey, responses in validator.miner_responses.items():
-                bt.logging.debug(f"hotkey: {hotkey}, responses_counter: {len(responses)}")
                 if len(responses) > max_number_of_responses_per_miner:
-                    print(hotkey, len(responses))
-                    await asyncio.sleep(20)
-                    exit(0)
-
+                    bt.logging.error(f"Stored responses are too large for miner: {hotkey}, responses_counter: {len(responses)}")
 
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
