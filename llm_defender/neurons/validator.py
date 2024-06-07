@@ -224,13 +224,16 @@ def handle_invalid_prompt(validator):
 
 def attach_response_to_validator(validator, response_data):
     for res in response_data:
-        if validator.miner_responses:
-            if res["hotkey"] in validator.miner_responses:
-                validator.miner_responses[res["hotkey"]].append(res)
-            else:
-                validator.miner_responses[res["hotkey"]] = [res]
-        else:
-            validator.miner_responses = {res["hotkey"]: [res]}
+        hotkey = res['hotkey']
+        analyzer = res['analyzer']
+
+        if hotkey not in validator.miner_responses:
+            validator.miner_responses[hotkey] = {}
+
+        if analyzer not in validator.miner_responses[hotkey]:
+            validator.miner_responses[hotkey][analyzer] = []
+
+        validator.miner_responses[hotkey][analyzer].append(res)
 
 
 def update_weights(validator):
@@ -260,12 +263,14 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
+            validator.step = 0
             # ensure that the number of responses per miner is below a number
-            max_number_of_responses_per_miner = 100
-            truncate_miner_state(validator, max_number_of_responses_per_miner)
-            for hotkey, responses in validator.miner_responses.items():
-                if len(responses) > max_number_of_responses_per_miner:
-                    bt.logging.error(f"Stored responses are too large for miner: {hotkey}, responses_counter: {len(responses)}")
+            # max_number_of_responses_per_miner = 100
+            # truncate_miner_state(validator, max_number_of_responses_per_miner)
+
+            # for hotkey, responses in validator.miner_responses.items():
+            #     if len(responses) > max_number_of_responses_per_miner:
+            #         bt.logging.error(f"Stored responses are too large for miner: {hotkey}, responses_counter: {len(responses)}")
 
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
