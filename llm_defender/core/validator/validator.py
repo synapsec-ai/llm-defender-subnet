@@ -505,18 +505,26 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 self.miner_responses = {}
 
     def truncate_miner_state(self, max_number_of_responses_per_miner: int):
-        """Truncates the local miner state"""
+        """Truncates the local miner state to limit the number of responses per analyzer under each hotkey."""
 
         if self.miner_responses:
             old_size = getsizeof(self.miner_responses) + sum(
-                getsizeof(key) + getsizeof(value)
+                getsizeof(key) + sum(getsizeof(analyzer_key) + getsizeof(analyzer_value)
+                                     for analyzer_key, analyzer_value in value.items())
                 for key, value in self.miner_responses.items()
             )
-            for hotkey in self.miner_responses:
-                self.miner_responses[hotkey] = self.miner_responses[hotkey][-max_number_of_responses_per_miner:]
 
+            for hotkey, analyzers in self.miner_responses.items():
+                for analyzer in analyzers:
+                    self.miner_responses[hotkey][analyzer] = self.miner_responses[hotkey][analyzer][-max_number_of_responses_per_miner:]
+
+            new_size = getsizeof(self.miner_responses) + sum(
+                getsizeof(key) + sum(getsizeof(analyzer_key) + getsizeof(analyzer_value)
+                                     for analyzer_key, analyzer_value in value.items())
+                for key, value in self.miner_responses.items()
+            )
             bt.logging.debug(
-                f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')"
+                f"Truncated miner response list (Old: '{old_size}' - New: '{new_size}')"
             )
 
     def save_state(self):

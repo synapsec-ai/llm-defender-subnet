@@ -265,8 +265,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
         try:
             validator.step = 0
             # ensure that the number of responses per miner is below a number
-            # max_number_of_responses_per_miner = 100
-            # truncate_miner_state(validator, max_number_of_responses_per_miner)
+            max_number_of_responses_per_miner = 10
+            truncate_miner_state(validator, max_number_of_responses_per_miner)
 
             # for hotkey, responses in validator.miner_responses.items():
             #     if len(responses) > max_number_of_responses_per_miner:
