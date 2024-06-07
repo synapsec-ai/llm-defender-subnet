@@ -51,7 +51,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt_injection_scores = None
         self.sensitive_information_scores = None
         self.hotkeys = None
-        self.miner_responses = None
+        self.miner_responses = {}
         self.max_targets = None
         self.target_group = None
         self.load_validator_state = None
@@ -502,7 +502,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     state_path,
                     f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
                 )
-                self.miner_responses = None
+                self.miner_responses = {}
 
     def truncate_miner_state(self, max_number_of_responses_per_miner: int):
         """Truncates the local miner state"""
