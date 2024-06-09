@@ -319,7 +319,7 @@ def apply_penalty(validator, response, hotkey) -> tuple:
 
     similarity = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    similarity += LLMDefenderCore.sensitive_information_penalty.check_similarity_penalty(
+    similarity += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
         uid, validator.miner_responses[hotkey]
     )
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(

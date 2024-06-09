@@ -29,21 +29,17 @@ def check_false_positive_penalty(uid, response):
             is not inputted.
     """
 
-    def _check_for_false_positives(uid, response):
+    def _check_for_false_positives(response):
         penalty = 0.0
         
-        if response['target'] == 0 and response['response']['confidence'] > 0.50:
+        if response['target'] == 0 and response.output['confidence'] > 0.50:
             penalty += 10.0
 
         return penalty
 
     penalty = 0.0
 
-    if not validate_uid(uid) or not response:
-        # Apply penalty if invalid values are provided to the function
-        return 20.0
-
-    penalty += _check_for_false_positives(uid, response)
+    penalty += _check_for_false_positives(response)
 
     return penalty
 
