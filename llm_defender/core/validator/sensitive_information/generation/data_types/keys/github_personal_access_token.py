@@ -57,11 +57,3 @@ class GitHub_PersonalAccessToken:
         random_part = ''.join(random.choices(string.ascii_letters + string.digits, k=30))
         full_token = prefix + random_part
         return full_token + self._get_invalid_checksum(full_token)
-
-    def verify(self, token):
-        if len(token) != 40 or not token.startswith(tuple(self.valid_prefixes)):
-            return False
-        base_part = token[:-6]
-        checksum_part = token[-6:]
-        calculated_checksum = self.calculate_checksum(base_part)
-        return checksum_part == calculated_checksum

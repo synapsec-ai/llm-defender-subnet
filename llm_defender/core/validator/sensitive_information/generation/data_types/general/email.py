@@ -18,13 +18,6 @@ class Email:
         self.predefined_tlds = ['.com', '.com', '.com', '.com', '.com', '.com', '.com', '.com', '.com', '.com', '.com', '.com', '.co', '.org', '.net', '.io', '.co.uk', '.fr', '.gov', '.tv', '.ai', '.travel', '.tel', '.pro', '.mil', '.int', '.info', '.edu', '.cat', '.biz', '.aero', '.me', '.gg']
         
         self.random_chars = ['!', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '+', '=', '~', "'", '"', '<', '>', '?', '[', ']', '{', '}']
-        
-        self.email_pattern = re.compile(
-            r'([!#-\'+/-9=?A-Z^-~-]+(\.[!#-\'+/-9=?A-Z^-~-]+)*|'
-            r'"([]!#-[^-~ \t]|(\\[\t -~]))+")'
-            r'@'
-            r'([!#-\'+/-9=?A-Z^-~-]+(\.[!#-\'+/-9=?A-Z^-~-]+)*|\[[\t -Z^-~]*\])'
-        )
     
     def generate_username(self): 
         # random set of strings 
@@ -88,7 +81,3 @@ class Email:
         # replace @ with another character
         else:
             return email.replace('@',random.choice(self.random_chars))     
-
-    def verify(self, email):
-        return self.email_pattern.match(email) is not None
-    

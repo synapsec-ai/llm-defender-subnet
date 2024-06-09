@@ -7,14 +7,6 @@ class IPv6_Address:
         self.random_chars = [k for k in '&;-_']
         self.hex_chars = [k for k in '1234567890ABCDEF']
         self.not_hex_chars = [k for k in 'GHIJKLMNOPQRSTUVWXYZ']
-        self.ipv6_pattern = re.compile(
-            r'^('
-            r'([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|'  # Fully specified IPv6 address
-            r'([0-9a-fA-F]{1,4}:){1,7}:|'  # Compression at the end
-            r'([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|'  # One group after compression
-            r'([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}'  # Two groups after one or more compressed
-            r')$'
-        )
 
     def _generate_valid_hex_number(self):
         # Generate a random integer between 0 and 65535 (inclusive)
@@ -545,10 +537,5 @@ class IPv6_Address:
 
         return f"{o1}{sc}{o2}{sc}{o3}{sc}{o4}{sc}{o5}{sc}{o6}{sc}{o7}{sc}{o8}"
     
-    def verify(self, ipv6_adr):
-        # Check if the IPv6 address matches the regex pattern
-        if self.ipv6_pattern.match(ipv6_adr):
-            return True
-        else:
-            return False
+
         

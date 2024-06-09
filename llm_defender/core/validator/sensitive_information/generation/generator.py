@@ -64,9 +64,7 @@ class SensitiveInfoGenerator:
                 # Generate
                 valid_instance = self.data_types[data_type].generate_valid()
                 
-                # Return if no false positive
-                if self.data_types[data_type].verify(valid_instance):
-                    return self.insert_sensitive_info_into_sentence(valid_instance), data_type
+                return self.insert_sensitive_info_into_sentence(valid_instance), data_type
 
     def generate_invalid(self, data_type):
         "Generates invalid instance of data_type"
@@ -79,9 +77,7 @@ class SensitiveInfoGenerator:
                 # Generate
                 invalid_instance = self.data_types[data_type].generate_invalid()
                 
-                # Return if no false positives
-                if not self.data_types[data_type].verify(invalid_instance):
-                    return self.insert_sensitive_info_into_sentence(invalid_instance), data_type
+                return self.insert_sensitive_info_into_sentence(invalid_instance), data_type
 
     def get_prompt_to_serve_miners(self):
 

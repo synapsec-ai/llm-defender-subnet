@@ -177,40 +177,4 @@ class IPv4_Address:
             third = self._generate_invalid_octet()
             fourth = self._generate_invalid_octet()
             return f"{first}.{second}.{third}.{fourth}"
-        
-    def verify(self, ipv4_adr):
-        if self.ipv4_pattern.match(ipv4_adr):
-            return True
-        else:
-            return False
-        
-if __name__ == "__main__":
-    ip = IPv4_Address()
-    vc = 0
-    ivc = 0
-    tot = 0
-
-    while True:
-
-        try: 
-            v = ip.generate_valid()
-            iv = ip.generate_invalid() 
-            vv = ip.verify(v)
-            viv = ip.verify(iv)
-
-            print(f"valid: {v}")
-            print(f"verify valid: {vv}")
-            print(f"invalid: {iv}")
-            print(f"verify invalid: {viv}")
-
-            if vv:
-                vc += 1
-            if not viv:
-                ivc += 1
-            tot += 1
-            time.sleep(0)
-
-        except KeyboardInterrupt:
-            print(f"\nRESULTS:\nvalid: {vc} / {tot}")
-            print(f"invalid: {ivc} / {tot}")
-            break
+    

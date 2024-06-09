@@ -69,33 +69,3 @@ class US_SSN:
         serial = f"{random.randint(1, 9999):04d}"
 
         return f"{area}{divider}{group}{divider}{serial}"
-
-    def verify(self,ssn):
-        """
-        Checks if a given Social Security Number (SSN) is potentially valid based on its format
-        and certain rules about the issuance of SSNs. This does not include a checksum verification,
-        as SSNs do not use a checksum, but it does include checks for known invalid patterns.
-        
-        Args:
-        - ssn (str): The SSN to validate, expected to be in the format "AAA-GG-SSSS".
-        
-        Returns:
-        - bool: True if the SSN is potentially valid, False otherwise.
-        
-        """
-        # Validate format
-        if not isinstance(ssn, str) or len(ssn) != 11 or ssn[3] != '-' or ssn[5] == '-':
-            return False
-        
-        for number in ssn:
-            if number not in ['-','0','1','2','3','4','5','6','7','8','9']:
-                return False
-        
-        area, group, serial = ssn.split('-')
-        
-        # Check for invalid patterns
-        if (area == "000" or group == "00" or serial == "0000" or
-            area == "666" or int(area) > 899):
-            return False
-        
-        return True
