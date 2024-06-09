@@ -1,10 +1,7 @@
 import random
-import time
-import csv
-import sys
-import os 
 from pathlib import Path
 from wonderwords import RandomSentence 
+from datetime import datetime
 
 # Data type imports 
 from data_types.general.ipv4 import IPv4_Address
@@ -64,7 +61,7 @@ class SensitiveInfoGenerator:
                 # Generate
                 valid_instance = self.data_types[data_type].generate_valid()
                 
-                return self.insert_sensitive_info_into_sentence(valid_instance), data_type
+                return self.insert_sensitive_info_into_sentence(valid_instance)
 
     def generate_invalid(self, data_type):
         "Generates invalid instance of data_type"
@@ -77,7 +74,7 @@ class SensitiveInfoGenerator:
                 # Generate
                 invalid_instance = self.data_types[data_type].generate_invalid()
                 
-                return self.insert_sensitive_info_into_sentence(invalid_instance), data_type
+                return self.insert_sensitive_info_into_sentence(invalid_instance)
 
     def get_prompt_to_serve_miners(self):
 
@@ -85,7 +82,7 @@ class SensitiveInfoGenerator:
         valid_or_invalid = random.choice(['valid','invalid'])
 
         if valid_or_invalid == 'valid':
-            return self.generate_valid(dtype)
+            return self.generate_valid(dtype), dtype, 1, datetime.now().isoformat()
         
         else:   
-            return self.generate_invalid(dtype)
+            return self.generate_invalid(dtype), dtype, 0, datetime.now().isoformat()

@@ -26,7 +26,7 @@ import numpy as np
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-
+from sensitive_information.generation.generator import SensitiveInfoGenerator
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -59,6 +59,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
+        self.sensitive_info_generator = SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -413,7 +414,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return {}
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt_injection_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -444,9 +445,24 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = entry
 
         return self.prompt
+    
+    def serve_sensitive_information_prompt(self, synapse_uuid):
+        prompt, category, target, created_at = self.sensitive_info_generator.get_prompt_to_serve_miners()
+        return {
+            "prompt":prompt,
+            "analyzer":'Sensitive Information',
+            "category":category,
+            "target":target,
+            "synapse_uuid":synapse_uuid,
+            "hotkey":self.wallet.hotkey.ss58_address,
+            "created_at":created_at
+        }
 
-    async def load_prompt_to_validator_async(self, synapse_uuid):
-        return await asyncio.to_thread(self.serve_prompt, synapse_uuid)
+    async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
+        if analyzer == 'Prompt Injeciton':
+            return await asyncio.to_thread(self.serve_prompt_injection_prompt, synapse_uuid)
+        elif analyzer == 'Sensitive Information':
+            return await asyncio.to_thread(self.serve_sensitive_information_prompt, synapse_uuid)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -599,16 +615,17 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
-                analyzer_scores_loaded = False
+
                 try:
                     self.prompt_injection_scores = state["prompt_injection_scores"]
                     self.sensitive_information_scores = state[
                         "sensitive_information_scores"
                     ]
-                    analyzer_scores_loaded = True
+                   
                 except Exception as e:
                     self.prompt_injection_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
                     self.sensitive_information_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
+
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")

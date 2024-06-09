@@ -12,6 +12,7 @@ import time
 import traceback
 from argparse import ArgumentParser
 from uuid import uuid4
+import random 
 
 # Import custom modules
 import bittensor as bt
@@ -350,11 +351,13 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             if validator.target_group == 0:
 
                 synapse_uuid = str(uuid4())
+                analyzer = random.choice['Prompt Injection', 'Sensitive Information']
                 prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    synapse_uuid=synapse_uuid
+                    synapse_uuid=synapse_uuid,
+                    analyzer=analyzer
                 )
 
-                bt.logging.debug(f"Serving prompt: {prompt_to_analyze}")
+                bt.logging.debug(f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}")
 
                 is_prompt_invalid = (
                     prompt_to_analyze is None
