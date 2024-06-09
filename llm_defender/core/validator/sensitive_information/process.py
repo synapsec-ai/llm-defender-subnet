@@ -338,7 +338,7 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
 def get_response_penalties(validator, response, hotkey, target):
     """This function resolves the penalties for the response"""
 
-    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(
+    false_positive_penalty, base_penalty, duplicate_penalty = apply_penalty(
         validator, response, hotkey, target
     )
 
@@ -350,11 +350,11 @@ def get_response_penalties(validator, response, hotkey, target):
     elif base_penalty > 0.0:
         distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
 
-    if sum([similarity_penalty, duplicate_penalty]) >= 20:
+    if sum([false_positive_penalty, duplicate_penalty]) >= 20:
         speed_penalty = 0.0
-    elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
+    elif sum([false_positive_penalty, duplicate_penalty]) > 0.0:
         speed_penalty = 1 - (
-            ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
+            ((sum([false_positive_penalty, duplicate_penalty])) / 2.0) / 10
         )
 
     return distance_penalty_multiplier, speed_penalty
