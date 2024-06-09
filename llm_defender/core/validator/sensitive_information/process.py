@@ -248,7 +248,7 @@ def calculate_score(
 
     # Get penalty multipliers
     distance_penalty, speed_penalty = get_response_penalties(
-        validator, response, hotkey
+        validator, response, hotkey, target
     )
 
     # Apply penalties to scores
@@ -301,7 +301,7 @@ def calculate_score(
     )
 
 
-def apply_penalty(validator, response, hotkey) -> tuple:
+def apply_penalty(validator, response, hotkey, target) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -317,10 +317,10 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
-    similarity = base = duplicate = 0.0
+    false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    similarity += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
-        uid, validator.miner_responses[hotkey]
+    false_positive += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
+        uid, response, target
     )
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
@@ -330,16 +330,16 @@ def apply_penalty(validator, response, hotkey) -> tuple:
     )
 
     bt.logging.trace(
-        f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
+        f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'"
     )
-    return similarity, base, duplicate
+    return false_positive, base, duplicate
 
 
-def get_response_penalties(validator, response, hotkey):
+def get_response_penalties(validator, response, hotkey, target):
     """This function resolves the penalties for the response"""
 
     similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(
-        validator, response, hotkey
+        validator, response, hotkey, target
     )
 
     distance_penalty_multiplier = 1.0

@@ -2,7 +2,7 @@ import bittensor as bt
 from llm_defender.base import validate_uid
 import bittensor as bt
 
-def check_false_positive_penalty(uid, response):
+def check_false_positive_penalty(uid, response, target):
     """
     This function checks the total penalty score within the false positive category.
 
@@ -29,17 +29,17 @@ def check_false_positive_penalty(uid, response):
             is not inputted.
     """
 
-    def _check_for_false_positives(response):
+    def _check_for_false_positives(response, target):
         penalty = 0.0
         
-        if response['target'] == 0 and response.output['confidence'] > 0.50:
+        if target == 0 and response.output['confidence'] > 0.50:
             penalty += 10.0
 
         return penalty
 
     penalty = 0.0
 
-    penalty += _check_for_false_positives(response)
+    penalty += _check_for_false_positives(response, target)
 
     return penalty
 

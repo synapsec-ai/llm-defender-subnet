@@ -245,7 +245,7 @@ def calculate_analyzer_score(
 
     # Get penalty multipliers
     distance_penalty, speed_penalty = get_response_penalties(
-        prompt, validator, response, hotkey
+        prompt, validator, response, hotkey, target
     )
 
     # Apply penalties to scores
@@ -316,7 +316,7 @@ def calculate_analyzer_score(
     )
 
 
-def apply_penalty(prompt, validator, response, hotkey) -> tuple:
+def apply_penalty(prompt, validator, response, hotkey, target) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -332,10 +332,10 @@ def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
-    similarity = base = duplicate = 0.0
+    false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    similarity += LLMDefenderCore.prompt_injection_penalty.check_false_postive_penalty(
-        uid, validator.miner_responses[hotkey]
+    false_positive += LLMDefenderCore.prompt_injection_penalty.check_false_postive_penalty(
+        uid, response, target
     )
     base += LLMDefenderCore.prompt_injection_penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
@@ -345,16 +345,16 @@ def apply_penalty(prompt, validator, response, hotkey) -> tuple:
     )
 
     bt.logging.trace(
-        f"Penalty score {[similarity, base, duplicate]} for response '{response}' from UID '{uid}'"
+        f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'"
     )
-    return similarity, base, duplicate
+    return false_positive, base, duplicate
 
 
-def get_response_penalties(prompt, validator, response, hotkey):
+def get_response_penalties(prompt, validator, response, hotkey, target):
     """This function resolves the penalties for the response"""
 
-    similarity_penalty, base_penalty, duplicate_penalty = apply_penalty(
-        prompt, validator, response, hotkey
+    false_positive_penalty, base_penalty, duplicate_penalty = apply_penalty(
+        prompt, validator, response, hotkey, target
     )
 
     distance_penalty_multiplier = 1.0
@@ -365,11 +365,11 @@ def get_response_penalties(prompt, validator, response, hotkey):
     elif base_penalty > 0.0:
         distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
 
-    if sum([similarity_penalty, duplicate_penalty]) >= 20:
+    if sum([false_positive_penalty, duplicate_penalty]) >= 20:
         speed_penalty = 0.0
-    elif sum([similarity_penalty, duplicate_penalty]) > 0.0:
+    elif sum([false_positive_penalty, duplicate_penalty]) > 0.0:
         speed_penalty = 1 - (
-            ((sum([similarity_penalty, duplicate_penalty])) / 2.0) / 10
+            ((sum([false_positive_penalty, duplicate_penalty])) / 2.0) / 10
         )
 
     return distance_penalty_multiplier, speed_penalty
