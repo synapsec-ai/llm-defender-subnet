@@ -1,19 +1,12 @@
 import bittensor as bt
 from llm_defender.base import validate_uid
 import bittensor as bt
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import CountVectorizer
-import numpy as np
 
-
-def check_similarity_penalty(uid, miner_responses):
+def check_false_positive_penalty(uid, response):
     """
-    This function checks the total penalty score within the similarity category.
-    This involves a summation of penalty values for the following methods over
-    all engines:
-        ---> _check_response_history()
+    This function checks the total penalty score within the false positive category.
 
-    A penalty of 20.0 is also added if any of the inputs (uid or miner_responses)
+    A penalty of 20.0 is added if any of the inputs (uid or miner_responses)
     is not inputted.
 
     Arguments:
@@ -36,11 +29,21 @@ def check_similarity_penalty(uid, miner_responses):
             is not inputted.
     """
 
+    def _check_for_false_positives(uid, response):
+        penalty = 0.0
+        
+        if response['target'] == 0 and response['response']['confidence'] > 0.50:
+            penalty += 10.0
+
+        return penalty
+
     penalty = 0.0
 
-    if not validate_uid(uid) or not miner_responses:
+    if not validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
+
+    penalty += _check_for_false_positives(uid, response)
 
     return penalty
 
@@ -48,10 +51,6 @@ def check_similarity_penalty(uid, miner_responses):
 def check_duplicate_penalty(uid, miner_responses, response):
     """
     This function checks the total penalty score within duplicate category.
-    This involves a summation of penalty values for the following methods
-    over all engines:
-        ---> _find_identical_reply()
-        ---> _calculate_duplicate_percentage()
 
     A penalty of 20.0 is also added if any of the inputs (uid, miner_responses,
     or response) is not inputted.
@@ -90,12 +89,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
 
 def check_base_penalty(uid, miner_responses, response):
     """
-    This function checks the total penalty score within the base category, which
-    contains the methods:
-
-        ---> _check_prompt_response_mismatch()
-        ---> _check_confidence_validity()
-        ---> _check_response_history()
+    This function checks the total penalty score within the base category.
 
     It also applies a penalty of 10.0 if invalid values are provided to the function,
     and a penalty of 5.0 if there is an insufficient number of miner responses to process
