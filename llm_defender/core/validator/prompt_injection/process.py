@@ -334,8 +334,8 @@ def apply_penalty(prompt, validator, response, hotkey, target) -> tuple:
 
     false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
-    false_positive += LLMDefenderCore.prompt_injection_penalty.check_false_postive_penalty(
-        uid, response, target
+    false_positive += LLMDefenderCore.prompt_injection_penalty.check_false_positive_penalty(
+        response, target
     )
     base += LLMDefenderCore.prompt_injection_penalty.check_base_penalty(
         uid, validator.miner_responses[hotkey], response
