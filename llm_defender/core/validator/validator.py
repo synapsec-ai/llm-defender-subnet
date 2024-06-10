@@ -26,7 +26,7 @@ import numpy as np
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-from sensitive_information.generation.generator import SensitiveInfoGenerator
+from .sensitive_information.generation.generator import SensitiveInfoGenerator
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
