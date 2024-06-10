@@ -452,10 +452,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             "prompt":prompt,
             "analyzer":'Sensitive Information',
             "category":category,
-            "target":target,
+            "label":target,
             "synapse_uuid":synapse_uuid,
             "hotkey":self.wallet.hotkey.ss58_address,
-            "created_at":created_at
+            "created_at":created_at,
+            "weight": 1.0
         }
 
     async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
