@@ -32,7 +32,7 @@ def check_false_positive_penalty(uid, response, target):
     def _check_for_false_positives(response, target):
         penalty = 0.0
         
-        if target == 0 and response.output['confidence'] > 0.50:
+        if target == 0 and response['confidence'] > 0.50:
             penalty += 10.0
 
         return penalty
