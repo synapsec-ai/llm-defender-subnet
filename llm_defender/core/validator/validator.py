@@ -460,7 +460,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         }
 
     async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
-        if analyzer == 'Prompt Injeciton':
+        if analyzer == 'Prompt Injection':
             return await asyncio.to_thread(self.serve_prompt_injection_prompt, synapse_uuid)
         elif analyzer == 'Sensitive Information':
             return await asyncio.to_thread(self.serve_sensitive_information_prompt, synapse_uuid)
