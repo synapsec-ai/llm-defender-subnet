@@ -4,11 +4,11 @@ from wonderwords import RandomSentence
 from datetime import datetime
 
 # Data type imports 
-from data_types.general.ipv4 import IPv4_Address
-from data_types.general.ipv6 import IPv6_Address
-from data_types.general.email import Email
-from data_types.countries.US.ssn import US_SSN
-from data_types.keys.github_personal_access_token import GitHub_PersonalAccessToken
+from .data_types.general.ipv4 import IPv4_Address
+from .data_types.general.ipv6 import IPv6_Address
+from .data_types.general.email import Email
+from .data_types.countries.US.ssn import US_SSN
+from .data_types.keys.github_personal_access_token import GitHub_PersonalAccessToken
 
 class SensitiveInfoGenerator:
 
