@@ -65,18 +65,11 @@ def process_response(
             )
         )
 
-        analyzer = response.output["analyzer"]
-        data = validator.miner_responses
-        analyzer_data = [item for sublist in [data[key][analyzer] for key in data if analyzer in data[key]] for item in sublist]
-        binned_analyzer_scores = [entry["scored_response"]["scores"]["binned_analyzer_score"] for entry in analyzer_data]
-        average_analyzer_score = sum(binned_analyzer_scores) / len(binned_analyzer_scores) if binned_analyzer_scores else 0
-
         miner_response = {
             "confidence": response.output["confidence"],
             "timestamp": response.output["timestamp"],
             "category": response.output["analyzer"],
             "response_time": response_time,
-            "average_analyzer_score": average_analyzer_score
         }
 
         text_class = [
