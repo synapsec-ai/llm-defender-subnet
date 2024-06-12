@@ -251,6 +251,40 @@ async def update_weights_async(validator):
     await asyncio.to_thread(update_weights, validator)
 
 
+async def get_average_score_per_analyzer(validator):
+    scores_sum = {
+        "Prompt Injection": 0,
+        "Sensitive Information": 0
+    }
+    counts = {
+        "Prompt Injection": 0,
+        "Sensitive Information": 0
+    }
+    for key, value in validator.miner_responses.items():
+        if "Prompt Injection" in value:
+            for item in value["Prompt Injection"]:
+                if item["scored_response"]["scores"].get("binned_analyzer_score") is not None:
+                    scores_sum["Prompt Injection"] += item["scored_response"]["scores"]["binned_analyzer_score"]
+                else:
+                    scores_sum["Sensitive Information"] += 0
+                counts["Prompt Injection"] += 1
+        if "Sensitive Information" in value:
+            for item in value["Sensitive Information"]:
+                if item["scored_response"]["scores"].get("binned_analyzer_score") is not None:
+                    scores_sum["Sensitive Information"] += item["scored_response"]["scores"]["binned_analyzer_score"]
+                else:
+                    scores_sum["Sensitive Information"] += 0
+
+                counts["Sensitive Information"] += 1
+
+        averages = {
+            "Prompt Injection": scores_sum["Prompt Injection"] / counts["Prompt Injection"] if counts["Prompt Injection"] > 0 else 0,
+            "Sensitive Information": scores_sum["Sensitive Information"] / counts["Sensitive Information"] if counts["Sensitive Information"] > 0 else 0
+        }
+
+        return averages
+
+
 async def main(validator: LLMDefenderCore.SubnetValidator):
     """
     This function executes the main function for the validator.
@@ -264,7 +298,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
-            validator.step = 0
+            # validator.step = 0 # Todo: delete this line, it's just to force update conditions.
             # ensure that the number of responses per miner is below a number
             max_number_of_responses_per_miner = 100
             truncate_miner_state(validator, max_number_of_responses_per_miner)
@@ -437,6 +471,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             bt.logging.debug(
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
+
+            average = await get_average_score_per_analyzer(validator)
+
+            print("average>>>>>>>>>>>>>>", average)
 
             if (
                 current_block - validator.last_updated_block > 100
