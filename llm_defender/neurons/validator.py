@@ -237,7 +237,7 @@ def attach_response_to_validator(validator, response_data):
         validator.miner_responses[hotkey][analyzer].append(res)
 
 
-def update_weights(validator):
+def update_weights(validator: LLMDefenderCore.SubnetValidator):
     # Periodically update the weights on the Bittensor blockchain.
     try:
         asyncio.run(validator.set_weights())
@@ -472,13 +472,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
-            average = await get_average_score_per_analyzer(validator)
-
-            print("average>>>>>>>>>>>>>>", average)
-
             if (
                 current_block - validator.last_updated_block > 100
             ) and not validator.debug_mode:
+                average = await get_average_score_per_analyzer(validator)
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
