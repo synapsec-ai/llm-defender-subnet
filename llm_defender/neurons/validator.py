@@ -298,7 +298,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
-            # validator.step = 0 # Todo: delete this line, it's just to force update conditions.
+            validator.step = 0 # Todo: delete this line, it's just to force update conditions.
             # ensure that the number of responses per miner is below a number
             max_number_of_responses_per_miner = 100
             truncate_miner_state(validator, max_number_of_responses_per_miner)
@@ -475,7 +475,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             if (
                 current_block - validator.last_updated_block > 100
             ) and not validator.debug_mode:
-                average = await get_average_score_per_analyzer(validator)
+                averages_per_analyzer = await get_average_score_per_analyzer(validator)
+                validator.prompt_injection_scores = averages_per_analyzer.get("Prompt Injection", 0)
+                validator.sensitive_information_scores = averages_per_analyzer.get("Sensitive Information", 0)
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
