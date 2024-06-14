@@ -252,37 +252,29 @@ async def update_weights_async(validator):
 
 
 async def get_average_score_per_analyzer(validator):
-    scores_sum = {
-        "Prompt Injection": 0,
-        "Sensitive Information": 0
-    }
-    counts = {
-        "Prompt Injection": 0,
-        "Sensitive Information": 0
-    }
-    for key, value in validator.miner_responses.items():
-        if "Prompt Injection" in value:
-            for item in value["Prompt Injection"]:
-                if item["scored_response"]["scores"].get("binned_analyzer_score") is not None:
-                    scores_sum["Prompt Injection"] += item["scored_response"]["scores"]["binned_analyzer_score"]
-                else:
-                    scores_sum["Sensitive Information"] += 0
-                counts["Prompt Injection"] += 1
-        if "Sensitive Information" in value:
-            for item in value["Sensitive Information"]:
-                if item["scored_response"]["scores"].get("binned_analyzer_score") is not None:
-                    scores_sum["Sensitive Information"] += item["scored_response"]["scores"]["binned_analyzer_score"]
-                else:
-                    scores_sum["Sensitive Information"] += 0
+    results = {}
 
-                counts["Sensitive Information"] += 1
+    for hotkey, content in validator.miner_responses.items():
+        for analyzer, details in content.items():
+            uid = details[0].get("UID")
 
-        averages = {
-            "Prompt Injection": scores_sum["Prompt Injection"] / counts["Prompt Injection"] if counts["Prompt Injection"] > 0 else 0,
-            "Sensitive Information": scores_sum["Sensitive Information"] / counts["Sensitive Information"] if counts["Sensitive Information"] > 0 else 0
-        }
+            if (hotkey, uid) not in results:
+                results[(hotkey, uid)] = {'Prompt Injection': [], 'Sensitive Information': []}
 
-        return averages
+            for analyzer_type in ['Prompt Injection', 'Sensitive Information']:
+                if analyzer_type in details:
+                    score = details[analyzer_type].get('binned_analyzer_score', 0)
+                    results[(hotkey, uid)][analyzer_type].append(score)
+
+    for key, scores in results.items():
+        for analyzer_type in scores:
+            if scores[analyzer_type]:
+                average_score = sum(scores[analyzer_type]) / len(scores[analyzer_type])
+            else:
+                average_score = 0
+            results[key][analyzer_type] = average_score
+
+    return results
 
 
 async def main(validator: LLMDefenderCore.SubnetValidator):
@@ -298,7 +290,6 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
-            validator.step = 0 # Todo: delete this line, it's just to force update conditions.
             # ensure that the number of responses per miner is below a number
             max_number_of_responses_per_miner = 100
             truncate_miner_state(validator, max_number_of_responses_per_miner)
@@ -472,12 +463,14 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
+            averages = await get_average_score_per_analyzer(validator)
+
             if (
                 current_block - validator.last_updated_block > 100
             ) and not validator.debug_mode:
-                averages_per_analyzer = await get_average_score_per_analyzer(validator)
-                validator.prompt_injection_scores = averages_per_analyzer.get("Prompt Injection", 0)
-                validator.sensitive_information_scores = averages_per_analyzer.get("Sensitive Information", 0)
+                for (hotkey, uid), data in averages.items():
+                    validator.prompt_injection_scores[uid] = data["Prompt Injection"]
+                    validator.sensitive_information_scores[uid] = data["Sensitive Information"]
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
