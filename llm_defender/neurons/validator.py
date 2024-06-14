@@ -442,10 +442,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             )
             await score_unused_axons_async(validator, uids_not_to_query)
 
-            are_responses_empty = all(item.output is None for item in responses)
-            if are_responses_empty:
-                handle_empty_responses(validator, list_of_uids)
-                continue
+            # are_responses_empty = all(item.output is None for item in responses)
+            # if are_responses_empty:
+                # handle_empty_responses(validator, list_of_uids)
+                # continue
 
             bt.logging.trace(f"Received responses: {responses}")
 
