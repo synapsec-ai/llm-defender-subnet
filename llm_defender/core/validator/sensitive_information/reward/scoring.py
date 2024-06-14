@@ -190,98 +190,12 @@ def validate_response(hotkey, response) -> bool:
     logging.trace(f"Validation succeeded for response: {response}")
     return True
 
-
-def assign_score_for_uid(
-    scores: ndarray, uid: int, alpha: float, response_score: float, prompt_weight: float
-):
-    """Assigns a score to an UID
-
-    Arguments:
-        scores:
-            Current ndarray of scores
-        uid:
-            UID of the neuron to set the score for
-        alpha:
-            Scaling factor used for the degradation
-        prompt_weight:
-            Weight of the current prompt.
-
-    Returns:
-        scores:
-            An updated ndarray of the scores
-    """
-
-    # Ensure the alpha is correctly defined
-    if (
-        not isinstance(alpha, float)
-        or isinstance(alpha, bool)
-        or alpha >= 1.0
-        or alpha < 0.1
-    ):
-        logging.error(f"Value for alpha is incorrect: {alpha}")
-        raise AttributeError(
-            f"Alpha must be less than 1.0 and greater than or equal to 0.1. Value: {alpha}"
-        )
-
-    if (
-        not isinstance(prompt_weight, (int, float))
-        or isinstance(prompt_weight, bool)
-        or not (0.0 < prompt_weight <= 1.0)
-    ):
-        logging.error(f"Value for prompt_weight is incorrect: {prompt_weight}")
-        raise AttributeError(
-            f"prompt_weight must be greater than or equal to 0.0 and less than or equal to 1.0. Value: {prompt_weight}"
-        )
-
-    # Ensure the response score is correctly defined
-    if not LLMDefenderBase.validate_numerical_value(
-        value=response_score, value_type=float, min_value=0.0, max_value=1.0
-    ):
-        logging.error(f"Value for response_score is incorrect: {response_score}")
-        raise AttributeError(
-            f"response_score must be in range (0.0, 1.0). Value: {response_score}"
-        )
-
-    # Ensure UID is correctly defined
-    if not LLMDefenderBase.validate_uid(uid):
-        logging.error(f"Value for UID is incorrect: {uid}")
-        raise AttributeError(f"UID must be in range (0, 255). Value: {uid}")
-
-    old_score = deepcopy(scores[uid])
-
-    # Account for a rounding error by setting scores below threshold to 0.0
-    if scores[uid] < 0.000001:
-        scores[uid] = 0.0
-
-    # And same for high values
-    if scores[uid] > 0.999999:
-        scores[uid] = 1.0
-
-    # If current score is already at 0.0 we do not need to do anything
-    if response_score == 0.0 and scores[uid] == 0.0:
-        return scores, old_score, 0.0
-
-    logging.trace(f"Assigning score for UID: {uid}. Current score: {old_score}")
-    unweighted_new_score = alpha * scores[uid] + (1 - alpha) * response_score
-    logging.trace(
-        f"Unweighted score for UID: {uid}. Unweighted score: {unweighted_new_score}"
-    )
-    diff = unweighted_new_score - scores[uid]
-    scores[uid] = scores[uid] + (prompt_weight * diff)
-    logging.trace(f"Assigned weighted score for UID: {uid}. New score: {scores[uid]}")
-
-    if old_score == scores[uid]:
-        logging.warning(
-            f"Score for UID: {uid} did not change. Old score: {old_score}, new score: {scores[uid]}"
-        )
-
-    return scores, old_score, unweighted_new_score.item()
-
-
 def get_engine_response_object(
-    total_score: float = 0.0,
-    final_distance_score: float = 0.0,
-    final_speed_score: float = 0.0,
+    normalized_analyzer_score: float = 0.0,
+    binned_analyzer_score: float = 0.0,
+    total_analyzer_raw_score: float = 0.0,
+    final_analyzer_distance_score: float = 0.0,
+    final_analyzer_speed_score: float = 0.0,
     distance_penalty: float = 0.0,
     speed_penalty: float = 0.0,
     raw_distance_score: float = 0.0,
@@ -293,9 +207,11 @@ def get_engine_response_object(
 
     res = {
         "scores": {
-            "total": total_score,
-            "distance": final_distance_score,
-            "speed": final_speed_score,
+            "binned_analyzer_score": binned_analyzer_score,
+            "normalized_analyzer_score": normalized_analyzer_score,
+            "total_analyzer_raw": total_analyzer_raw_score,
+            "distance": final_analyzer_distance_score,
+            "speed": final_analyzer_speed_score,
         },
         "raw_scores": {"distance": raw_distance_score, "speed": raw_speed_score},
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},

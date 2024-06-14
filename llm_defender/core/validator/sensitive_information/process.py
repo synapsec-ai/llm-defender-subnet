@@ -37,15 +37,9 @@ def process_response(
         hotkey, response.output
     ) or not validator.validate_nonce(response.output["nonce"]):
         bt.logging.debug(f"Empty response or nonce validation failed: {response}")
-        validator.scores, old_score, unweighted_new_score = (
-            LLMDefenderCore.sensitive_information_scoring.assign_score_for_uid(
-                validator.scores,
-                uid,
-                validator.neuron_config.alpha,
-                0.0,
-                query["weight"],
-            )
-        )
+        
+        scored_response = LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
+
         responses_invalid_uids.append(uid)
 
     # Calculate score for valid response
@@ -54,16 +48,6 @@ def process_response(
 
         scored_response = calculate_score(
             prompt, validator, response.output, target, response_time, hotkey
-        )
-
-        validator.scores, old_score, unweighted_new_score = (
-            LLMDefenderCore.sensitive_information_scoring.assign_score_for_uid(
-                validator.scores,
-                uid,
-                validator.neuron_config.alpha,
-                scored_response["scores"]["total"],
-                query["weight"],
-            )
         )
 
         miner_response = {
@@ -98,10 +82,6 @@ def process_response(
         response_object["engine_data"] = engine_data
         response_object["scored_response"] = scored_response
         response_object["weight_scores"] = {
-            "new": float(validator.scores[uid]),
-            "old": float(old_score),
-            "change": float(validator.scores[uid]) - float(old_score),
-            "unweighted": unweighted_new_score,
             "weight": query["weight"],
         }
 

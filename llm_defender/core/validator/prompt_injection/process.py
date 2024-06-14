@@ -36,15 +36,9 @@ def process_response(
         hotkey, response.output
     ) or not validator.validate_nonce(response.output["nonce"]):
         bt.logging.debug(f"Empty response or nonce validation failed: {response}")
-        validator.prompt_injection_scores, old_score, unweighted_new_score = (
-            LLMDefenderCore.prompt_injection_scoring.assign_score_for_uid(
-                validator.prompt_injection_scores,
-                uid,
-                validator.neuron_config.alpha,
-                0.0,
-                query["weight"],
-            )
-        )
+        
+        scored_response = LLMDefenderCore.prompt_injection_scoring.get_engine_response_object()
+
         responses_invalid_uids.append(uid)
 
     # Calculate score for valid response
@@ -53,16 +47,6 @@ def process_response(
 
         scored_response = calculate_analyzer_score(
             prompt, validator, response.output, target, response_time, hotkey
-        )
-
-        validator.prompt_injection_scores, old_score, unweighted_new_score = (
-            LLMDefenderCore.prompt_injection_scoring.assign_score_for_uid(
-                validator.prompt_injection_scores,
-                uid,
-                validator.neuron_config.alpha,
-                scored_response["scores"]["binned_analyzer_score"],
-                query["weight"],
-            )
         )
 
         miner_response = {
@@ -97,10 +81,6 @@ def process_response(
         response_object["engine_data"] = engine_data
         response_object["analyzer_scored_response"] = scored_response
         response_object["analyzer_weight_scores"] = {
-            "new": float(validator.prompt_injection_scores[uid]),
-            "old": float(old_score),
-            "change": float(validator.prompt_injection_scores[uid]) - float(old_score),
-            "unweighted": unweighted_new_score,
             "weight": query["weight"],
         }
 
