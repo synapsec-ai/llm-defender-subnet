@@ -463,11 +463,11 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
-            averages = await get_average_score_per_analyzer(validator)
 
             if (
                 current_block - validator.last_updated_block > 100
             ) and not validator.debug_mode:
+                averages = await get_average_score_per_analyzer(validator)
                 for (hotkey, uid), data in averages.items():
                     validator.prompt_injection_scores[uid] = data["Prompt Injection"]
                     validator.sensitive_information_scores[uid] = data["Sensitive Information"]
