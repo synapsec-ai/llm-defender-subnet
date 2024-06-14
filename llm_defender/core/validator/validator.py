@@ -269,8 +269,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             if response_object["response"]:
                 response_logger["miner_metrics"].append(response_object)
 
-        final_response_data = self.determine_overall_scores(response_data, responses)
-
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
@@ -290,17 +288,18 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     "Unable to push miner validation results to the logger service"
                 )
 
-        return final_response_data
+        return response_data
 
     def determine_overall_scores(
-        self, response_data, responses, specialization_bonus_n=5
+        self, specialization_bonus_n=5
     ):
 
         top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
-
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
 
-        for uid, _ in enumerate(responses):
+        for uid, _ in enumerate(self.scores):
 
             analyzer_avg = (
                 self.prompt_injection_scores[uid]
@@ -321,17 +320,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 if self.sensitive_information_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.sensitive_information_scores[uid]
 
-            response_data[uid]["total_scored_response"] = {
-                "top_prompt_injection_uid": (
-                    True if top_prompt_injection_uid == 1 else False
-                ),
-                "top_sensitive_information_uid": (
-                    True if top_sensitive_informaiton_uid == 1 else False
-                ),
-                "total_score": self.scores[uid],
-            }
-
-            miner_hotkey = response_data[uid]["hotkey"]
+            miner_hotkey = self.metagraph.hotkeys[uid]
 
             if self.wandb_enabled:
                 wandb_logs = [
@@ -347,7 +336,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 for wandb_log in wandb_logs:
                     self.wandb_handler.log(wandb_log)
 
-        return response_data
+        bt.logging.trace(f"Calculated miner scores: {self.scores}")
 
     def calculate_penalized_scores(
         self,
