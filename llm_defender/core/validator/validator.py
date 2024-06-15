@@ -22,6 +22,7 @@ import time
 import bittensor as bt
 import requests
 import numpy as np
+from collections import defaultdict 
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -515,11 +516,21 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             bt.logging.trace(f"Truncating miner responses: {self.miner_responses}")
 
-            for hotkey, analyzers in self.miner_responses.items():
-                for analyzer, data_list in analyzers.items():
-                    if len(data_list) > max_number_of_responses_per_miner:
-                        analyzers[analyzer] = data_list[:max_number_of_responses_per_miner]
-
+            for hotkey, data_list in self.miner_responses.items():
+                analyzer_dict = defaultdict(list)
+                
+                # Group entries by analyzer type
+                for entry in data_list:
+                    analyzer_type = entry["analyzer"]
+                    analyzer_dict[analyzer_type].append(entry)
+                
+                # Truncate each analyzer's list to 100 entries
+                truncated_list = []
+                for analyzer_type, entries in analyzer_dict.items():
+                    truncated_list.extend(entries[:max_number_of_responses_per_miner])
+                
+                # Update the original list with the truncated list
+                self.miner_responses[hotkey] = truncated_list
 
     def save_state(self):
         """Saves the state of the validator to a file."""
