@@ -514,8 +514,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         if self.miner_responses:
 
             for hotkey, analyzers in self.miner_responses.items():
-                for analyzer in analyzers:
-                    self.miner_responses[hotkey][analyzer] = self.miner_responses[hotkey][analyzer][-max_number_of_responses_per_miner:]
+                for analyzer, data_list in analyzers.items():
+                    if len(data_list) > max_number_of_responses_per_miner:
+                        analyzers[analyzer] = data_list[:max_number_of_responses_per_miner]
 
 
     def save_state(self):
