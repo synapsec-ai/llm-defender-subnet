@@ -242,14 +242,14 @@ def calculate_score(
 
     # Validate individual scores
     if (
-        not LLMDefenderBase.validate_numerical_value(total_score, float, 0.0, 1.0)
+        not LLMDefenderBase.validate_numerical_value(total_analyzer_raw_score, float, 0.0, 1.0)
         or not LLMDefenderBase.validate_numerical_value(
             final_distance_score, float, 0.0, 1.0
         )
         or not LLMDefenderBase.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
     ):
         bt.logging.error(
-            f"Calculated out-of-bounds individual scores (Total: {total_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
+            f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
         )
         return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
 
@@ -267,8 +267,10 @@ def calculate_score(
         "score_weights": score_weights,
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
         "raw_scores": {"distance": distance_score, "speed": speed_score},
-        "final_scores": {
-            "total": total_score,
+        "analyzer_scores": {
+            "binned_analyzer_score": binned_analyzer_score,
+            "normalized_analyzer_score": normalized_analyzer_score,
+            "total_analyzer_raw": total_analyzer_raw_score,
             "distance": final_distance_score,
             "speed": final_speed_score,
         },
