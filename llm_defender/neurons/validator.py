@@ -264,7 +264,7 @@ async def get_average_score_per_analyzer(validator):
         # Iterate through the responses to gather scores
         for response in response_list:
             analyzer = response["analyzer"]
-            score = response["scored_response"]["scores"]["binned_analyzer_score"]
+            score = response["analyzer_scored_response"]["scores"]["binned_analyzer_score"]
             
             if analyzer not in analyzer_scores:
                 analyzer_scores[analyzer] = []
