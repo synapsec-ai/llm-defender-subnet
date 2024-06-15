@@ -305,8 +305,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             analyzer_avg = (
                 self.prompt_injection_scores[uid]
                 + self.sensitive_information_scores[uid]
-            )
-            self.scores[uid] = analyzer_avg / 2
+            ) / 2
+            self.scores[uid] = analyzer_avg
 
             top_prompt_injection_uid = 0
             top_sensitive_informaiton_uid = 0
