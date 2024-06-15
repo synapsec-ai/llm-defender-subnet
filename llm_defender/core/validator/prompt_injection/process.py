@@ -277,12 +277,6 @@ def calculate_analyzer_score(
 
     bt.logging.debug(f"Calculated analyzer score: {score_logger}")
 
-    normalized_analyzer_score, binned_analyzer_score = (
-        LLMDefenderCore.prompt_injection_scoring.get_normalized_and_binned_scores(
-            total_analyzer_raw_score
-        )
-    )
-
     return LLMDefenderCore.prompt_injection_scoring.get_engine_response_object(
         normalized_analyzer_score=normalized_analyzer_score,
         binned_analyzer_score=binned_analyzer_score,
