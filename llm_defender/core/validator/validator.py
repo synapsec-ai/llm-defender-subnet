@@ -513,6 +513,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     def truncate_miner_state(self, max_number_of_responses_per_miner: int):
         if self.miner_responses:
 
+                bt.logging.trace(f"Truncating miner responses: {self.miner_responses}")
+
             for hotkey, analyzers in self.miner_responses.items():
                 for analyzer, data_list in analyzers.items():
                     if len(data_list) > max_number_of_responses_per_miner:
