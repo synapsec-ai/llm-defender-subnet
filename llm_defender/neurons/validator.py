@@ -231,10 +231,7 @@ def attach_response_to_validator(validator, response_data):
         if hotkey not in validator.miner_responses:
             validator.miner_responses[hotkey] = {}
 
-        if analyzer not in validator.miner_responses[hotkey]:
-            validator.miner_responses[hotkey][analyzer] = []
-
-        validator.miner_responses[hotkey][analyzer].append(res)
+        validator.miner_responses[hotkey].append(res)
 
 
 def update_weights(validator: LLMDefenderCore.SubnetValidator):
@@ -293,7 +290,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             # ensure that the number of responses per miner is below a number
             max_number_of_responses_per_miner = 100
             truncate_miner_state(validator, max_number_of_responses_per_miner)
-            
+
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
                 await update_metagraph_async(validator)
