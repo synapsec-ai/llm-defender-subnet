@@ -25,9 +25,13 @@ def main(miner: LLMDefenderCore.SubnetMiner):
 
     # Attach the miner functions to the Axon
     axon.attach(
-        forward_fn=miner.forward,
-        blacklist_fn=miner.blacklist,
-        priority_fn=miner.priority,
+        forward_fn=miner.analysis_forward,
+        blacklist_fn=miner.analysis_blacklist,
+        priority_fn=miner.analysis_priority,
+    ).attach(
+        forward_fn=miner.metric_forward,
+        blacklist_fn=miner.metric_blacklist,
+        priority_fn=miner.metric_priority
     )
     bt.logging.info(f"Attached functions to Axon: {axon}")
 

@@ -473,12 +473,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--disable_remote_logging",
-        action="store_true",
-        help="This flag must be set if you want to disable remote logging",
-    )
-
-    parser.add_argument(
         "--debug_mode",
         action="store_true",
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
