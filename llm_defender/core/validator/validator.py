@@ -512,24 +512,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def truncate_miner_state(self, max_number_of_responses_per_miner: int):
         if self.miner_responses:
-            old_size = getsizeof(self.miner_responses) + sum(
-                getsizeof(key) + sum(getsizeof(analyzer_key) + getsizeof(analyzer_value)
-                                     for analyzer_key, analyzer_value in value.items())
-                for key, value in self.miner_responses.items()
-            )
 
             for hotkey, analyzers in self.miner_responses.items():
                 for analyzer in analyzers:
                     self.miner_responses[hotkey][analyzer] = self.miner_responses[hotkey][analyzer][-max_number_of_responses_per_miner:]
 
-            new_size = getsizeof(self.miner_responses) + sum(
-                getsizeof(key) + sum(getsizeof(analyzer_key) + getsizeof(analyzer_value)
-                                     for analyzer_key, analyzer_value in value.items())
-                for key, value in self.miner_responses.items()
-            )
-            bt.logging.debug(
-                f"Truncated miner response list (Old: '{old_size}' - New: '{new_size}')"
-            )
 
     def save_state(self):
         """Saves the state of the validator to a file."""
