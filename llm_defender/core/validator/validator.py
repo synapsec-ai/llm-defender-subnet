@@ -489,13 +489,75 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         bt.logging.debug("Saved miner states to a file")
 
+    def check_miner_responses_are_formatted_correctly(self, miner_responses):
+
+        correct_formatting = True 
+
+        needed_keys_response = [
+            "UID", "coldkey", "hotkey", 
+            "target", "prompt", "analyzer", 
+            "category", "synapse_uuid", "response",
+            "scored_response", "weight_scores", "engine_data"
+        ]
+
+        needed_keys_scored_response = [
+            "scores", "raw_scores", "penalties"
+        ]
+
+        needed_keys_scores = [
+            "binned_analyzer_score", "total_analyzer_raw", "normalized_analyzer_score",
+            "distance", "speed"
+        ]   
+
+        for _, responses in miner_responses.items():
+            for response in responses:
+
+                response_keys = [k for k in response]
+                
+                for response_key in response_keys:
+
+                    if response_key not in needed_keys_response:
+                        correct_formatting = False
+                        break
+
+                    if response_key == "scored_response":
+
+                        scored_response_keys = [k for k in response["scored_response"]]
+
+                        for scored_response_key in scored_response_keys:
+
+                            if scored_response_key not in needed_keys_scored_response:
+                                correct_formatting = False 
+                                break
+
+                            if scored_response_key == "scores":
+
+                                scores_keys = [k for k in response["scored_response"]['scores']]
+
+                                for scores_key in scores_keys:
+                                    
+                                    if scores_key not in needed_keys_scores:
+                                        correct_formatting = False 
+                                        break
+
+        return correct_formatting
+
     def load_miner_state(self):
         """Loads the miner state from a file"""
         state_path = f"{self.cache_path}/miners.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
-                    self.miner_responses = pickle.load(pickle_file)
+                    miner_responses = pickle.load(pickle_file)
+                    if self.check_miner_responses_are_formatted_correctly(miner_responses):
+                        self.miner_responses = miner_responses
+                        self.truncate_miner_state(100)
+                    else:
+                        rename(
+                            state_path,
+                            f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                        )
+                        self.miner_responses = {}
 
                 bt.logging.debug("Loaded miner state from a file")
             except Exception as e:
