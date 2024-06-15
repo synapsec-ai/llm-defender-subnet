@@ -487,7 +487,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         ) as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
-        bt.logging.debug(f"Saved miner states to file: {f"{self.cache_path}/miners.pickle"}")
+        filename = f"{self.cache_path}/miners.pickle"
+        bt.logging.debug(f"Saved miner states to file: {filename}")
 
     def check_miner_responses_are_formatted_correctly(self, miner_responses):
 
@@ -607,8 +608,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             last_updated_block=self.last_updated_block,
         )
 
+        filename = f"{self.cache_path}/state.npz"
         bt.logging.debug(
-            f"Saved the following state to file: {f"{self.cache_path}/state.npz"} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
         )
 
     def init_default_scores(self) -> None:
