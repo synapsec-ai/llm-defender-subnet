@@ -265,7 +265,7 @@ async def get_average_score_per_analyzer(validator):
         for response in response_list:
             bt.logging.trace(f"Going through response: {response}")
             analyzer = response["analyzer"]
-            score = response["analyzer_scored_response"]["scores"]["binned_analyzer_score"]
+            score = response["scored_response"]["scores"]["binned_analyzer_score"]
             
             if analyzer not in analyzer_scores:
                 analyzer_scores[analyzer] = []

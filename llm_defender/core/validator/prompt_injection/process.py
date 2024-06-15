@@ -79,7 +79,7 @@ def process_response(
         # Populate response data
         response_object["response"] = miner_response
         response_object["engine_data"] = engine_data
-        response_object["analyzer_scored_response"] = scored_response
+        response_object["scored_response"] = scored_response
         response_object["analyzer_weight_scores"] = {
             "weight": query["weight"],
         }
@@ -95,7 +95,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
-                        "analyzer_scored_response"
+                        "scored_response"
                     ][
                         "scores"
                     ][
@@ -104,7 +104,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                        "analyzer_scored_response"
+                        "scored_response"
                     ][
                         "scores"
                     ][
@@ -113,7 +113,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                        "analyzer_scored_response"
+                        "scored_response"
                     ][
                         "scores"
                     ][
@@ -122,7 +122,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                        "analyzer_scored_response"
+                        "scored_response"
                     ][
                         "raw_scores"
                     ][
@@ -131,7 +131,7 @@ def process_response(
                 },
                 {
                     f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                        "analyzer_scored_response"
+                        "scored_response"
                     ][
                         "raw_scores"
                     ][
