@@ -228,9 +228,9 @@ def attach_response_to_validator(validator, response_data):
         hotkey = res['hotkey']
 
         if hotkey not in validator.miner_responses:
-            validator.miner_responses[hotkey] = {}
-
-        validator.miner_responses[hotkey].append(res)
+            validator.miner_responses[hotkey] = []
+        else:
+            validator.miner_responses[hotkey].append(res)
 
 
 def update_weights(validator: LLMDefenderCore.SubnetValidator):
