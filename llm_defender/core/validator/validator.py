@@ -705,7 +705,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        weights = self.scores / np.sum(np.abs(self.scores), axis=0)
+        nan_included_weights = self.scores / np.sum(np.abs(self.scores), axis=0)
+
+        def replace_nan_with_zero(array):
+            # Use np.isnan to find NaN values and replace them with 0.0
+            array[np.isnan(array)] = 0.0
+            return array
+
+        weights = replace_nan_with_zero(nan_included_weights)
         bt.logging.info(f"Setting weights: {weights}")
 
         bt.logging.debug(
