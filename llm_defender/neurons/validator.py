@@ -252,7 +252,7 @@ async def get_average_score_per_analyzer(validator):
     results = {}
 
     for hotkey, response_list in validator.miner_responses.items():
-        try: 
+        try:
             if not response_list:
                 continue
             
@@ -264,13 +264,20 @@ async def get_average_score_per_analyzer(validator):
             
             # Iterate through the responses to gather scores
             for response in response_list:
-                bt.logging.trace(f"Going through response: {response}")
-                analyzer = response["analyzer"]
-                score = response["scored_response"]["scores"]["binned_analyzer_score"]
+
+                analyzer = response["analyzer"] 
+
+                try: 
+                    
+                    analyzer = response["analyzer"]
+                    score = response["scored_response"]["scores"]["binned_analyzer_score"]
                 
-                if analyzer not in analyzer_scores:
-                    analyzer_scores[analyzer] = []
-                analyzer_scores[analyzer].append(score)
+                    if analyzer not in analyzer_scores:
+                        analyzer_scores[analyzer] = []
+                    analyzer_scores[analyzer].append(score)
+
+                except:
+                    analyzer_scores[analyzer].append(0.0)
             
             # Calculate the average score for each analyzer
             average_scores = {analyzer: sum(scores) / len(scores) for analyzer, scores in analyzer_scores.items()}
@@ -440,7 +447,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 validator=validator,
                 prompt_to_analyze=prompt_to_analyze,
             )
-            await score_unused_axons_async(validator, uids_not_to_query)
+            # await score_unused_axons_async(validator, uids_not_to_query)
 
             # are_responses_empty = all(item.output is None for item in responses)
             # if are_responses_empty:
@@ -455,7 +462,6 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             attach_response_to_validator(validator, response_data)
 
             # Print stats
-            bt.logging.debug(f"Scores: {validator.scores}")
             bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
 
             current_block = validator.subtensor.get_current_block()
@@ -472,6 +478,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 for uid, data in averages.items():
                     validator.prompt_injection_scores[uid] = data["Prompt Injection"]
                     validator.sensitive_information_scores[uid] = data["Sensitive Information"]
+                
+                bt.logging.trace(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
+                bt.logging.trace(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
                 
                 validator.determine_overall_scores()
                 
