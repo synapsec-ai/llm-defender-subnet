@@ -42,8 +42,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser, profile="validator")
-
-        self.max_engines = 3
+        
         self.timeout = 12
         self.neuron_config = None
         self.wallet = None
@@ -59,7 +58,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.target_group = None
         self.load_validator_state = None
         self.prompt = None
-        self.remote_logging = None
         self.query = None
         self.debug_mode = True
         self.sensitive_info_generator = SensitiveInfoGenerator()
@@ -182,11 +180,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             else:
                 self.max_targets = 256
 
-            if args.disable_remote_logging and args.disable_remote_logging is True:
-                self.remote_logging = False
-            else:
-                self.remote_logging = True
-
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -195,6 +188,33 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.target_group = 0
 
         return True
+
+    def send_metrics_synapse(self, response_object, synapse_uuid, target_uid):
+        """This method sends a synapse to the target_uid containing the
+        response_object"""
+
+        # Generate signature
+        nonce = secrets.token_hex(24)
+        timestamp = str(int(time.time()))
+        data_to_sign = (
+            f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
+        )
+
+        # Send Synapse
+        self.dendrite.query(
+            self.metagraph.axons[target_uid],
+            LLMDefenderBase.MetricsProtocol(
+                response_object=response_object,
+                synapse_uuid=synapse_uuid,
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_signature=LLMDefenderBase.sign_data(
+                    hotkey=self.wallet.hotkey, data=data_to_sign
+                ),
+            ),
+            timeout=1,
+            deserialize=False
+        )
 
     def _parse_args(self, parser):
         return parser.parse_args()
@@ -224,12 +244,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Initiate the response objects
         response_data = []
-        response_logger = {
-            "logger": "validator",
-            "validator_hotkey": self.wallet.hotkey.ss58_address,
-            "timestamp": str(time.time()),
-            "miner_metrics": [],
-        }
         responses_invalid_uids = []
         responses_valid_uids = []
 
@@ -270,28 +284,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             # Handle response
             response_data.append(response_object)
             if response_object["response"]:
-                response_logger["miner_metrics"].append(response_object)
+                self.send_metrics_synapse(response_object=response_object, synapse_uuid=synapse_uuid, target_uid=processed_uids[i])
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        # If remote logging is disabled, do not log to remote server
-        if self.remote_logging is False:
-            bt.logging.debug(
-                f"Remote metrics not stored because remote logging is disabled."
-            )
-        else:
-            bt.logging.trace(f"Message to log: {response_logger}")
-            if not self.remote_logger(
-                hotkey=self.wallet.hotkey, message=response_logger
-            ):
-                bt.logging.warning(
-                    "Unable to push miner validation results to the logger service"
-                )
-
-        return response_data
+        return final_response_data
 
     def determine_overall_scores(
         self, specialization_bonus_n=5
