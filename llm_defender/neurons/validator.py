@@ -226,7 +226,6 @@ def handle_invalid_prompt(validator):
 def attach_response_to_validator(validator, response_data):
     for res in response_data:
         hotkey = res['hotkey']
-        analyzer = res['analyzer']
 
         if hotkey not in validator.miner_responses:
             validator.miner_responses[hotkey] = {}
