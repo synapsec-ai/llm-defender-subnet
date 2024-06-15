@@ -22,6 +22,7 @@ import time
 import bittensor as bt
 import requests
 import numpy as np
+import datasets
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -413,6 +414,36 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return {}
 
+    def get_prompt_from_dataset(self):
+        """Fetches prompt from the dataset as a fallback to the prompt generation"""
+        
+        # Randomly choose which dataset to use
+        if secrets.randbelow(2) == 0:
+            dataset = datasets.load_dataset("synapsecai/synthetic-prompt-injections")
+            analyzer = "Prompt Injection"
+        else:
+            dataset = datasets.load_dataset("synapsecai/synthetic-sensitive-information")
+            analyzer = "Sensitive Information"
+        
+        # Use prompts from the test dataset
+        test_dataset = dataset["test"]
+
+        # Shuffle the dataset and select random sample
+        shuffled_dataset = test_dataset.shuffle()
+        dataset_entry = shuffled_dataset.select(range(1))
+
+        prompt = {
+            "analyzer": analyzer,
+            "category": dataset_entry["category"][0],
+            "prompt": dataset_entry["text"][0],
+            "label": dataset_entry["label"][0],
+            "weight": 0.1, # Prompts from dataset should be given low weight in the scoring
+        }
+
+        bt.logging.debug(f'Fetched prompt from the dataset: {prompt}')
+        return prompt
+
+
     def serve_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
@@ -433,6 +464,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         data = f"{synapse_uuid}{nonce}{timestamp}"
 
+        # Load prompt from the prompt API
         entry = self.get_api_prompt(
             hotkey=self.wallet.hotkey.ss58_address,
             signature=LLMDefenderBase.sign_data(hotkey=self.wallet.hotkey, data=data),
@@ -441,6 +473,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             nonce=nonce,
         )
 
+        # Fallback to dataset if prompt loading from the API failed
+        if not entry:
+            entry = self.get_prompt_from_dataset()
+        
         self.prompt = entry
 
         return self.prompt
