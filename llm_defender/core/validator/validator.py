@@ -648,10 +648,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             array[np.isnan(array)] = 0.0
             return array
 
-        self.scores = replace_nan_with_zero(self.scores)
-
         weights = self.scores / np.sum(np.abs(self.scores), axis=0)
         bt.logging.info(f"Setting weights: {weights}")
+
+        weights = replace_nan_with_zero(weights)
 
         bt.logging.debug(
             f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
