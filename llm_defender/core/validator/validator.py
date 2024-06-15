@@ -587,7 +587,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 # Truncate each analyzer's list to 100 entries
                 truncated_list = []
                 for analyzer_type, entries in analyzer_dict.items():
-                    truncated_list.extend(entries[:max_number_of_responses_per_miner])
+                    truncated_list.extend(entries[-max_number_of_responses_per_miner:])
                 
                 # Update the original list with the truncated list
                 self.miner_responses[hotkey] = truncated_list
@@ -705,15 +705,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        def replace_nan_with_zero(array):
-            # Use np.isnan to find NaN values and replace them with 0.0
-            array[np.isnan(array)] = 0.0
-            return array
 
         weights = self.scores / np.sum(np.abs(self.scores), axis=0)
         bt.logging.info(f"Setting weights: {weights}")
-
-        weights = replace_nan_with_zero(weights)
 
         bt.logging.debug(
             f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
