@@ -203,12 +203,12 @@ def check_base_penalty(uid, miner_responses, response):
         penalty = 0.0
         for entry in miner_responses:
             if (
-                "scored_response" in entry.keys()
-                and "raw_scores" in entry["scored_response"].keys()
-                and "distance" in entry["scored_response"]["raw_scores"].keys()
+                "analyzer_scored_response" in entry.keys()
+                and "raw_scores" in entry["analyzer_scored_response"].keys()
+                and "distance" in entry["analyzer_scored_response"]["raw_scores"].keys()
             ):
                 bt.logging.trace(f"Going through: {entry}")
-                total_distance += entry["scored_response"]["raw_scores"]["distance"]
+                total_distance += entry["analyzer_scored_response"]["raw_scores"]["distance"]
                 count += 1
             # Miner response is not valid, apply base penalty
             else:
