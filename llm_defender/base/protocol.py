@@ -2,18 +2,18 @@ from typing import List, Dict
 import bittensor as bt
 import pydantic
 
+
 class MetricsProtocol(bt.Synapse):
     """This class implements the Synapse responsible for the
     feedback-loop back towards the miner after processing the response
     received from the miner"""
-    
+
     # This variable contains the metrics to be sent back to the Miner
     response_object: Dict
 
     synapse_uuid: str = pydantic.Field(
         ...,
         description="Synapse UUID provides a unique identifier for the prompt sent out by the validator",
-
     )
 
     synapse_nonce: str = pydantic.Field(
