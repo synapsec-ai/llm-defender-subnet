@@ -248,27 +248,33 @@ async def update_weights_async(validator):
 
 
 async def get_average_score_per_analyzer(validator):
+
     results = {}
 
-    for hotkey, content in validator.miner_responses.items():
-        for analyzer, details in content.items():
-            uid = details[0].get("UID")
-
-            if (hotkey, uid) not in results:
-                results[(hotkey, uid)] = {'Prompt Injection': [], 'Sensitive Information': []}
-
-            for analyzer_type in ['Prompt Injection', 'Sensitive Information']:
-                if analyzer_type in details:
-                    score = details[analyzer_type].get('binned_analyzer_score', 0)
-                    results[(hotkey, uid)][analyzer_type].append(score)
-
-    for key, scores in results.items():
-        for analyzer_type in scores:
-            if scores[analyzer_type]:
-                average_score = sum(scores[analyzer_type]) / len(scores[analyzer_type])
-            else:
-                average_score = 0
-            results[key][analyzer_type] = average_score
+    for hotkey, response_list in validator.miner_responses.items():
+        if not response_list:
+            continue
+        
+        # Get the UID from the first response in the list
+        uid = response_list[0]["UID"]
+        
+        # Create a dictionary to store analyzer scores
+        analyzer_scores = {}
+        
+        # Iterate through the responses to gather scores
+        for response in response_list:
+            analyzer = response["analyzer"]
+            score = response["scored_response"]["scores"]["binned_analyzer_score"]
+            
+            if analyzer not in analyzer_scores:
+                analyzer_scores[analyzer] = []
+            analyzer_scores[analyzer].append(score)
+        
+        # Calculate the average score for each analyzer
+        average_scores = {analyzer: sum(scores) / len(scores) for analyzer, scores in analyzer_scores.items()}
+        
+        # Store the results using UID as the key
+        results[uid] = average_scores
 
     return results
 
