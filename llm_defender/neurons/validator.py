@@ -462,7 +462,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             ) and not validator.debug_mode:
                 averages = await get_average_score_per_analyzer(validator)
                 
-                for (hotkey, uid), data in averages.items():
+                for uid, data in averages.items():
                     validator.prompt_injection_scores[uid] = data["Prompt Injection"]
                     validator.sensitive_information_scores[uid] = data["Sensitive Information"]
                 
