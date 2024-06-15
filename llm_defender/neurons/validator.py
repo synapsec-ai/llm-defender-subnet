@@ -263,6 +263,7 @@ async def get_average_score_per_analyzer(validator):
         
         # Iterate through the responses to gather scores
         for response in response_list:
+            bt.logging.trace(f"Going through response: {response}")
             analyzer = response["analyzer"]
             score = response["analyzer_scored_response"]["scores"]["binned_analyzer_score"]
             
