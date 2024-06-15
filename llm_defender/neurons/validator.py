@@ -252,44 +252,39 @@ async def get_average_score_per_analyzer(validator):
     results = {}
 
     for hotkey, response_list in validator.miner_responses.items():
-        try:
-            if not response_list:
-                continue
-            
-            # Get the UID from the first response in the list
-            uid = response_list[0]["UID"]
-            
-            # Create a dictionary to store analyzer scores
-            analyzer_scores = {}
-            
-            # Iterate through the responses to gather scores
-            for response in response_list:
+        
+        if not response_list:
+            continue
+        
+        # Get the UID from the first response in the list
+        uid = response_list[0]["UID"]
+        
+        # Create a dictionary to store analyzer scores
+        analyzer_scores = {}
+        
+        # Iterate through the responses to gather scores
+        for response in response_list:
 
-                analyzer = response["analyzer"] 
+            analyzer = response["analyzer"] 
 
-                try: 
-                    
-                    analyzer = response["analyzer"]
-                    score = response["scored_response"]["scores"]["binned_analyzer_score"]
+            try: 
                 
-                    if analyzer not in analyzer_scores:
-                        analyzer_scores[analyzer] = []
-                    analyzer_scores[analyzer].append(score)
-
-                except:
-                    analyzer_scores[analyzer].append(0.0)
+                analyzer = response["analyzer"]
+                score = response["scored_response"]["scores"]["binned_analyzer_score"]
             
-            # Calculate the average score for each analyzer
-            average_scores = {analyzer: sum(scores) / len(scores) for analyzer, scores in analyzer_scores.items()}
-            
-            # Store the results using UID as the key
-            results[uid] = average_scores
+                if analyzer not in analyzer_scores:
+                    analyzer_scores[analyzer] = []
+                analyzer_scores[analyzer].append(score)
 
-        except:
-            # Get the UID from the first response in the list
-            uid = response_list[0]["UID"]
-            results[uid] = {'Prompt Injection': 0.0, "Sensitive Information": 0.0}
-
+            except:
+                analyzer_scores[analyzer].append(0.0)
+        
+        # Calculate the average score for each analyzer
+        average_scores = {analyzer: sum(scores) / len(scores) for analyzer, scores in analyzer_scores.items()}
+        
+        # Store the results using UID as the key
+        results[uid] = average_scores
+        
     return results
 
 

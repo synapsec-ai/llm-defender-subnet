@@ -705,7 +705,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-
         weights = self.scores / np.sum(np.abs(self.scores), axis=0)
         bt.logging.info(f"Setting weights: {weights}")
 
