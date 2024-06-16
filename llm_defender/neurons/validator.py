@@ -197,11 +197,11 @@ def handle_empty_responses(validator, list_of_uids):
     time.sleep(bt.__blocktime__/2)
 
 
-def format_responses(
+async def format_responses(
     validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
 ):
     # Process the responses
-    response_data = validator.process_responses(
+    response_data = await validator.process_responses(
         query=prompt_to_analyze,
         processed_uids=list_of_uids,
         responses=responses,
@@ -403,7 +403,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
             bt.logging.trace(f"Received responses: {responses}")
 
-            response_data = format_responses(
+            response_data = await format_responses(
                 validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
             )
             attach_response_to_validator(validator, response_data)
