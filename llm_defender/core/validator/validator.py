@@ -430,7 +430,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         return prompt
 
 
-    def serve_prompt(self) -> dict:
+    def serve_prompt_injection_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
