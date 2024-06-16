@@ -303,15 +303,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 await task
         except Exception as e:
             bt.logging.error(f'Error while handling background tasks for metric synapses: {e}')
-        
-        final_response_data = self.determine_overall_scores(response_data, responses)
+    
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        return final_response_data
+        return response_data
+    
 
     def determine_overall_scores(
         self, specialization_bonus_n=5
@@ -454,24 +454,21 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return self.prompt
     
-    def serve_sensitive_information_prompt(self, synapse_uuid):
-        prompt, category, target, created_at = self.sensitive_info_generator.get_prompt_to_serve_miners()
+    def serve_sensitive_information_prompt(self):
+        prompt, category, target = self.sensitive_info_generator.get_prompt_to_serve_miners()
         return {
             "prompt":prompt,
             "analyzer":'Sensitive Information',
             "category":category,
             "label":target,
-            "synapse_uuid":synapse_uuid,
-            "hotkey":self.wallet.hotkey.ss58_address,
-            "created_at":created_at,
             "weight": 1.0
         }
 
     async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
         if analyzer == 'Prompt Injection':
-            return await asyncio.to_thread(self.serve_prompt_injection_prompt, synapse_uuid)
+            return await asyncio.to_thread(self.serve_prompt_injection_prompt)
         elif analyzer == 'Sensitive Information':
-            return await asyncio.to_thread(self.serve_sensitive_information_prompt, synapse_uuid)
+            return await asyncio.to_thread(self.serve_sensitive_information_prompt)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
