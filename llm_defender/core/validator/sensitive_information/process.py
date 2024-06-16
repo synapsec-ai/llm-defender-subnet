@@ -11,7 +11,7 @@ def process_response(
     target,
     synapse_uuid,
     query,
-    validator: LLMDefenderCore.SubnetValidator,
+    validator,
     responses_invalid_uids,
     responses_valid_uids,
 ):
