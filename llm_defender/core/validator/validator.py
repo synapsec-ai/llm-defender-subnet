@@ -43,7 +43,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser, profile="validator")
         
-        self.timeout = 12
+        self.timeout = 6
         self.neuron_config = None
         self.wallet = None
         self.subtensor = None
