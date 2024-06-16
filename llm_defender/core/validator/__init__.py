@@ -12,3 +12,5 @@ from .sensitive_information import (
     sensitive_information_scoring,
     sensitive_information_penalty,
 )
+
+from .prompt_generator import PromptGenerator

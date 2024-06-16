@@ -19,8 +19,6 @@ from .neuron import BaseNeuron
 
 from .engine import BaseEngine
 
-from .prompt_generator import PromptGenerator
-
 # Configuration
 config = ModuleConfig().get_full_config()
 

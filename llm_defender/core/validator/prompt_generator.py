@@ -7,7 +7,7 @@ import bittensor as bt
 import random
 
 # Import custom modules
-from llm_defender.base import generator_data
+from llm_defender.core.validator import generator_data
 
 
 class PromptGenerator:
