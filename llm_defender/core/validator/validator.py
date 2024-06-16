@@ -213,7 +213,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     hotkey=self.wallet.hotkey, data=data_to_sign
                 ),
             ),
-            timeout=1,
+            timeout=2,
             deserialize=False
         )
 
