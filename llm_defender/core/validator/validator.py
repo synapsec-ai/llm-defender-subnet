@@ -187,7 +187,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return True
 
-    def send_metrics_synapse(self, response_object, synapse_uuid, target_uid):
+    async def send_metrics_synapse(self, response_object, synapse_uuid, target_uid):
         """This method sends a synapse to the target_uid containing the
         response_object"""
 
@@ -199,7 +199,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         )
 
         # Send Synapse
-        self.dendrite.query(
+        await self.dendrite.forward(
             self.metagraph.axons[target_uid],
             LLMDefenderBase.MetricsProtocol(
                 response_object=response_object,
@@ -213,6 +213,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             timeout=2,
             deserialize=False
         )
+
+        bt.logging.trace(f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}')
 
     def _parse_args(self, parser):
         return parser.parse_args()
@@ -244,6 +246,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         response_data = []
         responses_invalid_uids = []
         responses_valid_uids = []
+
+        # Collect tasks in a set
+        background_tasks = set()
 
         # Check each response
         for i, response in enumerate(responses):
@@ -282,7 +287,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             # Handle response
             response_data.append(response_object)
             if response_object["response"]:
-                self.send_metrics_synapse(response_object=response_object, synapse_uuid=synapse_uuid, target_uid=processed_uids[i])
+                # Add asyncio task to background tasks
+                task = asyncio.create_task(self.send_metrics_synapse(response_object=response_object, synapse_uuid=synapse_uuid, target_uid=processed_uids[i]))
+                background_tasks.add(task)
+                task.add_done_callback(background_tasks.discard)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
