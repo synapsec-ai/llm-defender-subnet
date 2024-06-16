@@ -256,34 +256,51 @@ async def get_average_score_per_analyzer(validator):
         if not response_list:
             continue
         
-        # Get the UID from the first response in the list
         uid = response_list[0]["UID"]
-        
-        # Create a dictionary to store analyzer scores
         analyzer_scores = {}
+        weights = {}
         
-        # Iterate through the responses to gather scores
         for response in response_list:
 
             analyzer = response["analyzer"] 
 
             try: 
                 
-                analyzer = response["analyzer"]
                 score = response["scored_response"]["scores"]["binned_analyzer_score"]
-            
+                weight = response["analyzer_weight_scores"]["weight"]
+
                 if analyzer not in analyzer_scores:
                     analyzer_scores[analyzer] = []
+                if analyzer not in weights:
+                    weights[analyzer] = []
+
                 analyzer_scores[analyzer].append(score)
+                weights[analyzer].append(weight)
 
             except:
+
+                if analyzer not in analyzer_scores:
+                    analyzer_scores[analyzer] = []
+                if analyzer not in weights:
+                    weights[analyzer] = []
+
                 analyzer_scores[analyzer].append(0.0)
+                weights[analyzer].append(1.0)
         
-        # Calculate the average score for each analyzer
-        average_scores = {analyzer: sum(scores) / len(scores) for analyzer, scores in analyzer_scores.items()}
+        weighted_averages = {}
+
+        for key in analyzer_scores:
+            scores = analyzer_scores[key]
+            weight = weights[key]
+            
+            weighted_sum = sum(score * w for score, w in zip(scores, weight))
+            total_weight = sum(weight)
+            
+            weighted_average = weighted_sum / total_weight
+            weighted_averages[key] = weighted_average
         
         # Store the results using UID as the key
-        results[uid] = average_scores
+        results[uid] = weighted_averages
         
     return results
 
