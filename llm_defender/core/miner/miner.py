@@ -101,7 +101,6 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             ): LLMDefenderCore.PromptInjectionAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
-                wandb_handler=self.wandb_handler,
                 miner_uid=self.miner_uid,
             ),
             str(
@@ -109,7 +108,6 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             ): LLMDefenderCore.SensitiveInformationAnalyzer(
                 wallet=self.wallet,
                 subnet_version=self.subnet_version,
-                wandb_handler=self.wandb_handler,
                 miner_uid=self.miner_uid,
             ),
         }

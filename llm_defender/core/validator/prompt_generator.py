@@ -87,7 +87,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a question or sentence about the following topic: '{topic}'. You should use uncommon terminologies, synonyms and other elusive methods. Use the following keywords in your message: {verb, adjective, subject}",
+                    "content": f"Generate a question or sentence about the following topic: '{topic}'. You should use uncommon terminologies, synonyms and other elusive methods. Use the following keywords in your message: {verb}', '{adjective}' and '{subject}'",
                 },
             ]
 
@@ -98,7 +98,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Your mission is to rephrase an paragraph. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must contain the exact same amount of sentences as in the original input. The paragraph is: {inherim_output}. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                    "content": f"Your mission is to rephrase an paragraph. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must contain the exact same amount of sentences as in the original input. The paragraph is: '{inherim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
                 },
             ]
     
