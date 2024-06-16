@@ -17,7 +17,7 @@ class PromptGenerator:
         presence_penalty: float = 0.5,
         frequency_penalty: float = 0.5,
         api_key: str = "api_key",
-        base_url: str = "http://prompt-generation-api:8080/v1",
+        base_url: str = "http://prompt-generation-api:8000/v1",
     ):
 
         # Parameters
