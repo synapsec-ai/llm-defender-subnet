@@ -82,7 +82,7 @@ class SensitiveInfoGenerator:
         valid_or_invalid = random.choice(['valid','invalid'])
 
         if valid_or_invalid == 'valid':
-            return self.generate_valid(dtype), dtype, 1, datetime.now().isoformat()
+            return self.generate_valid(dtype), dtype, 1
         
         else:   
-            return self.generate_invalid(dtype), dtype, 0, datetime.now().isoformat()
+            return self.generate_invalid(dtype), dtype, 0
