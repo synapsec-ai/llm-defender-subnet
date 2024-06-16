@@ -193,8 +193,8 @@ def handle_empty_responses(validator, list_of_uids):
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/2} seconds")
-    time.sleep(bt.__blocktime__/2)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__/3)
 
 
 async def format_responses(
@@ -218,8 +218,8 @@ def handle_invalid_prompt(validator):
     )
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/2} seconds")
-    time.sleep(bt.__blocktime__/2)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__/3)
 
 
 def attach_response_to_validator(validator, response_data):
@@ -327,8 +327,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
             if not axons_with_valid_ip:
                 bt.logging.warning("No axons with valid IPs found")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__/2} seconds")
-                time.sleep(bt.__blocktime__ / 2)
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+                time.sleep(bt.__blocktime__/3)
                 continue
 
             if validator.target_group == 0:
@@ -426,8 +426,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             validator.step += 1
 
             # Sleep for a duration equivalent to half of the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__/2} seconds")
-            time.sleep(bt.__blocktime__ / 2)
+            bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+            time.sleep(bt.__blocktime__/3)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
