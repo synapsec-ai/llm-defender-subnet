@@ -20,7 +20,6 @@ from os import path, rename
 import secrets
 import time
 import bittensor as bt
-import requests
 import numpy as np
 from collections import defaultdict 
 
@@ -62,6 +61,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.query = None
         self.debug_mode = True
         self.sensitive_info_generator = SensitiveInfoGenerator()
+        self.prompt_api = LLMDefenderBase.PromptGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -361,49 +361,23 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_api_prompt(self) -> dict:
         """Retrieves a prompt from the prompt API"""
-
-        headers = {
-            "X-Hotkey": hotkey,
-            "X-Signature": signature,
-            "X-SynapseUUID": synapse_uuid,
-            "X-Timestamp": timestamp,
-            "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey,
-        }
-
-        prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, timeout=12)
-            # check for correct status code
-            if res.status_code == 200:
-                # get prompt entry from the API output
-                prompt_entry = res.json()
-                # check to make sure prompt is valid
-                if LLMDefenderBase.validate_validator_api_prompt_output(prompt_entry):
-                    bt.logging.trace(
-                        f"Loaded remote prompt to serve to miners: {prompt_entry}"
-                    )
-                    return prompt_entry
-                else:
-                    return None
-
+            analyzer = secrets.choice(["prompt_injection"])
+            prompt = self.prompt_api.construct(analyzer=analyzer)
+            
+            # check to make sure prompt is valid
+            if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
+                bt.logging.trace(f'Validated prompt: {prompt}')
+                return prompt
             else:
-                bt.logging.warning(
-                    f"Unable to get prompt from the Prompt API: HTTP/{res.status_code} - {res.json()}"
-                )
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Prompt API request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the prompt API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the prompt API: {e}")
+                bt.logging.debug(f'Failed to validate prompt: {prompt}')
+                return {}
         except Exception as e:
-            bt.logging.error(f"Generic error during request: {e}")
+            bt.logging.error(f"Failed to get prompt from prompt API: {e}")
 
         return {}
 
@@ -437,7 +411,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         return prompt
 
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -451,20 +425,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             entry:
                 A dict instance
         """
-        # Attempt to get prompt from prompt API
-        nonce = str(secrets.token_hex(24))
-        timestamp = str(int(time.time()))
-
-        data = f"{synapse_uuid}{nonce}{timestamp}"
 
         # Load prompt from the prompt API
-        entry = self.get_api_prompt(
-            hotkey=self.wallet.hotkey.ss58_address,
-            signature=LLMDefenderBase.sign_data(hotkey=self.wallet.hotkey, data=data),
-            synapse_uuid=synapse_uuid,
-            timestamp=timestamp,
-            nonce=nonce,
-        )
+        entry = self.get_api_prompt()
 
         # Fallback to dataset if prompt loading from the API failed
         if not entry:

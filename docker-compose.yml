@@ -29,6 +29,8 @@ services:
       "--revision", "gptq-8bit-128g-actorder_True",
       "--tensor-parallel-size", "4"
     ]
+    volumes:
+      - ${HOME}.cache/huggingface:/root/.cache/huggingface
 
 volumes:
   llm-defender-subnet:
