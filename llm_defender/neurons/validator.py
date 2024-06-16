@@ -12,6 +12,7 @@ import time
 import traceback
 from argparse import ArgumentParser
 from uuid import uuid4
+import random 
 
 # Import custom modules
 import bittensor as bt
@@ -66,12 +67,12 @@ async def save_miner_state_async(validator: LLMDefenderCore.SubnetValidator):
     await asyncio.to_thread(save_miner_state, validator)
 
 
-def truncate_miner_state(validator: LLMDefenderCore.SubnetValidator):
-    validator.truncate_miner_state()
+def truncate_miner_state(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
+    validator.truncate_miner_state(max_number_of_responses_per_miner)
 
 
-async def truncate_miner_state_async(validator: LLMDefenderCore.SubnetValidator):
-    await asyncio.to_thread(truncate_miner_state, validator)
+async def truncate_miner_state_async(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
+    await asyncio.to_thread(truncate_miner_state, validator, max_number_of_responses_per_miner)
 
 
 def save_used_nonces(validator: LLMDefenderCore.SubnetValidator):
@@ -224,16 +225,15 @@ def handle_invalid_prompt(validator):
 
 def attach_response_to_validator(validator, response_data):
     for res in response_data:
-        if validator.miner_responses:
-            if res["hotkey"] in validator.miner_responses:
-                validator.miner_responses[res["hotkey"]].append(res)
-            else:
-                validator.miner_responses[res["hotkey"]] = [res]
+        hotkey = res['hotkey']
+
+        if hotkey not in validator.miner_responses:
+            validator.miner_responses[hotkey] = []
         else:
-            validator.miner_responses = {res["hotkey"]: [res]}
+            validator.miner_responses[hotkey].append(res)
 
 
-def update_weights(validator):
+def update_weights(validator: LLMDefenderCore.SubnetValidator):
     # Periodically update the weights on the Bittensor blockchain.
     try:
         asyncio.run(validator.set_weights())
@@ -245,6 +245,64 @@ def update_weights(validator):
 
 async def update_weights_async(validator):
     await asyncio.to_thread(update_weights, validator)
+
+
+async def get_average_score_per_analyzer(validator):
+
+    results = {}
+
+    for _, response_list in validator.miner_responses.items():
+        
+        if not response_list:
+            continue
+        
+        uid = response_list[0]["UID"]
+        analyzer_scores = {}
+        weights = {}
+        
+        for response in response_list:
+
+            analyzer = response["analyzer"] 
+
+            try: 
+                
+                score = response["scored_response"]["scores"]["binned_analyzer_score"]
+                weight = response["analyzer_weight_scores"]["weight"]
+
+                if analyzer not in analyzer_scores:
+                    analyzer_scores[analyzer] = []
+                if analyzer not in weights:
+                    weights[analyzer] = []
+
+                analyzer_scores[analyzer].append(score)
+                weights[analyzer].append(weight)
+
+            except:
+
+                if analyzer not in analyzer_scores:
+                    analyzer_scores[analyzer] = []
+                if analyzer not in weights:
+                    weights[analyzer] = []
+
+                analyzer_scores[analyzer].append(0.0)
+                weights[analyzer].append(1.0)
+        
+        weighted_averages = {}
+
+        for key in analyzer_scores:
+            scores = analyzer_scores[key]
+            weight = weights[key]
+            
+            weighted_sum = sum(score * w for score, w in zip(scores, weight))
+            total_weight = sum(weight)
+            
+            weighted_average = weighted_sum / total_weight
+            weighted_averages[key] = weighted_average
+        
+        # Store the results using UID as the key
+        results[uid] = weighted_averages
+        
+    return results
 
 
 async def main(validator: LLMDefenderCore.SubnetValidator):
@@ -260,6 +318,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
     while True:
         try:
+            # ensure that the number of responses per miner is below a number
+            max_number_of_responses_per_miner = 100
+            truncate_miner_state(validator, max_number_of_responses_per_miner)
+
             # Periodically sync subtensor status and save the state file
             if validator.step % 5 == 0:
                 await update_metagraph_async(validator)
@@ -270,7 +332,6 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 )
             if validator.step % 20 == 0:
                 await asyncio.gather(
-                    truncate_miner_state_async(validator),
                     save_used_nonces_async(validator),
                 )
 
@@ -334,11 +395,13 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             if validator.target_group == 0:
 
                 synapse_uuid = str(uuid4())
+                analyzer = random.choice(['Prompt Injection', 'Sensitive Information'])
                 prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    synapse_uuid=synapse_uuid
+                    synapse_uuid=synapse_uuid,
+                    analyzer=analyzer
                 )
 
-                bt.logging.debug(f"Serving prompt: {prompt_to_analyze}")
+                bt.logging.debug(f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}")
 
                 is_prompt_invalid = (
                     prompt_to_analyze is None
@@ -396,12 +459,12 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 validator=validator,
                 prompt_to_analyze=prompt_to_analyze,
             )
-            await score_unused_axons_async(validator, uids_not_to_query)
+            # await score_unused_axons_async(validator, uids_not_to_query)
 
-            are_responses_empty = all(item.output is None for item in responses)
-            if are_responses_empty:
-                handle_empty_responses(validator, list_of_uids)
-                continue
+            # are_responses_empty = all(item.output is None for item in responses)
+            # if are_responses_empty:
+                # handle_empty_responses(validator, list_of_uids)
+                # continue
 
             bt.logging.trace(f"Received responses: {responses}")
 
@@ -411,7 +474,6 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             attach_response_to_validator(validator, response_data)
 
             # Print stats
-            bt.logging.debug(f"Scores: {validator.scores}")
             bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
 
             current_block = validator.subtensor.get_current_block()
@@ -419,9 +481,21 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
+            # Calculate analyzer average scores, calculate overall scores and then set weights
             if (
                 current_block - validator.last_updated_block > 100
             ) and not validator.debug_mode:
+                averages = await get_average_score_per_analyzer(validator)
+                
+                for uid, data in averages.items():
+                    validator.prompt_injection_scores[uid] = data["Prompt Injection"]
+                    validator.sensitive_information_scores[uid] = data["Sensitive Information"]
+                
+                bt.logging.trace(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
+                bt.logging.trace(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
+                
+                validator.determine_overall_scores()
+                
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.

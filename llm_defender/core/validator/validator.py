@@ -22,11 +22,14 @@ import time
 import bittensor as bt
 import requests
 import numpy as np
+from collections import defaultdict 
+
+np.seterr(divide='ignore', invalid='ignore')
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-
+from .sensitive_information.generation.generator import SensitiveInfoGenerator
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -51,7 +54,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt_injection_scores = None
         self.sensitive_information_scores = None
         self.hotkeys = None
-        self.miner_responses = None
+        self.miner_responses = {}
         self.max_targets = None
         self.target_group = None
         self.load_validator_state = None
@@ -59,6 +62,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
+        self.sensitive_info_generator = SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -268,8 +272,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             if response_object["response"]:
                 response_logger["miner_metrics"].append(response_object)
 
-        final_response_data = self.determine_overall_scores(response_data, responses)
-
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
@@ -289,23 +291,24 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     "Unable to push miner validation results to the logger service"
                 )
 
-        return final_response_data
+        return response_data
 
     def determine_overall_scores(
-        self, response_data, responses, specialization_bonus_n=5
+        self, specialization_bonus_n=5
     ):
 
         top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
-
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
 
-        for uid, _ in enumerate(responses):
+        for uid, _ in enumerate(self.scores):
 
             analyzer_avg = (
                 self.prompt_injection_scores[uid]
                 + self.sensitive_information_scores[uid]
-            )
-            self.scores[uid] = analyzer_avg / 2
+            ) / 2
+            self.scores[uid] = analyzer_avg
 
             top_prompt_injection_uid = 0
             top_sensitive_informaiton_uid = 0
@@ -320,17 +323,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 if self.sensitive_information_scores[uid] > self.scores[uid]:
                     self.scores[uid] = self.sensitive_information_scores[uid]
 
-            response_data[uid]["total_scored_response"] = {
-                "top_prompt_injection_uid": (
-                    True if top_prompt_injection_uid == 1 else False
-                ),
-                "top_sensitive_information_uid": (
-                    True if top_sensitive_informaiton_uid == 1 else False
-                ),
-                "total_score": self.scores[uid],
-            }
-
-            miner_hotkey = response_data[uid]["hotkey"]
+            miner_hotkey = self.metagraph.hotkeys[uid]
 
             if self.wandb_enabled:
                 wandb_logs = [
@@ -346,7 +339,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 for wandb_log in wandb_logs:
                     self.wandb_handler.log(wandb_log)
 
-        return response_data
+        bt.logging.trace(f"Calculated miner scores: {self.scores}")
 
     def calculate_penalized_scores(
         self,
@@ -413,7 +406,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return {}
 
-    def serve_prompt(self, synapse_uuid) -> dict:
+    def serve_prompt_injection_prompt(self, synapse_uuid) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -444,9 +437,25 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = entry
 
         return self.prompt
+    
+    def serve_sensitive_information_prompt(self, synapse_uuid):
+        prompt, category, target, created_at = self.sensitive_info_generator.get_prompt_to_serve_miners()
+        return {
+            "prompt":prompt,
+            "analyzer":'Sensitive Information',
+            "category":category,
+            "label":target,
+            "synapse_uuid":synapse_uuid,
+            "hotkey":self.wallet.hotkey.ss58_address,
+            "created_at":created_at,
+            "weight": 1.0
+        }
 
-    async def load_prompt_to_validator_async(self, synapse_uuid):
-        return await asyncio.to_thread(self.serve_prompt, synapse_uuid)
+    async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
+        if analyzer == 'Prompt Injection':
+            return await asyncio.to_thread(self.serve_prompt_injection_prompt, synapse_uuid)
+        elif analyzer == 'Sensitive Information':
+            return await asyncio.to_thread(self.serve_sensitive_information_prompt, synapse_uuid)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -480,7 +489,61 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         ) as pickle_file:
             pickle.dump(self.miner_responses, pickle_file)
 
-        bt.logging.debug("Saved miner states to a file")
+        filename = f"{self.cache_path}/miners.pickle"
+        bt.logging.debug(f"Saved miner states to file: {filename}")
+
+    def check_miner_responses_are_formatted_correctly(self, miner_responses):
+
+        correct_formatting = True 
+
+        needed_keys_response = [
+            "UID", "coldkey", "hotkey", 
+            "target", "prompt", "analyzer", 
+            "category", "synapse_uuid", "response",
+            "scored_response", "engine_data"
+        ]
+
+        needed_keys_scored_response = [
+            "scores", "raw_scores", "penalties"
+        ]
+
+        needed_keys_scores = [
+            "binned_analyzer_score", "total_analyzer_raw", "normalized_analyzer_score",
+            "distance", "speed"
+        ]   
+
+        for _, responses in miner_responses.items():
+            for response in responses:
+
+                response_keys = [k for k in response]
+                
+                for response_key in response_keys:
+
+                    if response_key not in needed_keys_response:
+                        correct_formatting = False
+                        break
+
+                    if response_key == "scored_response":
+
+                        scored_response_keys = [k for k in response["scored_response"]]
+
+                        for scored_response_key in scored_response_keys:
+
+                            if scored_response_key not in needed_keys_scored_response:
+                                correct_formatting = False 
+                                break
+
+                            if scored_response_key == "scores":
+
+                                scores_keys = [k for k in response["scored_response"]['scores']]
+
+                                for scores_key in scores_keys:
+                                    
+                                    if scores_key not in needed_keys_scores:
+                                        correct_formatting = False 
+                                        break
+
+        return correct_formatting
 
     def load_miner_state(self):
         """Loads the miner state from a file"""
@@ -488,7 +551,16 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
-                    self.miner_responses = pickle.load(pickle_file)
+                    miner_responses = pickle.load(pickle_file)
+                    if self.check_miner_responses_are_formatted_correctly(miner_responses):
+                        self.miner_responses = miner_responses
+                        self.truncate_miner_state(100)
+                    else:
+                        rename(
+                            state_path,
+                            f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
+                        )
+                        self.miner_responses = {}
 
                 bt.logging.debug("Loaded miner state from a file")
             except Exception as e:
@@ -502,22 +574,26 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     state_path,
                     f"{state_path}-{int(datetime.now().timestamp())}.autorecovery",
                 )
-                self.miner_responses = None
+                self.miner_responses = {}
 
-    def truncate_miner_state(self):
-        """Truncates the local miner state"""
-
+    def truncate_miner_state(self, max_number_of_responses_per_miner: int):
         if self.miner_responses:
-            old_size = getsizeof(self.miner_responses) + sum(
-                getsizeof(key) + getsizeof(value)
-                for key, value in self.miner_responses.items()
-            )
-            for hotkey in self.miner_responses:
-                self.miner_responses[hotkey] = self.miner_responses[hotkey][-100:]
 
-            bt.logging.debug(
-                f"Truncated miner response list (Old: '{old_size}' - New: '{getsizeof(self.miner_responses) + sum(getsizeof(key) + getsizeof(value) for key, value in self.miner_responses.items())}')"
-            )
+            for hotkey, data_list in self.miner_responses.items():
+                analyzer_dict = defaultdict(list)
+                
+                # Group entries by analyzer type
+                for entry in data_list:
+                    analyzer_type = entry["analyzer"]
+                    analyzer_dict[analyzer_type].append(entry)
+                
+                # Truncate each analyzer's list to 100 entries
+                truncated_list = []
+                for analyzer_type, entries in analyzer_dict.items():
+                    truncated_list.extend(entries[-max_number_of_responses_per_miner:])
+                
+                # Update the original list with the truncated list
+                self.miner_responses[hotkey] = truncated_list
 
     def save_state(self):
         """Saves the state of the validator to a file."""
@@ -534,8 +610,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             last_updated_block=self.last_updated_block,
         )
 
+        filename = f"{self.cache_path}/state.npz"
         bt.logging.debug(
-            f"Saved the following state to a file: step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
         )
 
     def init_default_scores(self) -> None:
@@ -593,16 +670,17 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 bt.logging.debug(f"Loaded the following state from file: {state}")
                 self.step = state["step"]
                 self.scores = state["scores"]
-                analyzer_scores_loaded = False
+
                 try:
                     self.prompt_injection_scores = state["prompt_injection_scores"]
                     self.sensitive_information_scores = state[
                         "sensitive_information_scores"
                     ]
-                    analyzer_scores_loaded = True
+                   
                 except Exception as e:
                     self.prompt_injection_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
                     self.sensitive_information_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
+
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
@@ -631,7 +709,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        weights = self.scores / np.sum(np.abs(self.scores), axis=0)
+        nan_included_weights = self.scores / np.sum(np.abs(self.scores), axis=0)
+        weights = np.nan_to_num(nan_included_weights, nan=0.0, posinf = 0.0, neginf = 0.0)
         bt.logging.info(f"Setting weights: {weights}")
 
         bt.logging.debug(
