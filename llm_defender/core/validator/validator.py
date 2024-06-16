@@ -57,7 +57,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = None
         self.query = None
         self.debug_mode = True
-        self.prompt_api = LLMDefenderBase.PromptGenerator()
+        self.prompt_api = LLMDefenderCore.PromptGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
