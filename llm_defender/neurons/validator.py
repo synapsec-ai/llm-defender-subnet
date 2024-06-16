@@ -334,9 +334,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             if validator.target_group == 0:
 
                 synapse_uuid = str(uuid4())
-                prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    synapse_uuid=synapse_uuid
-                )
+                prompt_to_analyze = await validator.load_prompt_to_validator_async()
 
                 bt.logging.debug(f"Serving prompt: {prompt_to_analyze}")
 
