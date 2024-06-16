@@ -251,7 +251,7 @@ async def get_average_score_per_analyzer(validator):
 
     results = {}
 
-    for hotkey, response_list in validator.miner_responses.items():
+    for _, response_list in validator.miner_responses.items():
         
         if not response_list:
             continue
