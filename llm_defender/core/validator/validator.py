@@ -61,7 +61,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.query = None
         self.debug_mode = True
         self.sensitive_info_generator = SensitiveInfoGenerator()
-        self.prompt_api = LLMDefenderBase.PromptGenerator()
+        self.prompt_api = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -136,7 +136,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
-
+    
 
         # Setup the bittensor objects
         wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
@@ -187,6 +187,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.max_targets = 256
 
         self.target_group = 0
+
+        # Setup prompt generation
+        self.prompt_api = LLMDefenderCore.PromptGenerator(disabled=args.disable_prompt_generation)
 
         return True
 
