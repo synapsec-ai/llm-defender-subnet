@@ -214,12 +214,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             deserialize=False
         )
 
-        bt.logging.trace(f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}')
+        bt.logging.debug(f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}')
 
     def _parse_args(self, parser):
         return parser.parse_args()
 
-    def process_responses(
+    async def process_responses(
         self,
         processed_uids: np.ndarray,
         query: dict,
@@ -290,7 +290,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 # Add asyncio task to background tasks
                 task = asyncio.create_task(self.send_metrics_synapse(response_object=response_object, synapse_uuid=synapse_uuid, target_uid=processed_uids[i]))
                 background_tasks.add(task)
-                task.add_done_callback(background_tasks.discard)
+        
+        # Handle background tasks
+        try:
+            for task in background_tasks:
+                await task
+        except Exception as e:
+            bt.logging.error(f'Error while handling background tasks for metric synapses: {e}')
+        
+        final_response_data = self.determine_overall_scores(response_data, responses)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(

@@ -14,7 +14,7 @@ class ModuleConfig:
     def __init__(self):
 
         # Determine module code version
-        self.__version__ = "0.8.0"
+        self.__version__ = "0.9.0"
 
         # Convert the version into a single integer
         self.__version_split__ = self.__version__.split(".")

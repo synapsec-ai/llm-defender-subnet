@@ -33,7 +33,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
     ):
         return 1.0
 
-    distance = abs(target - engine_response["confidence"])
+    distance = abs(int(target) - engine_response["confidence"])
 
     return distance
 
