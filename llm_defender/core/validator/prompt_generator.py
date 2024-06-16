@@ -180,7 +180,7 @@ class PromptGenerator:
 
         # Only run if prompt generation is enabled
         if not self.disabled: 
-            if analyzer == "prompt_injection":
+            if analyzer == "Prompt Injection":
                 try:
                     prompt = self.construct_pi_prompt()
                     bt.logging.debug(f'Generated prompt: {prompt}')

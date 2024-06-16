@@ -385,7 +385,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         try:
             # get prompt
-            analyzer = secrets.choice(["prompt_injection"])
+            analyzer = secrets.choice(["Prompt Injection"])
             prompt = self.prompt_api.construct(analyzer=analyzer)
             
             # check to make sure prompt is valid
@@ -400,16 +400,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return {}
 
-    def get_prompt_from_dataset(self):
+    def get_prompt_from_dataset(self, analyzer: str):
         """Fetches prompt from the dataset as a fallback to the prompt generation"""
         
         # Randomly choose which dataset to use
-        if secrets.randbelow(2) == 0:
+        if analyzer == "Prompt Injection":
             dataset = datasets.load_dataset("synapsecai/synthetic-prompt-injections")
-            analyzer = "Prompt Injection"
-        else:
+        elif analyzer == "Sensitive Information":
             dataset = datasets.load_dataset("synapsecai/synthetic-sensitive-information")
-            analyzer = "Sensitive Information"
         
         # Use prompts from the test dataset
         test_dataset = dataset["test"]
@@ -450,7 +448,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Fallback to dataset if prompt loading from the API failed
         if not entry:
-            entry = self.get_prompt_from_dataset()
+            entry = self.get_prompt_from_dataset(analyzer="Prompt Injection")
         
         self.prompt = entry
 
