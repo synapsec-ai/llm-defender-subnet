@@ -288,8 +288,8 @@ def get_response_object(
         "synapse_uuid": synapse_uuid,
         "response": {},
         "scored_response": get_engine_response_object(),
-        "weight_scores": {"new": 0.0, "old": 0.0, "change": 0.0, "unweighted": 0.0},
         "engine_data": [],
+        "analyzer_weight_scores":{},
     }
 
     return response

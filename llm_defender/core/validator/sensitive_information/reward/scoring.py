@@ -2,7 +2,7 @@
 
 from bittensor import logging
 from copy import deepcopy
-from numpy import cbrt, ndarray
+from numpy import cbrt, log, ndarray
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -190,6 +190,50 @@ def validate_response(hotkey, response) -> bool:
     logging.trace(f"Validation succeeded for response: {response}")
     return True
 
+def get_normalized_and_binned_scores(total_analyzer_raw_score):
+    """
+    This function normalizes the analyzer's score using the abs(ln(x)) curve,
+    and then bins this normalized value.
+
+    Inputs:
+        total_analyzer_raw_score: float
+            - The score obtained from the summation of distance/speed scores with
+            penalties applied.=
+
+    Outputs:
+        normalized_analyzer_score: float
+            - The output of abs(ln(total_analyzer_raw_score))
+        binned_analyzer_score: float
+            - The binned output of normalized_analyzer_score
+
+    """
+
+    if float(total_analyzer_raw_score) == 0.0:
+        normalized_analyzer_score = 10.0
+    else:
+        normalized_analyzer_score = abs(log(total_analyzer_raw_score))
+
+    score_bins = [  # [range_low, range_high, binned_score]
+        [0, 0.03, 1],
+        [0.03, 0.11, 0.9],
+        [0.11, 0.22, 0.8],
+        [0.22, 0.35, 0.7],
+        [0.35, 0.51, 0.6],
+        [0.51, 0.69, 0.5],
+        [0.69, 0.91, 0.4],
+        [0.91, 1.2, 0.3],
+        [1.2, 1.6, 0.2],
+        [1.6, 2.3, 0.1],
+    ]
+    binned_analyzer_score = 0.0
+
+    for score_bin in score_bins:
+        if score_bin[0] <= normalized_analyzer_score <= score_bin[1]:
+            binned_analyzer_score = score_bin[2]
+            break
+
+    return normalized_analyzer_score, binned_analyzer_score
+
 def get_engine_response_object(
     normalized_analyzer_score: float = 0.0,
     binned_analyzer_score: float = 0.0,
@@ -243,8 +287,8 @@ def get_response_object(
         "synapse_uuid": synapse_uuid,
         "response": {},
         "scored_response": get_engine_response_object(),
-        "weight_scores": {"new": 0.0, "old": 0.0, "change": 0.0, "unweighted": 0.0},
         "engine_data": [],
+        "analyzer_weight_scores":{}
     }
 
     return response

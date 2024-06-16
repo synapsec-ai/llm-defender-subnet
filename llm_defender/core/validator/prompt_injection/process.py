@@ -94,12 +94,30 @@ def process_response(
                     ]
                 },
                 {
-                    f"{response_object['UID']}:{response_object['hotkey']}_scores_total": response_object[
+                    f"{response_object['UID']}:{response_object['hotkey']}_binned_analyzer_score": response_object[
                         "scored_response"
                     ][
                         "scores"
                     ][
-                        "total"
+                        "binned_analyzer_score"
+                    ]
+                },
+                {
+                    f"{response_object['UID']}:{response_object['hotkey']}_normalized_analyzer_score": response_object[
+                        "scored_response"
+                    ][
+                        "scores"
+                    ][
+                        "normalized_analyzer_score"
+                    ]
+                },
+                {
+                    f"{response_object['UID']}:{response_object['hotkey']}_total_analyzer_raw": response_object[
+                        "scored_response"
+                    ][
+                        "scores"
+                    ][
+                        "total_analyzer_raw"
                     ]
                 },
                 {
@@ -136,27 +154,6 @@ def process_response(
                         "raw_scores"
                     ][
                         "speed"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_weight_score_new": response_object[
-                        "analyzer_weight_scores"
-                    ][
-                        "new"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_weight_score_old": response_object[
-                        "analyzer_weight_scores"
-                    ][
-                        "old"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_weight_score_change": response_object[
-                        "analyzer_weight_scores"
-                    ][
-                        "change"
                     ]
                 },
             ]
@@ -225,7 +222,7 @@ def calculate_analyzer_score(
 
     # Get penalty multipliers
     distance_penalty, speed_penalty = get_response_penalties(
-        prompt, validator, response, hotkey, target
+        validator, response, hotkey, target
     )
 
     # Apply penalties to scores
@@ -245,7 +242,9 @@ def calculate_analyzer_score(
         or not LLMDefenderBase.validate_numerical_value(
             final_distance_score, float, 0.0, 1.0
         )
-        or not LLMDefenderBase.validate_numerical_value(final_speed_score, float, 0.0, 1.0)
+        or not LLMDefenderBase.validate_numerical_value(
+            final_speed_score, float, 0.0, 1.0
+        )
     ):
         bt.logging.error(
             f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
@@ -290,7 +289,7 @@ def calculate_analyzer_score(
     )
 
 
-def apply_penalty(prompt, validator, response, hotkey, target) -> tuple:
+def apply_penalty(validator, response, hotkey, target) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -324,11 +323,11 @@ def apply_penalty(prompt, validator, response, hotkey, target) -> tuple:
     return false_positive, base, duplicate
 
 
-def get_response_penalties(prompt, validator, response, hotkey, target):
+def get_response_penalties(validator, response, hotkey, target):
     """This function resolves the penalties for the response"""
 
     false_positive_penalty, base_penalty, duplicate_penalty = apply_penalty(
-        prompt, validator, response, hotkey, target
+        validator, response, hotkey, target
     )
 
     distance_penalty_multiplier = 1.0

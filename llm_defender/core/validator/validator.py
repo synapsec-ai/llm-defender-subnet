@@ -500,7 +500,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             "UID", "coldkey", "hotkey", 
             "target", "prompt", "analyzer", 
             "category", "synapse_uuid", "response",
-            "scored_response", "weight_scores", "engine_data"
+            "scored_response", "engine_data"
         ]
 
         needed_keys_scored_response = [
