@@ -501,7 +501,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             # End the current step and prepare for the next iteration.
             validator.step += 1
 
-            # Sleep for a duration equivalent to half of the block time (i.e., time between successive blocks).
+            # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
             bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
             time.sleep(bt.__blocktime__/3)
 
