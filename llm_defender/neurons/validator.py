@@ -266,7 +266,7 @@ async def get_average_score_per_analyzer(validator):
 
             try: 
                 
-                score = response["scored_response"]["scores"]["binned_analyzer_score"]
+                score = response["scored_response"]["scores"]["total_analyzer_raw"]
                 weight = response["analyzer_weight_scores"]["weight"]
 
                 if analyzer not in analyzer_scores:

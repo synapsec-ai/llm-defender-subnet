@@ -94,21 +94,21 @@ def process_response(
                     ]
                 },
                 {
-                    f"{response_object['UID']}:{response_object['hotkey']}_binned_analyzer_score": response_object[
+                    f"{response_object['UID']}:{response_object['hotkey']}_binned_distance_score": response_object[
                         "scored_response"
                     ][
                         "scores"
                     ][
-                        "binned_analyzer_score"
+                        "binned_distance_score"
                     ]
                 },
                 {
-                    f"{response_object['UID']}:{response_object['hotkey']}_normalized_analyzer_score": response_object[
+                    f"{response_object['UID']}:{response_object['hotkey']}_normalized_distance_score": response_object[
                         "scored_response"
                     ][
                         "scores"
                     ][
-                        "normalized_analyzer_score"
+                        "normalized_distance_score"
                     ]
                 },
                 {
@@ -198,6 +198,12 @@ def calculate_analyzer_score(
         )
         distance_score = 0.0
 
+    normalized_distance_score, binned_distance_score = (
+        LLMDefenderCore.sensitive_information_scoring.get_normalized_and_binned_scores(
+            distance_score
+        )
+    )
+
     # Calculate speed score
     speed_score = LLMDefenderCore.sensitive_information_scoring.calculate_subscore_speed(
         validator.timeout, response_time
@@ -231,7 +237,7 @@ def calculate_analyzer_score(
         final_distance_score,
         final_speed_score,
     ) = validator.calculate_penalized_scores(
-        score_weights, distance_score, speed_score, distance_penalty, speed_penalty
+        score_weights, binned_distance_score, speed_score, distance_penalty, speed_penalty
     )
 
     # Validate individual scores
@@ -250,12 +256,6 @@ def calculate_analyzer_score(
         )
         return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
 
-    normalized_analyzer_score, binned_analyzer_score = (
-        LLMDefenderCore.sensitive_information_scoring.get_normalized_and_binned_scores(
-            total_analyzer_raw_score
-        )
-    )
-
     # Log the scoring data
     score_logger = {
         "hotkey": hotkey,
@@ -265,8 +265,8 @@ def calculate_analyzer_score(
         "penalties": {"distance": distance_penalty, "speed": speed_penalty},
         "raw_scores": {"distance": distance_score, "speed": speed_score},
         "analyzer_scores": {
-            "binned_analyzer_score": binned_analyzer_score,
-            "normalized_analyzer_score": normalized_analyzer_score,
+            "binned_distance_score": binned_distance_score,
+            "normalized_distance_score": normalized_distance_score,
             "total_analyzer_raw": total_analyzer_raw_score,
             "distance": final_distance_score,
             "speed": final_speed_score,
@@ -276,8 +276,8 @@ def calculate_analyzer_score(
     bt.logging.debug(f"Calculated score: {score_logger}")
 
     return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object(
-        normalized_analyzer_score=normalized_analyzer_score,
-        binned_analyzer_score=binned_analyzer_score,
+        normalized_distance_score=normalized_distance_score,
+        binned_distance_score=binned_distance_score,
         total_analyzer_raw_score=total_analyzer_raw_score,
         final_analyzer_distance_score=final_distance_score,
         final_analyzer_speed_score=final_speed_score,
