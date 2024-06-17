@@ -23,9 +23,6 @@ import bittensor as bt
 import numpy as np
 from collections import defaultdict 
 
-np.seterr(divide='ignore', invalid='ignore')
-import datasets
-
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
