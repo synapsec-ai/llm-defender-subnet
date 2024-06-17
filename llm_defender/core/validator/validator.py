@@ -24,8 +24,6 @@ import requests
 import numpy as np
 from collections import defaultdict 
 
-np.seterr(divide='ignore', invalid='ignore')
-
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
@@ -508,7 +506,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         ]
 
         needed_keys_scores = [
-            "binned_analyzer_score", "total_analyzer_raw", "normalized_analyzer_score",
+            "binned_distance_score", "total_analyzer_raw", "normalized_distance_score",
             "distance", "speed"
         ]   
 
@@ -709,8 +707,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        nan_included_weights = self.scores / np.sum(np.abs(self.scores), axis=0)
-        weights = np.nan_to_num(nan_included_weights, nan=0.0, posinf = 0.0, neginf = 0.0)
+        def power_scaling(scores, power=10):
+            transformed_scores = np.power(scores, power)
+            normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
+            return normalized_scores
+
+        weights = power_scaling(self.scores)
+
+        
+        
         bt.logging.info(f"Setting weights: {weights}")
 
         bt.logging.debug(
