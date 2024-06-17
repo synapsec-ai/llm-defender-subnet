@@ -707,10 +707,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def set_weights(self):
         """Sets the weights for the subnet"""
 
-        if np.all(self.scores==0.0):
-            weights = self.scores 
-        else:
-            unquantiled_weights = self.scores / np.sum(np.abs(self.scores), axis=0)
+        def power_scaling(scores, power=10):
+            transformed_scores = np.power(scores, power)
+            normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
+            return normalized_scores
+
+        weights = power_scaling(self.scores)
 
         
         
