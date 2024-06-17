@@ -22,6 +22,7 @@ import time
 import bittensor as bt
 import numpy as np
 from collections import defaultdict 
+import datasets
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
