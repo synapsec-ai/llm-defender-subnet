@@ -198,6 +198,8 @@ def calculate_analyzer_score(
         )
         distance_score = 0.0
 
+    
+
     # Calculate speed score
     speed_score = LLMDefenderCore.prompt_injection_scoring.calculate_subscore_speed(
         validator.timeout, response_time
