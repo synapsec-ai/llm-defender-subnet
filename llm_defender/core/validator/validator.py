@@ -508,7 +508,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         ]
 
         needed_keys_scores = [
-            "binned_analyzer_score", "total_analyzer_raw", "normalized_analyzer_score",
+            "binned_distance_score", "total_analyzer_raw", "normalized_distance_score",
             "distance", "speed"
         ]   
 

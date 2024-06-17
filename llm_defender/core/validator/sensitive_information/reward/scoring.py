@@ -201,17 +201,17 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
             penalties applied.=
 
     Outputs:
-        normalized_analyzer_score: float
+        normalized_distance_score: float
             - The output of abs(ln(total_analyzer_raw_score))
-        binned_analyzer_score: float
-            - The binned output of normalized_analyzer_score
+        binned_distance_score: float
+            - The binned output of normalized_distance_score
 
     """
 
     if float(total_analyzer_raw_score) == 0.0:
-        normalized_analyzer_score = 10.0
+        normalized_distance_score = 10.0
     else:
-        normalized_analyzer_score = abs(log(total_analyzer_raw_score))
+        normalized_distance_score = abs(log(total_analyzer_raw_score))
 
     score_bins = [  # [range_low, range_high, binned_score]
         [0, 0.03, 1],
@@ -225,18 +225,18 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
         [1.2, 1.6, 0.2],
         [1.6, 2.3, 0.1],
     ]
-    binned_analyzer_score = 0.0
+    binned_distance_score = 0.0
 
     for score_bin in score_bins:
-        if score_bin[0] <= normalized_analyzer_score <= score_bin[1]:
-            binned_analyzer_score = score_bin[2]
+        if score_bin[0] <= normalized_distance_score <= score_bin[1]:
+            binned_distance_score = score_bin[2]
             break
 
-    return normalized_analyzer_score, binned_analyzer_score
+    return normalized_distance_score, binned_distance_score
 
 def get_engine_response_object(
-    normalized_analyzer_score: float = 0.0,
-    binned_analyzer_score: float = 0.0,
+    normalized_distance_score: float = 0.0,
+    binned_distance_score: float = 0.0,
     total_analyzer_raw_score: float = 0.0,
     final_analyzer_distance_score: float = 0.0,
     final_analyzer_speed_score: float = 0.0,
@@ -251,8 +251,8 @@ def get_engine_response_object(
 
     res = {
         "scores": {
-            "binned_analyzer_score": binned_analyzer_score,
-            "normalized_analyzer_score": normalized_analyzer_score,
+            "binned_distance_score": binned_distance_score,
+            "normalized_distance_score": normalized_distance_score,
             "total_analyzer_raw": total_analyzer_raw_score,
             "distance": final_analyzer_distance_score,
             "speed": final_analyzer_speed_score,
