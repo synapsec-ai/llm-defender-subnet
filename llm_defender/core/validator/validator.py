@@ -712,9 +712,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
             return normalized_scores
 
-        weights = power_scaling(self.scores)
-
-        
+        if np.all(self.scores == 0.0):
+            weights = self.scores 
+        else:
+            weights = power_scaling(self.scores)
         
         bt.logging.info(f"Setting weights: {weights}")
 
