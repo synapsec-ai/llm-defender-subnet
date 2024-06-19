@@ -14,7 +14,6 @@ import copy
 import pickle
 from argparse import ArgumentParser
 from typing import Tuple
-from sys import getsizeof
 from datetime import datetime
 from os import path, rename
 import secrets
@@ -27,7 +26,7 @@ from collections import defaultdict
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-from .sensitive_information.generation.generator import SensitiveInfoGenerator
+
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -60,7 +59,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
-        self.sensitive_info_generator = SensitiveInfoGenerator()
+        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
