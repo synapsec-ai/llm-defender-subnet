@@ -84,9 +84,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return True
 
-    def setup_bittensor_objects(
-        self, neuron_config
-    ) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
+    def setup_bittensor_objects(self, neuron_config):
         """Setups the bittensor objects"""
         try:
             wallet = bt.wallet(config=neuron_config)
@@ -99,7 +97,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
 
-        return wallet, subtensor, dendrite, metagraph
+        self.wallet = wallet
+        self.subtensor = subtensor
+        self.dendrite = dendrite
+        self.metagraph = metagraph
+
+        return self.wallet, self.subtensor, self.dendrite, self.metagraph
 
     def initialize_neuron(self) -> bool:
         """This function initializes the neuron.
@@ -137,30 +140,23 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
 
         # Setup the bittensor objects
-        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
-            self.neuron_config
-        )
+        self.setup_bittensor_objects(self.neuron_config)
 
         bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
+            f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
         if not args or not args.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
-            if not self.validator_validation(metagraph, wallet, subtensor):
+            if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
 
             # Get the unique identity (UID) from the network
-            validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+            validator_uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             bt.logging.info(f"Validator is running with UID: {validator_uid}")
 
             # Disable debug mode
             self.debug_mode = False
-
-        self.wallet = wallet
-        self.subtensor = subtensor
-        self.dendrite = dendrite
-        self.metagraph = metagraph
 
         if args:
             if args.load_state == "False":
@@ -478,6 +474,37 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+    
+    async def send_payload_message(self,
+        synapse_uuid, uids_to_query, prompt_to_analyze
+    ):
+        # Broadcast query to valid Axons
+        nonce = secrets.token_hex(24)
+        timestamp = str(int(time.time()))
+        data_to_sign = (
+            f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
+        )
+        bt.logging.trace(
+            f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}."
+        )
+        prompts = [prompt_to_analyze["prompt"]]
+        responses = await self.dendrite.forward(
+            uids_to_query,
+            LLMDefenderBase.SubnetProtocol(
+                analyzer=prompt_to_analyze["analyzer"],
+                subnet_version=self.subnet_version,
+                synapse_uuid=synapse_uuid,
+                synapse_signature=LLMDefenderBase.sign_data(
+                    hotkey=self.wallet.hotkey, data=data_to_sign
+                ),
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_prompts=prompts,
+            ),
+            timeout=self.timeout,
+            deserialize=True,
+        )
+        return responses
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
