@@ -34,11 +34,6 @@ def get_parser():
         "--api_data_dir", type=str, default=os.getenv("API_DATA_DIR", "/tmp")
     )
     parser.add_argument(
-        "--wallet.path",
-        type=str,
-        default=os.getenv("WALLET_PATH", ".bittensor/wallets"),
-    )
-    parser.add_argument(
         "--wallet.name", type=str, default=os.getenv("WALLET_NAME", "validator")
     )
     parser.add_argument(

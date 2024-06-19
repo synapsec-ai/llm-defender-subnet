@@ -40,7 +40,7 @@ homepage = "https://github.com/synapsec-ai/llm-defender-subnet"
 wandb = ["wandb==0.17.0"]
 miner = ["transformers==4.41.2", "datasets==2.19.1", "torch==2.3.0"]
 validator = ["scikit-learn==1.5.0", "numpy==1.26.4", "wonderwords==2.2.0", "english-words==2.0.1"]
-api = ["fastapi==0.110.1", "uvicorn==0.22.0", "python-multipart=0.0.9"]
+api = ["fastapi==0.110.1", "uvicorn==0.22.0", "python-multipart==0.0.9"]
 
 [tool.setuptools.packages.find]
 include = ["llm_defender"]
