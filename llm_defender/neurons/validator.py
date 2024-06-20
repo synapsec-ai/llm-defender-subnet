@@ -245,8 +245,7 @@ async def get_average_score_per_analyzer(validator):
                 analyzer_scores[analyzer].append(score)
                 weights[analyzer].append(weight)
 
-            except Exception as e:
-                bt.logging.error(f'Failure to get average scores per analyzer: {e}')
+            except:
                 if analyzer not in analyzer_scores:
                     analyzer_scores[analyzer] = []
                 if analyzer not in weights:
@@ -459,8 +458,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                     validator.prompt_injection_scores[uid] = data["Prompt Injection"]
                     validator.sensitive_information_scores[uid] = data["Sensitive Information"]
                 
-                bt.logging.trace(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
-                bt.logging.trace(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
+                bt.logging.debug(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
+                bt.logging.debug(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
                 
                 validator.determine_overall_scores()
                 if not validator.debug_mode:
