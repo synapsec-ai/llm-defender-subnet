@@ -425,6 +425,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 synapse_uuid=synapse_uuid,
                 uids_to_query=uids_to_query,
                 prompt_to_analyze=prompt_to_analyze,
+                timeout=validator.timeout
             )
             # await score_unused_axons_async(validator, uids_not_to_query)
 

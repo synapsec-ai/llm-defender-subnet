@@ -476,7 +476,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
     
     async def send_payload_message(self,
-        synapse_uuid, uids_to_query, prompt_to_analyze
+        synapse_uuid, uids_to_query, prompt_to_analyze, timeout
     ):
         # Broadcast query to valid Axons
         nonce = secrets.token_hex(24)
@@ -501,7 +501,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 synapse_timestamp=timestamp,
                 synapse_prompts=prompts,
             ),
-            timeout=self.timeout,
+            timeout=timeout,
             deserialize=True,
         )
         return responses

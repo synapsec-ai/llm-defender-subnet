@@ -55,11 +55,9 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ~/.bittensor/:/root/
-    environment:
-      - NETUID=38
-      - SUBTENSOR_NETWORK=test
-      - SUBTENSOR_CHAIN_ENDPOINT=wss://test.finney.opentensor.ai
+      - ${HOME}/.bittensor/:/tmp/
+    env_file:
+      - .api-env
 networks:
   llm-defender-subnet-network-development:
     driver: bridge
