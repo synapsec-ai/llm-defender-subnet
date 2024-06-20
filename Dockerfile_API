@@ -1,0 +1,8 @@
+from python:3.10.14-bookworm
+
+# Copy required files
+RUN mkdir -p /var/run/llm-defender-subnet
+COPY llm_defender /var/run/llm-defender-subnet/llm_defender
+COPY pyproject.toml /var/run/llm-defender-subnet
+
+RUN /bin/bash -c "python3 -m venv /var/run/llm-defender-subnet/.venv && source /var/run/llm-defender-subnet/.venv/bin/activate && pip3 install -e /var/run/llm-defender-subnet/.[validator,api]"

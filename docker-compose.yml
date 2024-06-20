@@ -46,7 +46,20 @@ services:
     networks:
       llm-defender-subnet-network-development:
         ipv4_address: ${MINER2_IP}
-
+  llm-defender-api:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile_API
+    command: /bin/bash -c "source /var/run/llm-defender-subnet/.venv/bin/activate && python3 /var/run/llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ~/.bittensor/:/root/
+    environment:
+      - NETUID=38
+      - SUBTENSOR_NETWORK=test
+      - SUBTENSOR_CHAIN_ENDPOINT=wss://test.finney.opentensor.ai
 networks:
   llm-defender-subnet-network-development:
     driver: bridge
