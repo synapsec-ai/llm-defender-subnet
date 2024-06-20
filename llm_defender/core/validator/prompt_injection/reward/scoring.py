@@ -223,9 +223,8 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
         [0.69, 0.91, 0.4],
         [0.91, 1.2, 0.3],
         [1.2, 1.6, 0.2],
-        [1.6, 30, 0.1],
     ]
-    binned_distance_score = 0.0
+    binned_distance_score = 0.1
 
     for score_bin in score_bins:
         if score_bin[0] <= normalized_distance_score <= score_bin[1]:
