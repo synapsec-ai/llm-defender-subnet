@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
+from llm_defender import TextClassificationEngine
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def test_text_classification_engine_execute(mock_transformers):
     mock_pipeline.return_value = MagicMock(return_value=mock_pipe_result)
 
     prompt = "Test prompt"
-    engine = TextClassificationEngine(prompt=prompt)
+    engine = TextClassificationEngine(prompts=[prompt])
     engine.prepare()
     engine.execute(model=mock_model, tokenizer=mock_tokenizer)
 

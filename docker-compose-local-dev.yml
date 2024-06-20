@@ -5,9 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile   
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && ls -la /var/run/llm-defender-subnet/ && ls -la /var/run/llm-defender-subnet/llm_defender && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --logging.debug"
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && ls -la /var/run/llm-defender-subnet/ && ls -la /var/run/llm-defender-subnet/llm_defender && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level DEBUG"
     volumes:
       - .:/var/run/llm-defender-subnet
+      - .bittensor:/tmp/.bittensor
     networks:
       llm-defender-subnet-network-development:
         ipv4_address: ${VALIDATOR_IP}
@@ -17,7 +18,7 @@ services:
   #   build:
   #     context: .
   #     dockerfile: Dockerfile   
-  #   command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR2_WALLET} --wallet.hotkey ${VALIDATOR2_HOTKEY} --logging.debug"
+  #   command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR2_WALLET} --wallet.hotkey ${VALIDATOR2_HOTKEY} --log_level DEBUG"
   #   volumes:
   #     - .:/var/run/llm-defender-subnet
   #   networks:
@@ -29,23 +30,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER_WALLET} --wallet.hotkey ${MINER_HOTKEY} --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP} --logging.debug"
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER_WALLET} --wallet.hotkey ${MINER_HOTKEY} --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP} --log_level DEBUG"
     volumes:
       - .:/var/run/llm-defender-subnet
-    networks:
-      llm-defender-subnet-network-development:
-        ipv4_address: ${MINER_IP}
-  miner2:
-    image: llm-defender-subnet
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER2_WALLET} --wallet.hotkey ${MINER2_HOTKEY} --axon.port ${MINER2_PORT} --validator_min_stake 0 --axon.external_ip ${MINER2_IP} --logging.debug"
-    volumes:
       - .bittensor:/tmp/.bittensor
     networks:
       llm-defender-subnet-network-development:
-        ipv4_address: ${MINER2_IP}
+        ipv4_address: ${MINER_IP}
+  # miner2:
+  #   image: llm-defender-subnet
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER2_WALLET} --wallet.hotkey ${MINER2_HOTKEY} --axon.port ${MINER2_PORT} --validator_min_stake 0 --axon.external_ip ${MINER2_IP} --log_level DEBUG"
+  #   volumes:
+  #     - .bittensor:/tmp/.bittensor
+  #     - .bittensor:/tmp/.bittensor
+  #   networks:
+  #     llm-defender-subnet-network-development:
+  #       ipv4_address: ${MINER2_IP}
 
 networks:
   llm-defender-subnet-network-development:

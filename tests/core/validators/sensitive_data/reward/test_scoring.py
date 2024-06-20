@@ -2,8 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from llm_defender.core.validators.analyzers.sensitive_data.reward.scoring import calculate_subscore_speed, \
-    get_engine_response_object
+from llm_defender import sensitive_information_scoring
 
 
 @pytest.fixture
@@ -21,7 +20,7 @@ def mock_utils():
     ],
 )
 def test_calculate_subscore_speed(timeout, response_time, expected_subscore):
-    assert calculate_subscore_speed(timeout, response_time) == expected_subscore
+    assert sensitive_information_scoring.calculate_subscore_speed(timeout, response_time) == expected_subscore
 
 
 @pytest.mark.parametrize(
@@ -42,7 +41,7 @@ def test_get_engine_response_object(
     expected_response,
 ):
     assert (
-        get_engine_response_object(
+        sensitive_information_scoring.get_engine_response_object(
             total_score,
             final_distance_score,
             final_speed_score,

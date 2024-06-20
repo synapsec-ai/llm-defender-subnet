@@ -2,13 +2,14 @@ from os import path
 
 import pytest
 
-from llm_defender.base.engine import BaseEngine
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
 
 
 def test_init():
-    engine = BaseEngine()
+    engine = LLMDefenderBase.BaseEngine()
     assert engine.name == "BaseEngine"
-    assert engine.prompt is None
+    assert engine.prompts is None
     assert engine.confidence is None
     assert engine.output == {}
     assert engine.cache_dir == f"{path.expanduser('~')}/.llm-defender-subnet/cache"
@@ -16,7 +17,7 @@ def test_init():
 
 def test_confidence_validation():
 
-    @BaseEngine.confidence_validation
+    @LLMDefenderBase.BaseEngine.confidence_validation
     def mock_confidence_function(score):
         return score
 
@@ -27,7 +28,7 @@ def test_confidence_validation():
 
 
 def test_data_validation():
-    @BaseEngine.data_validation
+    @LLMDefenderBase.BaseEngine.data_validation
     def mock_data_function(data):
         return data
 
@@ -37,7 +38,7 @@ def test_data_validation():
         mock_data_function({})
 
 
-class ConcreteEngine(BaseEngine):
+class ConcreteEngine(LLMDefenderBase.BaseEngine):
     def _calculate_confidence(self) -> float:
         return 0.75
 

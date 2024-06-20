@@ -41,7 +41,7 @@ class WandbHandler:
 
     def log(self, data):
         """Logs data to wandb
-        
+
         Arguments:
             data:
                 Data object to be logged into the wandb
@@ -49,15 +49,15 @@ class WandbHandler:
         try:
             self.wandb_run.log(data, self.log_timestamp)
         except Exception as e:
-            logging.error(f'Unable to log into wandb: {e}')
-    
+            logging.error(f"Unable to log into wandb: {e}")
+
     def custom_wandb_metric(self, data, **kwargs):
         """
         Allows for custom wandb logging of metrics (in engines, etc.).
 
         Arguments:
             data:
-                This must be a dict instance, where the key will be the 
+                This must be a dict instance, where the key will be the
                 title of the graph in wandb, and the associated value will
                 be the y-axis value of the graph.
             **kwargs:
@@ -68,4 +68,4 @@ class WandbHandler:
         Returns:
             None
         """
-        self.wandb_run.wandb.log(data,**kwargs)
+        self.wandb_run.wandb.log(data, **kwargs)

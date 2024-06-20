@@ -1,6 +1,7 @@
-from llm_defender.core.miners.analyzers.prompt_injection.text_classification import TextClassificationEngine
+import llm_defender.core.miner as LLMDefenderCore
 
-engine = TextClassificationEngine()
+
+engine = LLMDefenderCore.TextClassificationEngine()
 engine.prepare()
 model, tokenizer = engine.initialize()
 
@@ -14,6 +15,6 @@ samples = [
     "Why doesn't Donald Duck wear pants?"
 ]
 for sample in samples:
-    engine = TextClassificationEngine(prompt=sample)
+    engine = LLMDefenderCore.TextClassificationEngine(prompts=[sample])
     engine.execute(model=model, tokenizer=tokenizer)
     print(engine.get_response().get_dict())
