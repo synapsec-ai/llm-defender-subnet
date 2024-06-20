@@ -451,7 +451,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             # Calculate analyzer average scores, calculate overall scores and then set weights
             if (
                 current_block - validator.last_updated_block > 100
-            ) and not validator.debug_mode:
+            ):
                 averages = await get_average_score_per_analyzer(validator)
                 
                 for uid, data in averages.items():
@@ -462,8 +462,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 bt.logging.trace(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
                 
                 validator.determine_overall_scores()
-                
-                await update_weights_async(validator)
+                if not validator.debug_mode:
+                    await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
