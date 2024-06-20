@@ -233,26 +233,16 @@ async def get_average_score_per_analyzer(validator):
 
             analyzer = response["analyzer"] 
 
-            try:   
-                score = response["scored_response"]["scores"]["total_analyzer_raw"]
-                weight = response["analyzer_weight_scores"]["weight"]
+            score = response["scored_response"]["scores"]["total_analyzer_raw"]
+            weight = response["analyzer_weight_scores"]["weight"]
 
-                if analyzer not in analyzer_scores:
-                    analyzer_scores[analyzer] = []
-                if analyzer not in weights:
-                    weights[analyzer] = []
+            if analyzer not in analyzer_scores:
+                analyzer_scores[analyzer] = []
+            if analyzer not in weights:
+                weights[analyzer] = []
 
-                analyzer_scores[analyzer].append(score)
-                weights[analyzer].append(weight)
-
-            except:
-                if analyzer not in analyzer_scores:
-                    analyzer_scores[analyzer] = []
-                if analyzer not in weights:
-                    weights[analyzer] = []
-
-                analyzer_scores[analyzer].append(0.0)
-                weights[analyzer].append(1.0)
+            analyzer_scores[analyzer].append(score)
+            weights[analyzer].append(weight)
         
         weighted_averages = {}
 
@@ -455,9 +445,16 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 averages = await get_average_score_per_analyzer(validator)
                 
                 for uid, data in averages.items():
-                    validator.prompt_injection_scores[uid] = data["Prompt Injection"]
-                    validator.sensitive_information_scores[uid] = data["Sensitive Information"]
-                
+                    if 'Prompt Injection' in [k for k in data]:
+                        validator.prompt_injection_scores[uid] = data["Prompt Injection"]
+                    else:
+                        validator.prompt_injection_scores[uid] = 0.0
+                    
+                    if 'Sensitive Information' in [k for k in data]:
+                        validator.sensitive_information_scores[uid] = data["Sensitive Information"]
+                    else:
+                        validator.sensitive_information_scores[uid] = 0.0
+
                 bt.logging.debug(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
                 bt.logging.debug(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
                 
