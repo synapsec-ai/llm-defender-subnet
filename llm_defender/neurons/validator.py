@@ -197,7 +197,7 @@ def attach_response_to_validator(validator, response_data):
         hotkey = res['hotkey']
 
         if hotkey not in validator.miner_responses:
-            validator.miner_responses[hotkey] = res
+            validator.miner_responses[hotkey] = [res]
         else:
             validator.miner_responses[hotkey].append(res)
 
