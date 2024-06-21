@@ -131,7 +131,6 @@ class BaseNeuron:
         
 
         return config
-
     def remote_logger(self, hotkey, message: dict) -> bool:
         """This function is responsible for sending validation metrics
         and miner response data to centralized log repository.

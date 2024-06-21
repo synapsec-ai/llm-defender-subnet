@@ -13,7 +13,6 @@ import asyncio
 import copy
 import pickle
 from argparse import ArgumentParser
-from typing import Tuple
 from datetime import datetime
 from os import path, rename
 import secrets
@@ -22,11 +21,15 @@ import bittensor as bt
 import requests
 import numpy as np
 from collections import defaultdict 
+import logging
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
 
+class SuppressPydanticFrozenFieldFilter(logging.Filter):
+    def filter(self, record):
+        return 'Field is frozen [type=frozen_field' not in record.getMessage()
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -133,6 +136,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+
+        # Suppress specific validation errors from pydantic
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
         
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
