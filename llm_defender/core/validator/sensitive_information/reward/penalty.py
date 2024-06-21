@@ -77,7 +77,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
     """
     penalty = 0.0
 
-    if not validate_uid(uid) or not miner_responses or not response:
+    if not validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
     
@@ -147,7 +147,7 @@ def check_base_penalty(uid, miner_responses, response):
         )
         return penalty
 
-    if not validate_uid(uid) or not miner_responses or not response:
+    if not validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         return 10.0
 

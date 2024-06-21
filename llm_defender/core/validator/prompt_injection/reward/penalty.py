@@ -76,7 +76,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
             is not inputted.
     """
 
-    if not LLMDefenderBase.validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
@@ -165,7 +165,7 @@ def check_base_penalty(uid, miner_responses, response):
 
         return penalty
 
-    if not LLMDefenderBase.validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         bt.logging.debug(f"Validation failed: {uid}, {miner_responses}, {response}")
         return 10.0
