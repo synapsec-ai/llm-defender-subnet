@@ -431,6 +431,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             response_data = format_responses(
                 validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
             )
+            bt.logging.debug(f'Response data after payload message: {response_data}')
             attach_response_to_validator(validator, response_data)
 
             # Print stats
