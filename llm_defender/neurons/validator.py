@@ -207,7 +207,8 @@ def update_weights(validator: LLMDefenderCore.SubnetValidator):
     try:
         asyncio.run(validator.set_weights())
         # Update validators knowledge of the last updated block
-        validator.last_updated_block = validator.subtensor.get_current_block()
+        if not validator.debug_mode:
+            validator.last_updated_block = validator.subtensor.get_current_block()
     except TimeoutError as e:
         bt.logging.error(f"Setting weights timed out: {e}")
 
