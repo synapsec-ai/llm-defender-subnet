@@ -80,9 +80,7 @@ def process_response(
         response_object["response"] = miner_response
         response_object["engine_data"] = engine_data
         response_object["scored_response"] = scored_response
-        response_object["analyzer_weight_scores"] = {
-            "weight": query["weight"],
-        }
+        response_object["weight"] = query["weight"]
 
         if validator.wandb_enabled:
             wandb_logs = [

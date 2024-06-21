@@ -234,7 +234,7 @@ async def get_average_score_per_analyzer(validator):
             analyzer = response["analyzer"] 
 
             score = response["scored_response"]["scores"]["total_analyzer_raw"]
-            weight = response["analyzer_weight_scores"]["weight"]
+            weight = response["weight"]
 
             if analyzer not in analyzer_scores:
                 analyzer_scores[analyzer] = []
