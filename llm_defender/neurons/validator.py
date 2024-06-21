@@ -445,12 +445,13 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 averages = await get_average_score_per_analyzer(validator)
                 
                 for uid, data in averages.items():
-                    if 'Prompt Injection' in [k for k in data]:
+                    data_keys = [k for k in data]
+                    if 'Prompt Injection' in data_keys:
                         validator.prompt_injection_scores[uid] = data["Prompt Injection"]
                     else:
                         validator.prompt_injection_scores[uid] = 0.0
                     
-                    if 'Sensitive Information' in [k for k in data]:
+                    if 'Sensitive Information' in data_keys:
                         validator.sensitive_information_scores[uid] = data["Sensitive Information"]
                     else:
                         validator.sensitive_information_scores[uid] = 0.0
