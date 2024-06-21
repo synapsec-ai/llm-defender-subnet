@@ -744,24 +744,26 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             weights = power_scaling(self.scores)
         
         bt.logging.info(f"Setting weights: {weights}")
-
-        bt.logging.debug(
-            f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
-        )
-        # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-        result = self.subtensor.set_weights(
-            netuid=self.neuron_config.netuid,  # Subnet to set weights on.
-            wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-            uids=self.metagraph.uids,  # Uids of the miners to set weights for.
-            weights=weights,  # Weights to set for the miners.
-            wait_for_inclusion=False,
-            version_key=self.subnet_version,
-        )
-        if result:
-            bt.logging.success("Successfully set weights.")
+        if not self.debug_mode:
+            bt.logging.debug(
+                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+            )
+            # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+            result = self.subtensor.set_weights(
+                netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+                wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+                uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+                weights=weights,  # Weights to set for the miners.
+                wait_for_inclusion=False,
+                version_key=self.subnet_version,
+            )
+            if result:
+                bt.logging.success("Successfully set weights.")
+            else:
+                bt.logging.error("Failed to set weights.")
         else:
-            bt.logging.error("Failed to set weights.")
+            bt.logging.info(f"Skipped setting weights due to debug mode")
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--

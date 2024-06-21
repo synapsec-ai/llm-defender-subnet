@@ -460,8 +460,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 bt.logging.debug(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
                 
                 validator.determine_overall_scores()
-                if not validator.debug_mode:
-                    await update_weights_async(validator)
+                await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
             validator.step += 1
