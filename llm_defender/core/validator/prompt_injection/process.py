@@ -334,7 +334,7 @@ def get_response_penalties(validator, response, hotkey, target):
     if sum([base_penalty, false_positive_penalty]) >= 20:
         distance_penalty_multiplier = 0.0
     elif sum([base_penalty, false_positive_penalty]) > 0.0:
-        distance_penalty_multiplier = 1 - ((sum([base_penalty, false_positive_penalty]) / 20.0)
+        distance_penalty_multiplier = 1 - ((sum([base_penalty, false_positive_penalty]) / 20.0))
 
     if duplicate_penalty >= 20:
         speed_penalty = 0.0
