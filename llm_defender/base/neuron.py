@@ -58,6 +58,7 @@ class BaseNeuron:
         self.last_updated_block = 0
         self.base_path = f"{path.expanduser('~')}/.llm-defender-subnet"
         self.subnet_version = LLMDefenderBase.config["module_version"]
+        self.score_version = LLMDefenderBase.config["score_version"]
         self.used_nonces = []
         self.cache_path = None
         self.log_path = None
@@ -113,7 +114,7 @@ class BaseNeuron:
         self.log_path = f"{self.base_path}/logs/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
 
         # Construct cache path
-        self.cache_path = f"{self.base_path}/cache/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}"
+        self.cache_path = f"{self.base_path}/cache/{config.wallet.name}/{config.wallet.hotkey}/{config.netuid}/{self.profile}/{self.score_version}"
 
         # Create the OS paths if they do not exists
         try:
