@@ -287,7 +287,7 @@ def get_response_object(
         "response": {},
         "scored_response": get_engine_response_object(),
         "engine_data": [],
-        "analyzer_weight_scores":{"weight": None}
+        "weight": 0.1
     }
 
     return response
