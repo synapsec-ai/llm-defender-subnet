@@ -247,6 +247,7 @@ async def get_average_score_per_analyzer(validator):
         
         weighted_averages = {}
 
+        bt.logging.debug(f'Analyzer scores: {analyzer_scores}')
         for key in analyzer_scores:
             scores = analyzer_scores[key]
             weight = weights[key]
