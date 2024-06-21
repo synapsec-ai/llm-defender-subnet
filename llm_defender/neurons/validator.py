@@ -224,6 +224,7 @@ async def get_average_score_per_analyzer(validator):
     for _, response_list in validator.miner_responses.items():
         
         if not response_list:
+            bt.logging.debug(f'Response list is empty: {response_list}')
             continue
         
         uid = response_list[0]["UID"]
