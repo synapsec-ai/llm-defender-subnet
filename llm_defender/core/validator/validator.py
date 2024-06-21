@@ -13,8 +13,6 @@ import asyncio
 import copy
 import pickle
 from argparse import ArgumentParser
-from typing import Tuple
-from sys import getsizeof
 from datetime import datetime
 from os import path, rename
 import secrets
@@ -23,11 +21,15 @@ import bittensor as bt
 import requests
 import numpy as np
 from collections import defaultdict 
+import logging
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-from .sensitive_information.generation.generator import SensitiveInfoGenerator
+
+class SuppressPydanticFrozenFieldFilter(logging.Filter):
+    def filter(self, record):
+        return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -60,7 +62,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
-        self.sensitive_info_generator = SensitiveInfoGenerator()
+        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -85,9 +87,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return True
 
-    def setup_bittensor_objects(
-        self, neuron_config
-    ) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
+    def setup_bittensor_objects(self, neuron_config):
         """Setups the bittensor objects"""
         try:
             wallet = bt.wallet(config=neuron_config)
@@ -100,7 +100,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
 
-        return wallet, subtensor, dendrite, metagraph
+        self.wallet = wallet
+        self.subtensor = subtensor
+        self.dendrite = dendrite
+        self.metagraph = metagraph
+
+        return self.wallet, self.subtensor, self.dendrite, self.metagraph
 
     def initialize_neuron(self) -> bool:
         """This function initializes the neuron.
@@ -131,6 +136,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+
+        # Suppress specific validation errors from pydantic
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
         
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
@@ -138,30 +146,23 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
 
         # Setup the bittensor objects
-        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
-            self.neuron_config
-        )
+        self.setup_bittensor_objects(self.neuron_config)
 
         bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
+            f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
         if not args or not args.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
-            if not self.validator_validation(metagraph, wallet, subtensor):
+            if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
 
             # Get the unique identity (UID) from the network
-            validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+            validator_uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             bt.logging.info(f"Validator is running with UID: {validator_uid}")
 
             # Disable debug mode
             self.debug_mode = False
-
-        self.wallet = wallet
-        self.subtensor = subtensor
-        self.dendrite = dendrite
-        self.metagraph = metagraph
 
         if args:
             if args.load_state == "False":
@@ -479,6 +480,37 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+    
+    async def send_payload_message(self,
+        synapse_uuid, uids_to_query, prompt_to_analyze, timeout
+    ):
+        # Broadcast query to valid Axons
+        nonce = secrets.token_hex(24)
+        timestamp = str(int(time.time()))
+        data_to_sign = (
+            f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
+        )
+        bt.logging.trace(
+            f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}."
+        )
+        prompts = [prompt_to_analyze["prompt"]]
+        responses = await self.dendrite.forward(
+            uids_to_query,
+            LLMDefenderBase.SubnetProtocol(
+                analyzer=prompt_to_analyze["analyzer"],
+                subnet_version=self.subnet_version,
+                synapse_uuid=synapse_uuid,
+                synapse_signature=LLMDefenderBase.sign_data(
+                    hotkey=self.wallet.hotkey, data=data_to_sign
+                ),
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_prompts=prompts,
+            ),
+            timeout=timeout,
+            deserialize=True,
+        )
+        return responses
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
@@ -718,24 +750,26 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             weights = power_scaling(self.scores)
         
         bt.logging.info(f"Setting weights: {weights}")
-
-        bt.logging.debug(
-            f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
-        )
-        # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-        result = self.subtensor.set_weights(
-            netuid=self.neuron_config.netuid,  # Subnet to set weights on.
-            wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-            uids=self.metagraph.uids,  # Uids of the miners to set weights for.
-            weights=weights,  # Weights to set for the miners.
-            wait_for_inclusion=False,
-            version_key=self.subnet_version,
-        )
-        if result:
-            bt.logging.success("Successfully set weights.")
+        if not self.debug_mode:
+            bt.logging.debug(
+                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+            )
+            # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+            result = self.subtensor.set_weights(
+                netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+                wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+                uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+                weights=weights,  # Weights to set for the miners.
+                wait_for_inclusion=False,
+                version_key=self.subnet_version,
+            )
+            if result:
+                bt.logging.success("Successfully set weights.")
+            else:
+                bt.logging.error("Failed to set weights.")
         else:
-            bt.logging.error("Failed to set weights.")
+            bt.logging.info(f"Skipped setting weights due to debug mode")
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--

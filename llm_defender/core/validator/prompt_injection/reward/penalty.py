@@ -76,7 +76,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
             is not inputted.
     """
 
-    if not LLMDefenderBase.validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         return 20.0
 
@@ -165,97 +165,12 @@ def check_base_penalty(uid, miner_responses, response):
 
         return penalty
 
-    def _check_response_history(
-        uid, miner_responses, penalty_name="Suspicious response history"
-    ):
-        """
-        This method checks the history of a miner's outputted confidence values and determines
-        if it is suspicious by taking the average confidence score and applying a penalty based on this.
-
-        Arguments:
-            uid:
-                An int instance displaying a unique user id for a miner. Must be
-                between 0 and 255.
-            miner_responses:
-                A iterable instance where each element must be a dict instance containing flag 'confidence',
-                and a float value between 0.0 and 1.0 as its associated value.
-            penalty_name:
-                A str instance displaying the name of the penalty being administered
-                by the _check_response_history() method. Default is 'Suspicious response history'.
-
-                This argument generally should not be altered.
-
-        Returns:
-            penalty:
-                A float instance which depends on the average value of the miner's response
-                confidence values. The penalty will be:
-                    ---> 7.0 if the average confidence score is between 0.45 and 0.55.
-                    This is because many of the engines are set to output 0.5 as a default
-                    confidence value if the logic cannot be executed, so if the averages are
-                    within a tolerance of 0.05 of 0.5 it likely means that the engine logic
-                    failed to execute over multiple different scoring attempts.
-                    ---> 4.0 if the average confidence is lower than 0.45 and greater than
-                    or equal to 0.35, or if the average confidence is greater than 0.9.
-                    ---> 6.0 if the average confidence is less than 0.35.
-        """
-        total_distance = 0
-        count = 0
-        penalty = 0.0
-        for entry in miner_responses:
-            if (
-                "scored_response" in entry.keys()
-                and "raw_scores" in entry["scored_response"].keys()
-                and "distance" in entry["scored_response"]["raw_scores"].keys()
-            ):
-                bt.logging.trace(f"Going through: {entry}")
-                total_distance += entry["scored_response"]["raw_scores"]["distance"]
-                count += 1
-            # Miner response is not valid, apply base penalty
-            else:
-                penalty += 10.0
-                bt.logging.debug(
-                    f"Applied base penalty due to invalid/stale miners.pickle entry: {entry}"
-                )
-
-                return penalty
-
-        average_distance = total_distance / count if count > 0 else 0
-
-        # this range denotes miners who perform way better than a purely random guess
-        if 0.65 < average_distance <= 0.95:
-            penalty += 0.0
-        # this range denotes miners who perform better than a purely random guess
-        elif 0.55 < average_distance <= 0.65:
-            penalty += 2.0
-        # miners in this range are performing at roughly the same efficiency as random
-        elif 0.45 <= average_distance <= 0.55:
-            penalty += 5.0
-        # miners in this range are performing worse than random
-        elif 0.0 <= average_distance < 0.45:
-            penalty += 10.0
-
-        bt.logging.trace(
-            f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'. Average distance: '{average_distance}'"
-        )
-
-        return penalty
-
-    if not LLMDefenderBase.validate_uid(uid) or not miner_responses or not response:
+    if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
         bt.logging.debug(f"Validation failed: {uid}, {miner_responses}, {response}")
         return 10.0
 
-    bt.logging.trace(f"Miner responses length: {len(miner_responses)}")
-    bt.logging.trace(f"Miner responses: {miner_responses}")
-    if len(miner_responses) < 15:
-        # Apply base penalty if we do not have a sufficient number of responses to process
-        bt.logging.trace(
-            f"Applied base penalty for UID: {uid} because of insufficient number of responses: {len(miner_responses)}"
-        )
-        return 5.0
-
     penalty = 0.0
     penalty += _check_response_validity(uid, response)
-    penalty += _check_response_history(uid, miner_responses)
 
     return penalty

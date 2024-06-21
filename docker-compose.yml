@@ -46,7 +46,18 @@ services:
     networks:
       llm-defender-subnet-network-development:
         ipv4_address: ${MINER2_IP}
-
+  llm-defender-api:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile_API
+    command: /bin/bash -c "source /var/run/llm-defender-subnet/.venv/bin/activate && python3 /var/run/llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.bittensor/:/tmp/
+    env_file:
+      - .api-env
 networks:
   llm-defender-subnet-network-development:
     driver: bridge

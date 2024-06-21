@@ -223,9 +223,8 @@ def get_normalized_and_binned_scores(total_analyzer_raw_score):
         [0.69, 0.91, 0.4],
         [0.91, 1.2, 0.3],
         [1.2, 1.6, 0.2],
-        [1.6, 2.3, 0.1],
     ]
-    binned_distance_score = 0.0
+    binned_distance_score = 0.1
 
     for score_bin in score_bins:
         if score_bin[0] <= normalized_distance_score <= score_bin[1]:
@@ -288,7 +287,7 @@ def get_response_object(
         "response": {},
         "scored_response": get_engine_response_object(),
         "engine_data": [],
-        "analyzer_weight_scores":{}
+        "weight": 0.1
     }
 
     return response
