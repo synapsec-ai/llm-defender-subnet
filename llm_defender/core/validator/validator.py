@@ -29,7 +29,7 @@ import llm_defender.core.validator as LLMDefenderCore
 
 class SuppressPydanticFrozenFieldFilter(logging.Filter):
     def filter(self, record):
-        return 'Field is frozen [type=frozen_field' not in record.getMessage()
+        return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
