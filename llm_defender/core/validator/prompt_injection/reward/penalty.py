@@ -134,7 +134,6 @@ def check_base_penalty(uid, miner_responses, response):
 
                 This argument generally should not be altered.
 
-
         Returns:
             penalty:
                 This is a float instance of value 20.0 if the confidence value is out-of-bounds,
