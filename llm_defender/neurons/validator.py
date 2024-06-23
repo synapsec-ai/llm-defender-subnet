@@ -466,6 +466,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 validator.determine_overall_scores()
                 await update_weights_async(validator)
 
+            # Truncate commit hashes used for commit reveal weights 
+            validator.truncate_commit_hashes()
+
             # End the current step and prepare for the next iteration.
             validator.step += 1
 

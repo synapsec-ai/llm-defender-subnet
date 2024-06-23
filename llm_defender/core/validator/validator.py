@@ -753,7 +753,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         bt.logging.info(f"Setting weights: {weights}")
         if not self.debug_mode: 
 
-            commit_hash, commit_hash_dict = self.obtain_unique_commit_hash()
+            commit_hash, current_block, commit_hash_dict = self.obtain_unique_commit_hash()
 
             bt.logging.debug(
                 f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
@@ -774,8 +774,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 self.commit_hashes.append(commit_hash_dict)
             else:
                 bt.logging.error("Failed to set weights.")
+            
+            self.truncate_commit_hashes(current_block)
+
         else:
             bt.logging.info(f"Skipped setting weights due to debug mode")
+
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--
@@ -860,6 +864,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)
 
     def obtain_commit_reveal_weights_interval(self):
+        "query the interval "
         return self.subtensor.get_subnet_hyperparameters(netuid=14).commit_reveal_weights_interval
     
     def obtain_unique_commit_hash(self):
@@ -883,9 +888,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             "block":current_block,
         }
 
-        return commit_hash, commit_hash_dict
+        bt.logging.debug(f"Obtained commit hash: {commit_hash} to set weights on block: {current_block}")
+
+        return commit_hash, current_block, commit_hash_dict
 
     def truncate_commit_hashes(self, current_block):
+        
         commit_reveal_weights_interval = self.obtain_commit_reveal_weights_interval()
         truncate_block = current_block - commit_reveal_weights_interval
 
@@ -897,3 +905,5 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     new_commit_hashes.append(commit)
 
         self.commit_hashes = new_commit_hashes
+
+        bt.logging.debug(f"Truncated commit hashes: {self.commit_hashes}")
