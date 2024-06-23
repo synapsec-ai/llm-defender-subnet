@@ -864,7 +864,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     
     def obtain_unique_commit_hash(self):
 
-        existing_hashes = [commit['hash'] for commit in self.commit_hashes]
+        existing_hashes = []
+        for commit in self.commit_hashes:
+            commit_keys = [k for k in commit]
+            if "hash" in commit_keys and "block" in commit_keys and len(commit_keys) == 2: 
+                existing_hashes.append(commit["hash"])
+
         unique_hash = False
         
         while not unique_hash:
