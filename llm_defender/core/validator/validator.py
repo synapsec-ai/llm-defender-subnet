@@ -852,3 +852,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     async def get_uids_to_query_async(self, all_axons):
         return await asyncio.to_thread(self.get_uids_to_query, all_axons)
+
+    def obtain_commit_reveal_weights_interval(self):
+        return self.subtensor.get_subnet_hyperparameters(netuid=14).commit_reveal_weights_interval
