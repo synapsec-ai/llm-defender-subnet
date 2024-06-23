@@ -745,12 +745,36 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
             return normalized_scores
 
+        def get_weights_list(weights):
+
+            max_value = self.subtensor.get_subnet_hyperparameters(netuid=14).max_weight_limit
+            
+            # Find the maximum value in the array
+            original_max = np.max(weights)
+            
+            # Scale the array so the highest value becomes max_value
+            if original_max == 0:
+                scaled_array = weights
+            else:
+                scaled_array = (weights / original_max) * max_value
+            
+            # Round the scaled values to the nearest integer
+            rounded_array = np.round(scaled_array).astype(int)
+            
+            # Convert the rounded array to a list
+            result_list = rounded_array.tolist()
+            
+            return result_list
+
         if np.all(self.scores == 0.0):
-            weights = self.scores 
+            power_weights = self.scores 
         else:
-            weights = power_scaling(self.scores)
+            power_weights = power_scaling(self.scores)
+
+        weights = get_weights_list(power_weights)
         
-        bt.logging.info(f"Setting weights: {weights}")
+        bt.logging.info(f"Setting weights: {weights} on uids: {self.metagraph.uids}")
+        
         if not self.debug_mode: 
 
             # generate unique commit hash
