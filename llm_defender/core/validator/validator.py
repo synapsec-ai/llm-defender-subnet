@@ -62,7 +62,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.remote_logging = None
         self.query = None
         self.debug_mode = True
-        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
+        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator() 
+        self.commit_hashes = []
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -750,22 +751,27 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             weights = power_scaling(self.scores)
         
         bt.logging.info(f"Setting weights: {weights}")
-        if not self.debug_mode:
+        if not self.debug_mode: 
+
+            commit_hash, commit_hash_dict = self.obtain_unique_commit_hash()
+
             bt.logging.debug(
                 f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-            result = self.subtensor.set_weights(
+            result = self.subtensor.commit_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
                 uids=self.metagraph.uids,  # Uids of the miners to set weights for.
                 weights=weights,  # Weights to set for the miners.
                 wait_for_inclusion=False,
                 version_key=self.subnet_version,
+                salt=commit_hash,
             )
             if result:
                 bt.logging.success("Successfully set weights.")
+                self.commit_hashes.append(commit_hash_dict)
             else:
                 bt.logging.error("Failed to set weights.")
         else:
@@ -855,3 +861,34 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def obtain_commit_reveal_weights_interval(self):
         return self.subtensor.get_subnet_hyperparameters(netuid=14).commit_reveal_weights_interval
+    
+    def obtain_unique_commit_hash(self):
+
+        existing_hashes = [commit['hash'] for commit in self.commit_hashes]
+        unique_hash = False
+        
+        while not unique_hash:
+            commit_hash = secrets.token_hex(24)
+            if commit_hash not in existing_hashes:
+                unique_hash = True
+                
+        current_block = self.subtensor.get_current_block()
+        commit_hash_dict = {
+            "hash":commit_hash,
+            "block":current_block,
+        }
+
+        return commit_hash, commit_hash_dict
+
+    def truncate_commit_hashes(self, current_block):
+        commit_reveal_weights_interval = self.obtain_commit_reveal_weights_interval()
+        truncate_block = current_block - commit_reveal_weights_interval
+
+        new_commit_hashes = []
+        for commit in self.commit_hashes:
+            commit_keys = [k for k in commit]
+            if "hash" in commit_keys and "block" in commit_keys and len(commit_keys) == 2: 
+                if commit["block"] >= truncate_block:
+                    new_commit_hashes.append(commit)
+
+        self.commit_hashes = new_commit_hashes
