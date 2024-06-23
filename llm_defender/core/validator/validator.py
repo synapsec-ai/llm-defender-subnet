@@ -753,6 +753,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         bt.logging.info(f"Setting weights: {weights}")
         if not self.debug_mode: 
 
+            # generate unique commit hash
             commit_hash, current_block, commit_hash_dict = self.obtain_unique_commit_hash()
 
             bt.logging.debug(
@@ -774,7 +775,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 self.commit_hashes.append(commit_hash_dict)
             else:
                 bt.logging.error("Failed to set weights.")
-            
+
+            # truncate existing hashes
             self.truncate_commit_hashes(current_block)
 
         else:
