@@ -639,6 +639,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             sensitive_information_scores=self.sensitive_information_scores,
             hotkeys=self.hotkeys,
             last_updated_block=self.last_updated_block,
+            commit_hashes = self.commit_hashes,
         )
 
         filename = f"{self.cache_path}/state.npz"
@@ -687,6 +688,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.step = 0
         self.last_updated_block = 0
         self.hotkeys = None
+        self.commit_hashes = []
 
     def load_state(self):
         """Loads the state of the validator from a file."""
@@ -714,6 +716,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
+                self.commit_hashes = state['commit_hashes']
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
