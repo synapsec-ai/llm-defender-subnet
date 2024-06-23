@@ -442,7 +442,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
             # Calculate analyzer average scores, calculate overall scores and then set weights
             if (
-                current_block - validator.last_updated_block > 100
+                current_block - validator.last_updated_block > 1
             ):
                 averages = await get_average_score_per_analyzer(validator)
                 
