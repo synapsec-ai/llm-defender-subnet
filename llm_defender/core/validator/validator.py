@@ -929,6 +929,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     def reveal_weights(self, current_block):
 
         commit_reveal_weights_interval = self.obtain_commit_reveal_weights_interval()
+        bt.logging.debug(f"Weight reveal interval: {commit_reveal_weights_interval}")
         cutoff_block = current_block - commit_reveal_weights_interval
         new_commit_hashes = []
 
