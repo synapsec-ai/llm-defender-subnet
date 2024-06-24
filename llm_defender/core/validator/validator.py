@@ -793,7 +793,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             result = self.subtensor.commit_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-                uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+                uids=self.metagraph.uids.tolist(),  # Uids of the miners to set weights for.
                 weights=weights,  # Weights to set for the miners.
                 wait_for_inclusion=False,
                 version_key=self.subnet_version,
