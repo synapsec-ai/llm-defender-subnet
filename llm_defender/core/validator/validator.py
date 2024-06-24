@@ -797,7 +797,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 weights=weights,  # Weights to set for the miners.
                 wait_for_inclusion=False,
                 version_key=self.subnet_version,
-                salt=commit_hash,
+                salt=commit_hash.encode('utf-8'),
             )
             if result:
                 bt.logging.success("Successfully set weights.")
