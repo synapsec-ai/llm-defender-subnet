@@ -788,7 +788,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             commit_hash, current_block, commit_hash_dict = self.obtain_unique_commit_hash(weights=weights)
 
             bt.logging.debug(
-                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}, commit_hash={commit_hash}"
+                f"Committing weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}, commit_hash={commit_hash}"
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
@@ -802,10 +802,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 salt=commit_hash.encode('utf-8'),
             )
             if result:
-                bt.logging.success("Successfully set weights.")
+                bt.logging.success("Successfully committed weights.")
                 self.commit_hashes.append(commit_hash_dict)
             else:
-                bt.logging.error("Failed to set weights.")
+                bt.logging.error("Failed to committed weights.")
 
             # run reveal weights operation on commits that are past the block interval
             self.reveal_weights(current_block)
