@@ -944,6 +944,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
                 # reveal weights
                 else:
+
+                    bt.logging.trace(f"Successfully revealing weights: {commit['weights']} from block: {commit['block']} with hash: {commit['hash']}")
+
                     result = self.subtensor.reveal_weights(
                         netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                         wallet=self.wallet,  # Wallet to sign set weights using hotkey.
