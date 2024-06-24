@@ -780,16 +780,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             power_weights = power_scaling(self.scores)
 
         weights = get_weights_list(power_weights)
-        
         bt.logging.info(f"Setting weights: {weights} on uids: {self.metagraph.uids}")
         
         if not self.debug_mode: 
 
             # generate unique commit hash
-            commit_hash, current_block, commit_hash_dict = self.obtain_unique_commit_hash()
+            commit_hash, current_block, commit_hash_dict = self.obtain_unique_commit_hash(weights=weights)
 
             bt.logging.debug(
-                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}, commit_hash={commit_hash}"
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
@@ -808,8 +807,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             else:
                 bt.logging.error("Failed to set weights.")
 
-            # truncate existing hashes
-            self.truncate_commit_hashes(current_block)
+            # run reveal weights operation on commits that are past the block interval
+            self.reveal_weights(current_block)
 
         else:
             bt.logging.info(f"Skipped setting weights due to debug mode")
@@ -901,7 +900,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         "query the interval "
         return self.subtensor.get_subnet_hyperparameters(netuid=14).commit_reveal_weights_interval
     
-    def obtain_unique_commit_hash(self):
+    def obtain_unique_commit_hash(self, weights):
 
         existing_hashes = []
         for commit in self.commit_hashes:
@@ -920,24 +919,45 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         commit_hash_dict = {
             "hash":commit_hash,
             "block":current_block,
+            "weights":weights,
         }
 
         bt.logging.debug(f"Obtained commit hash: {commit_hash} to set weights on block: {current_block}")
 
         return commit_hash, current_block, commit_hash_dict
 
-    def truncate_commit_hashes(self, current_block):
-        
-        commit_reveal_weights_interval = self.obtain_commit_reveal_weights_interval()
-        truncate_block = current_block - commit_reveal_weights_interval
+    def reveal_weights(self, current_block):
 
+        commit_reveal_weights_interval = self.obtain_commit_reveal_weights_interval()
+        cutoff_block = current_block - commit_reveal_weights_interval
         new_commit_hashes = []
+
         for commit in self.commit_hashes:
+
+            # check that dict is formatted correctly
             commit_keys = [k for k in commit]
-            if "hash" in commit_keys and "block" in commit_keys and len(commit_keys) == 2: 
-                if commit["block"] >= truncate_block:
+            if ("hash" in commit_keys) and ("block" in commit_keys) and ("weights" in commit_keys) and (len(commit_keys) == 3): 
+
+                # if we can't reveal the weights yet just add them back into the commit hashes
+                if commit["block"] >= cutoff_block:
                     new_commit_hashes.append(commit)
 
-        self.commit_hashes = new_commit_hashes
+                # reveal weights
+                else:
+                    result = self.subtensor.commit_weights(
+                        netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+                        wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+                        uids=self.metagraph.uids.tolist(),  # Uids of the miners to set weights for.
+                        weights=commit["weights"],  # Weights to set for the miners.
+                        wait_for_inclusion=False,
+                        version_key=self.subnet_version,
+                        salt=commit["hash"].encode('utf-8'),
+                    )
 
+                    if result:
+                        bt.logging.success("Successfully revealed weights.")
+                    else:
+                        bt.logging.error("Failed to reveal weights.")
+
+        self.commit_hashes = new_commit_hashes
         bt.logging.debug(f"Truncated commit hashes: {self.commit_hashes}")
