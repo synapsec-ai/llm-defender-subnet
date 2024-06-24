@@ -718,7 +718,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-                self.commit_hashes = state['commit_hashes']
+                try:
+                    self.commit_hashes = state['commit_hashes'].tolist()
+                except:
+                    self.commit_hashes = []
                 bt.logging.info(f"Scores loaded from saved file: {self.scores}")
             except Exception as e:
                 bt.logging.error(
