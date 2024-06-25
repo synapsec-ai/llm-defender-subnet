@@ -755,7 +755,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         def get_weights_list(weights):
 
-            max_value = self.subtensor.get_subnet_hyperparameters(netuid=14).max_weight_limit
+            max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
             
             # Find the maximum value in the array
             original_max = np.max(weights)
