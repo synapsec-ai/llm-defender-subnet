@@ -898,7 +898,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def obtain_commit_reveal_weights_interval(self):
         "query the interval "
-        return self.subtensor.get_subnet_hyperparameters(netuid=14).commit_reveal_weights_interval
+        return self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).commit_reveal_weights_interval
     
     def obtain_unique_commit_hash(self, weights):
 
