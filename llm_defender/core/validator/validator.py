@@ -459,7 +459,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
-        if self.hotkeys is not None:
+        if self.hotkeys:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
                 current_hotkeys = self.metagraph.hotkeys
