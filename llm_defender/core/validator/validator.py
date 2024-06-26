@@ -813,7 +813,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 bt.logging.success(f"Successfully committed weights. Message: {commit_weights_message}")
                 self.commit_hashes.append(commit_hash_dict)
             else:
-                bt.logging.error(f"Failed to committed weights. Message: {commit_weights_message}")
+                bt.logging.error(f"Failed to commit weights. Message: {commit_weights_message}")
 
             # run reveal weights operation on commits that are past the block interval
             self.reveal_weights(current_block)
