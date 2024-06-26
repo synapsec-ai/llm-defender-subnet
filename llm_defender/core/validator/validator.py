@@ -302,7 +302,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
         bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
 
-        for uid, _ in enumerate(self.scores):
+        for uid, _ in enumerate(self.hotkeys):
 
             analyzer_avg = (
                 self.prompt_injection_scores[uid]
@@ -468,11 +468,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         bt.logging.debug(
                             f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                         )
-                        bt.logging.debug(f"Score before reset: {self.scores[i]}")
+                        bt.logging.debug(f"Score before reset: {self.scores[i]}, Prompt Injeciton scores before reset: {self.prompt_injection_scores}, Sensitive Information scores before reset: {self.sensitive_information_scores}")
                         self.scores[i] = 0.0
                         self.prompt_injection_scores[i] = 0.0
                         self.sensitive_information_scores[i] = 0.0
-                        bt.logging.debug(f"Score after reset: {self.scores[i]}")
+                        self.miner_responses.pop(self.hotkeys[i])
+                        bt.logging.debug(f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}")
             else:
                 # Init default scores
                 bt.logging.info(
@@ -771,8 +772,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             
             # Convert the rounded array to a list
             preprocessed_result_list = rounded_array.tolist()
-
             result_list = []
+            
             for result in preprocessed_result_list:
                 if result == 0:
                     result_list.append(1)
