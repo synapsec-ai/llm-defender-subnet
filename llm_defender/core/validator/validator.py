@@ -800,7 +800,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-            result = self.subtensor.commit_weights(
+            result, commit_weights_message = self.subtensor.commit_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
                 uids=self.metagraph.uids.tolist(),  # Uids of the miners to set weights for.
@@ -810,7 +810,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 salt=commit_hash.encode('utf-8'),
             )
             if result:
-                bt.logging.success("Successfully committed weights.")
+                bt.logging.success(f"Successfully committed weights. Message: {commit_weights_message}")
                 self.commit_hashes.append(commit_hash_dict)
             else:
                 bt.logging.error("Failed to committed weights.")
@@ -956,7 +956,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
                     bt.logging.trace(f"Revealing weights: {commit['weights']} from block: {commit['block']} with hash: {commit['hash']}")
 
-                    result = self.subtensor.reveal_weights(
+                    result, reveal_weights_message = self.subtensor.reveal_weights(
                         netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                         wallet=self.wallet,  # Wallet to sign set weights using hotkey.
                         uids=self.metagraph.uids.tolist(),  # Uids of the miners to set weights for.
@@ -967,7 +967,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     )
 
                     if result:
-                        bt.logging.success("Successfully revealed weights.")
+                        bt.logging.success(f"Successfully revealed weights. Message: {reveal_weights_message}")
                     else:
                         bt.logging.error("Failed to reveal weights.")
 
