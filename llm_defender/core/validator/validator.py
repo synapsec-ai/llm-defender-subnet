@@ -770,8 +770,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             rounded_array = np.round(scaled_array).astype(int)
             
             # Convert the rounded array to a list
-            result_list = rounded_array.tolist()
-            
+            preprocessed_result_list = rounded_array.tolist()
+
+            result_list = []
+            for result in preprocessed_result_list:
+                if result == 0:
+                    result_list.append(1)
+                else:
+                    result_list.append(result)
+
             return result_list
 
         if np.all(self.scores == 0.0):
