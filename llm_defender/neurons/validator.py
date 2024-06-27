@@ -227,7 +227,7 @@ async def get_average_score_per_analyzer(validator):
             bt.logging.debug(f'Response list is empty: {response_list}')
             continue
         
-        uid = response_list[0]["UID"]
+        hotkey = response_list[0]["hotkey"]
         analyzer_scores = {}
         weights = {}
         
@@ -258,8 +258,8 @@ async def get_average_score_per_analyzer(validator):
             weighted_average = weighted_sum / total_weight
             weighted_averages[key] = weighted_average
         
-        # Store the results using UID as the key
-        results[uid] = weighted_averages
+        # Store the results using hotkey as the key
+        results[hotkey] = weighted_averages
         
     return results
 
@@ -446,7 +446,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             ):
                 averages = await get_average_score_per_analyzer(validator)
                 
-                for uid, data in averages.items():
+                for hotkey, data in averages.items():
+
+                    uid = validator.hotkeys.index(hotkey)
                     
                     data_keys = [k for k in data]
 

@@ -301,7 +301,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
         bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
 
-        for uid, _ in enumerate(self.scores):
+        for uid, _ in enumerate(self.hotkeys):
 
             analyzer_avg = (
                 self.prompt_injection_scores[uid]
@@ -458,7 +458,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
-        if self.hotkeys is None:
+        if np.size(self.hotkeys) > 0:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
                 current_hotkeys = self.metagraph.hotkeys
@@ -467,9 +467,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         bt.logging.debug(
                             f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                         )
-                        bt.logging.debug(f"Score before reset: {self.scores[i]}")
+                        bt.logging.debug(f"Score before reset: {self.scores[i]}, Prompt Injeciton scores before reset: {self.prompt_injection_scores}, Sensitive Information scores before reset: {self.sensitive_information_scores}")
                         self.scores[i] = 0.0
-                        bt.logging.debug(f"Score after reset: {self.scores[i]}")
+                        self.prompt_injection_scores[i] = 0.0
+                        self.sensitive_information_scores[i] = 0.0
+                        self.miner_responses.pop(self.hotkeys[i])
+                        bt.logging.debug(f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}")
             else:
                 # Init default scores
                 bt.logging.info(
@@ -743,11 +746,41 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             transformed_scores = np.power(scores, power)
             normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
             return normalized_scores
+        
+        def get_weights_list(weights):
+
+            max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
+
+            # Find the maximum value in the array
+            original_max = np.max(weights)
+
+            # Scale the array so the highest value becomes max_value
+            if original_max == 0:
+                scaled_array = weights
+            else:
+                scaled_array = (weights / original_max) * max_value
+
+            # Round the scaled values to the nearest integer
+            rounded_array = np.round(scaled_array).astype(int)
+
+            # Convert the rounded array to a list
+            preprocessed_result_list = rounded_array.tolist()
+            result_list = []
+
+            for result in preprocessed_result_list:
+                if result == 0:
+                    result_list.append(1)
+                else:
+                    result_list.append(result)
+
+            return result_list
 
         if np.all(self.scores == 0.0):
-            weights = self.scores 
+            power_weights = self.scores 
         else:
-            weights = power_scaling(self.scores)
+            power_weights = power_scaling(self.scores)
+
+        weights = get_weights_list(power_weights)
         
         bt.logging.info(f"Setting weights: {weights}")
         if not self.debug_mode:
