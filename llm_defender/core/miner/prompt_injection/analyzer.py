@@ -48,6 +48,7 @@ class PromptInjectionAnalyzer:
             self.wandb_enabled = False
 
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
+        
         output = []
 
         # Execute Text Classification engine
@@ -62,7 +63,11 @@ class PromptInjectionAnalyzer:
         for text_classification_response in text_classification_responses:
 
             # Responses are stored in a dict
-            response_output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
+            response_output = {
+                "analyzer": "Prompt Injection", 
+                "confidence": None, 
+                "engines": []
+            }
 
             engine_data = {
                 'name':text_classification_response['name'],
