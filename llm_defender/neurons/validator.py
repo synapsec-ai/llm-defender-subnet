@@ -221,15 +221,16 @@ async def get_average_score_per_analyzer(validator):
 
     results = {}
 
-    for _, response_list in validator.miner_responses.items():
+    for hotkey, response_list in validator.miner_responses.items():
         
         if not response_list:
             bt.logging.debug(f'Response list is empty: {response_list}')
             continue
         
-        uid = response_list[0]["UID"]
         analyzer_scores = {}
         weights = {}
+        missed_responses = {}
+        successful_responses = {}
         
         for response in response_list:
 
@@ -242,24 +243,46 @@ async def get_average_score_per_analyzer(validator):
                 analyzer_scores[analyzer] = []
             if analyzer not in weights:
                 weights[analyzer] = []
+            if analyzer not in missed_responses:
+                missed_responses[analyzer] = 0
+            if analyzer not in successful_responses:
+                successful_responses[analyzer] = 0
 
             analyzer_scores[analyzer].append(score)
             weights[analyzer].append(weight)
+            if not response['engine_data']:
+                missed_responses[analyzer] += 1
+            else:
+                successful_responses[analyzer] += 1
         
         weighted_averages = {}
+        missed_response_ratios = {}
+        
+        for key in missed_responses:
+            total = missed_responses[key] + successful_responses[key]
+            if total > 0:
+                missed_response_ratios[key] = missed_responses[key] / total
+            else: 
+                missed_response_ratios[key] = 1.0
 
         for key in analyzer_scores:
             scores = analyzer_scores[key]
             weight = weights[key]
             
+            preprocessed_missed_response_penalty = 1 - missed_response_ratios[key]
+            if preprocessed_missed_response_penalty >= 0.95:
+                missed_response_penalty = 1.0 
+            else:
+                missed_response_penalty = preprocessed_missed_response_penalty
+            
             weighted_sum = sum(score * w for score, w in zip(scores, weight))
             total_weight = sum(weight)
             
-            weighted_average = weighted_sum / total_weight
+            weighted_average = (weighted_sum * missed_response_penalty) / total_weight
             weighted_averages[key] = weighted_average
         
-        # Store the results using UID as the key
-        results[uid] = weighted_averages
+        # Store the results using hotkey as the key
+        results[hotkey] = weighted_averages
         
     return results
 
@@ -446,7 +469,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             ):
                 averages = await get_average_score_per_analyzer(validator)
                 
-                for uid, data in averages.items():
+                for hotkey, data in averages.items():
+
+                    uid = validator.hotkeys.index(hotkey)
                     
                     data_keys = [k for k in data]
 
