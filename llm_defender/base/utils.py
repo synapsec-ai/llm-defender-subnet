@@ -27,7 +27,7 @@ class EngineResponse:
             Returns a dict representation of the EngineResponse class.
     """
 
-    def __init__(self, confidence: float, data: dict, name: str):
+    def __init__(self, confidences: list, data: list, name: str, timestamps: list):
         """
         Initializes the confidence, data & name attributes.
 
@@ -42,11 +42,12 @@ class EngineResponse:
         Returns:
             None
         """
-        self.confidence = confidence
+        self.confidences = confidences
         self.data = data
+        self.timestamps = timestamps
         self.name = name
 
-    def get_dict(self) -> dict:
+    def get_list(self) -> list:
         """
         This function returns dict representation of the class.
 
@@ -57,7 +58,16 @@ class EngineResponse:
             dict:
                 A dict instance with keys "name", "confidence" and "data"
         """
-        return {"name": self.name, "confidence": self.confidence, "data": self.data}
+
+        output_list = []
+
+        for confidence, data, timestamp in zip(self.confidences, self.data, self.timestamps):
+
+            output_dict = {"name": self.name, "confidence": confidence, "data": data, "timestamp": timestamp}
+
+            output_list.append(output_dict)
+
+        return output_list
 
 
 def validate_numerical_value(value, value_type, min_value, max_value):

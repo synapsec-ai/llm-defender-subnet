@@ -50,20 +50,27 @@ class PromptInjectionAnalyzer:
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
         output = []
 
-        for prompt in prompts:
-        
+        # Execute Text Classification engine
+        text_classification_engine = LLMDefenderCore.TextClassificationEngine(
+            prompts=prompts
+        )
+        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        text_classification_responses = (
+            text_classification_engine.get_response().get_list()
+        )
+
+        for text_classification_response in text_classification_responses:
+
             # Responses are stored in a dict
             response_output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
-            # Execute Text Classification engine
-            text_classification_engine = LLMDefenderCore.TextClassificationEngine(
-                prompt=prompt
-            )
-            text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-            text_classification_response = (
-                text_classification_engine.get_response().get_dict()
-            )
-            response_output["engines"].append(text_classification_response)
+            engine_data = {
+                'name':text_classification_response['name'],
+                'confidence':text_classification_response['confidence'],
+                'data':text_classification_response['data'],
+            }
+
+            response_output["engines"].append(engine_data)
 
             # Calculate confidence score
             response_output["confidence"] = text_classification_response["confidence"]
@@ -72,7 +79,7 @@ class PromptInjectionAnalyzer:
             response_output["subnet_version"] = self.subnet_version
             response_output["synapse_uuid"] = synapse.synapse_uuid
             response_output["nonce"] = secrets.token_hex(24)
-            response_output["timestamp"] = str(int(time.time()))
+            response_output["timestamp"] = text_classification_response['timestamp']
 
             data_to_sign = f'{response_output["synapse_uuid"]}{response_output["nonce"]}{self.wallet.hotkey.ss58_address}{response_output["timestamp"]}'
 

@@ -12,6 +12,7 @@ from transformers import (
 )
 from transformers import pipeline
 import bittensor as bt
+import time
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -74,7 +75,7 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompt: str = None, name: str = "sensitive_info:token_classification"):
+    def __init__(self, prompts: List[str] = None, name: str = "sensitive_info:token_classification"):
         """
         Initializes the TokenClassificationEngine object with the name and prompt attributes.
 
@@ -90,12 +91,12 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
             None
         """        
         super().__init__(name=name)
-        self.prompt = prompt
+        self.prompts = prompts
 
     def _calculate_confidence(self):
         # Determine the confidence based on the score
-        if self.output["token_data"]:
-            highest_score_entity = max(self.output["token_data"], key=lambda x: x['score'])
+        if self.output[-1]["token_data"]:
+            highest_score_entity = max(self.output[-1]["token_data"], key=lambda x: x['score'])
             return float(highest_score_entity["score"])
         
         return 0.0
@@ -220,27 +221,29 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
                 execution of the token classification pipeline. This is based on 
                 try/except syntax.
         """
+        for prompt in self.prompts:
 
-        if not model or not tokenizer:
-            raise ValueError("Model or tokenizer is empty")
-        try:
-            pipe = pipeline(
-                "token-classification",
-                model=model,
-                tokenizer=tokenizer,
-                device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            if not model or not tokenizer:
+                raise ValueError("Model or tokenizer is empty")
+            try:
+                pipe = pipeline(
+                    "token-classification",
+                    model=model,
+                    tokenizer=tokenizer,
+                    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                )
+                nested_results = pipe([prompt, prompt], aggregation_strategy="first")
+                results = [item for sublist in nested_results if isinstance(sublist, list) for item in sublist]
+            except Exception as e:
+                raise Exception(
+                    f"Error occurred during token classification pipeline execution: {e}"
+                ) from e
+
+            self.outputs.append(self._populate_data(results))
+            self.confidences.append(self._calculate_confidence())
+            self.timestamps.append(str(int(time.time())))
+
+            bt.logging.debug(
+                f"Token Classification engine executed (Confidence: {self.confidences[-1]} - Output: {self.outputs[-1]})"
             )
-            nested_results = pipe([self.prompt, self.prompt], aggregation_strategy="first")
-            results = [item for sublist in nested_results if isinstance(sublist, list) for item in sublist]
-        except Exception as e:
-            raise Exception(
-                f"Error occurred during token classification pipeline execution: {e}"
-            ) from e
-
-        self.output = self._populate_data(results)
-        self.confidence = self._calculate_confidence()
-
-        bt.logging.debug(
-            f"Token Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
-        )
         return True

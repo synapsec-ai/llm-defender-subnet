@@ -66,8 +66,9 @@ class BaseEngine:
             None
         """
         self.prompts = None
-        self.confidence = None
-        self.output = {}
+        self.confidences = []
+        self.outputs = []
+        self.timestamps = []
         self.name = name
         self.cache_dir = f"{path.expanduser('~')}/.llm-defender-subnet/cache"
 
@@ -188,22 +189,25 @@ class BaseEngine:
         calculate_confidence() and populate_data() methods.
         """
 
-        if not self.name or self.confidence is None or not self.output:
+        if not self.name or not self.confidences or not self.outputs or not self.timestamps:
             raise ValueError(
-                f"Instance attributes [self.name, self.confidence, self.data] cannot be empty. Values are: {[self.name, self.confidence, self.output]}"
+                f"Instance attributes [self.name, self.confidences, self.outputs, self.timestamps] cannot be empty. Values are: {[self.name, self.confidence, self.output]}"
             )
 
         if not isinstance(self.name, str):
             raise TypeError("Name must be a string")
 
-        if not isinstance(self.confidence, float):
-            raise TypeError("Confidence must be a float")
+        if not isinstance(self.confidences, list):
+            raise TypeError("Confidence must be a list")
 
-        if not isinstance(self.output, dict):
-            raise TypeError("Output must be a dict")
+        if not isinstance(self.outputs, list):
+            raise TypeError("Output must be a list")
+
+        if not isinstance(self.timestamps, list):
+            raise TypeError("Timestamps must be a list")
 
         return LLMDefenderBase.EngineResponse(
-            name=self.name, confidence=self.confidence, data=self.output
+            name=self.name, confidences=self.confidences, data=self.outputs, timestamps = self.timestamps,
         )
 
     @abstractmethod

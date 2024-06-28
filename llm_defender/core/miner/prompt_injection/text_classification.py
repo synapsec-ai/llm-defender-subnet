@@ -12,6 +12,7 @@ from transformers import (
 )
 from transformers import pipeline
 import bittensor as bt
+import time 
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -73,7 +74,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompt: str = None, name: str = "prompt_injection:text_classification"):
+    def __init__(self, prompts: List[str] = None, name: str = "prompt_injection:text_classification"):
         """
         Initializes the TextClassificationEngine object with the name and prompt attributes.
 
@@ -89,7 +90,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             None
         """        
         super().__init__(name=name)
-        self.prompt = prompt
+        self.prompts = prompts
 
     def _calculate_confidence(self):
         """
@@ -106,8 +107,8 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             output attribute.
         """
         # Determine the confidence based on the score
-        if self.output["outcome"] != "UNKNOWN":
-            if self.output["outcome"] == "SAFE":
+        if self.outputs[-1]["outcome"] != "UNKNOWN":
+            if self.outputs[-1]["outcome"] == "SAFE":
                 return 0.0
             else:
                 return 1.0
@@ -227,28 +228,30 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
                 execution of the text classification pipeline. This is based on 
                 try/except syntax.
         """
+        for prompt in self.prompts:
 
-        if not model or not tokenizer:
-            raise ValueError("Model or tokenizer is empty")
-        try:
-            pipe = pipeline(
-                "text-classification",
-                model=model,
-                tokenizer=tokenizer,
-                truncation=True,
-                max_length=512,
-                device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+            if not model or not tokenizer:
+                raise ValueError("Model or tokenizer is empty")
+            try:
+                pipe = pipeline(
+                    "text-classification",
+                    model=model,
+                    tokenizer=tokenizer,
+                    truncation=True,
+                    max_length=512,
+                    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                )
+                results = pipe([prompt])
+            except Exception as e:
+                raise Exception(
+                    f"Error occurred during text classification pipeline execution: {e}"
+                ) from e
+
+            self.outputs.append(self._populate_data(results))
+            self.confidences.append(self._calculate_confidence())
+            self.timestamps.append(str(int(time.time())))
+
+            bt.logging.debug(
+                f"Text Classification engine executed (Confidence: {self.confidences[-1]} - Output: {self.outputs[-1]})"
             )
-            results = pipe([self.prompt])
-        except Exception as e:
-            raise Exception(
-                f"Error occurred during text classification pipeline execution: {e}"
-            ) from e
-
-        self.output = self._populate_data(results)
-        self.confidence = self._calculate_confidence()
-
-        bt.logging.debug(
-            f"Text Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
-        )
         return True

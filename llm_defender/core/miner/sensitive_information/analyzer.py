@@ -49,33 +49,39 @@ class SensitiveInformationAnalyzer:
 
         output = []
 
-        for prompt in prompts:
+        # Execute Token Classification engine
+        token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
+            prompts=prompts
+        )
+        token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        token_classification_responses = (
+            token_classification_engine.get_response().get_list()
+        )
+        
+        for token_classification_response in token_classification_responses:
+
             response_output = {
                 "analyzer": "Sensitive Information",
                 "confidence": None,
                 "engines": [],
             }
-            engine_confidences = []
 
-            # Execute Token Classification engine
-            token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
-                prompts=prompt
-            )
-            token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-            token_classification_response = (
-                token_classification_engine.get_response().get_dict()
-            )
-            response_output["engines"].append(token_classification_response)
-            engine_confidences.append(token_classification_response["confidence"])
+            engine_data = {
+                'name':token_classification_response['name'],
+                'confidence':token_classification_response['confidence'],
+                'data':token_classification_response['data']
+            }
+
+            response_output["engines"].append(engine_data)
 
             # Calculate confidence score
-            response_output["confidence"] = sum(engine_confidences) / len(engine_confidences)
+            response_output["confidence"] = token_classification_response['confidence']
 
             # Add subnet version and UUID to the response_output
             response_output["subnet_version"] = self.subnet_version
             response_output["synapse_uuid"] = synapse.synapse_uuid
             response_output["nonce"] = secrets.token_hex(24)
-            response_output["timestamp"] = str(int(time.time()))
+            response_output["timestamp"] = token_classification_response['timestamp']
 
             data_to_sign = f'{response_output["synapse_uuid"]}{response_output["nonce"]}{self.wallet.hotkey.ss58_address}{response_output["timestamp"]}'
 
