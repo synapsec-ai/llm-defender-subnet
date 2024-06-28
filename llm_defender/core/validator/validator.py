@@ -471,7 +471,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         self.scores[i] = 0.0
                         self.prompt_injection_scores[i] = 0.0
                         self.sensitive_information_scores[i] = 0.0
-                        self.miner_responses.pop(self.hotkeys[i])
+                        self.miner_responses[self.hotkeys[i]] = []
                         bt.logging.debug(f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}")
             else:
                 # Init default scores
