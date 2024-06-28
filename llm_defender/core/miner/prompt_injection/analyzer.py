@@ -48,53 +48,59 @@ class PromptInjectionAnalyzer:
             self.wandb_enabled = False
 
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
-        # Responses are stored in a dict
-        output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
+        output = []
 
-        # Execute Text Classification engine
-        text_classification_engine = LLMDefenderCore.TextClassificationEngine(
-            prompts=prompts
-        )
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        text_classification_response = (
-            text_classification_engine.get_response().get_dict()
-        )
-        output["engines"].append(text_classification_response)
+        for prompt in prompts:
+        
+            # Responses are stored in a dict
+            response_output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
-        # Calculate confidence score
-        output["confidence"] = text_classification_response["confidence"]
+            # Execute Text Classification engine
+            text_classification_engine = LLMDefenderCore.TextClassificationEngine(
+                prompt=prompt
+            )
+            text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+            text_classification_response = (
+                text_classification_engine.get_response().get_dict()
+            )
+            response_output["engines"].append(text_classification_response)
 
-        # Add subnet version and UUID to the output
-        output["subnet_version"] = self.subnet_version
-        output["synapse_uuid"] = synapse.synapse_uuid
-        output["nonce"] = secrets.token_hex(24)
-        output["timestamp"] = str(int(time.time()))
+            # Calculate confidence score
+            response_output["confidence"] = text_classification_response["confidence"]
 
-        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
+            # Add subnet version and UUID to the response_output
+            response_output["subnet_version"] = self.subnet_version
+            response_output["synapse_uuid"] = synapse.synapse_uuid
+            response_output["nonce"] = secrets.token_hex(24)
+            response_output["timestamp"] = str(int(time.time()))
 
-        # Generate signature for the response
-        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+            data_to_sign = f'{response_output["synapse_uuid"]}{response_output["nonce"]}{self.wallet.hotkey.ss58_address}{response_output["timestamp"]}'
 
-        # Wandb logging
-        if self.wandb_enabled:
-            self.wandb_handler.set_timestamp()
+            # Generate signature for the response
+            response_output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
 
-            wandb_logs = [
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response[
-                        "confidence"
-                    ]
-                },
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output[
-                        "confidence"
-                    ]
-                },
-            ]
+            output.append(response_output)
 
-            for wandb_log in wandb_logs:
-                self.wandb_handler.log(data=wandb_log)
+            # Wandb logging
+            if self.wandb_enabled:
+                self.wandb_handler.set_timestamp()
 
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                wandb_logs = [
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response[
+                            "confidence"
+                        ]
+                    },
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": response_output[
+                            "confidence"
+                        ]
+                    },
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(data=wandb_log)
+
+                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
         return output

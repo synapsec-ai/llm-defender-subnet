@@ -6,7 +6,7 @@ import llm_defender.core.validator as LLMDefenderCore
 
 def process_response(
     prompt,
-    response,
+    responses,
     uid,
     target,
     synapse_uuid,
@@ -19,161 +19,168 @@ def process_response(
     hotkey = validator.metagraph.hotkeys[uid]
     coldkey = validator.metagraph.coldkeys[uid]
 
-    # Get the default response object
-    response_object = LLMDefenderCore.sensitive_information_scoring.get_response_object(
-        uid,
-        hotkey,
-        coldkey,
-        target,
-        synapse_uuid,
-        query["analyzer"],
-        query["category"],
-        query["prompt"],
-    )
+    response_objects = []
 
-    # Set the score for invalid responses or responses that fail nonce validation to 0.0
-    if not LLMDefenderCore.sensitive_information_scoring.validate_response(
-        hotkey, response.output
-    ) or not validator.validate_nonce(response.output["nonce"]):
-        bt.logging.debug(f"Empty response or nonce validation failed: {response}")
-        
-        scored_response = LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
+    for response in responses:
 
-        responses_invalid_uids.append(uid)
-
-    # Calculate score for valid response
-    else:
-        response_time = response.dendrite.process_time
-
-        scored_response = calculate_analyzer_score(
-            prompt, validator, response.output, target, response_time, hotkey
+        # Get the default response object
+        response_object = LLMDefenderCore.sensitive_information_scoring.get_response_object(
+            uid,
+            hotkey,
+            coldkey,
+            target,
+            synapse_uuid,
+            query["analyzer"],
+            query["category"],
+            query["prompt"],
         )
 
-        miner_response = {
-            "confidence": response.output["confidence"],
-            "timestamp": response.output["timestamp"],
-            "category": response.output["analyzer"],
-            "response_time": response_time,
-        }
+        # Set the score for invalid responses or responses that fail nonce validation to 0.0
+        if not LLMDefenderCore.sensitive_information_scoring.validate_response(
+            hotkey, response.output
+        ) or not validator.validate_nonce(response.output["nonce"]):
+            bt.logging.debug(f"Empty response or nonce validation failed: {response}")
+            
+            scored_response = LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
+            if uid not in responses_invalid_uids:
+                responses_invalid_uids.append(uid)
 
-        token_class = [
-            data
-            for data in response.output["engines"]
-            if "token_classification" in data["name"]
-        ]
+        # Calculate score for valid response
+        else:
+            response_time = response.dendrite.process_time
 
-        engine_data = []
+            scored_response = calculate_analyzer_score(
+                prompt, validator, response.output, target, response_time, hotkey
+            )
 
-        if token_class:
-            if len(token_class) > 0:
-                engine_data.append(token_class[0])
+            miner_response = {
+                "confidence": response.output["confidence"],
+                "timestamp": response.output["timestamp"],
+                "category": response.output["analyzer"],
+                "response_time": response_time,
+            }
 
-        responses_valid_uids.append(uid)
-
-        if response.output["subnet_version"]:
-            if response.output["subnet_version"] > validator.subnet_version:
-                bt.logging.warning(
-                    f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.'
-                )
-
-        # Populate response data
-        response_object["response"] = miner_response
-        response_object["engine_data"] = engine_data
-        response_object["scored_response"] = scored_response
-        response_object["weight"] = query["weight"]
-
-        if validator.wandb_enabled:
-            wandb_logs = [
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_confidence": response_object[
-                        "response"
-                    ][
-                        "confidence"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_binned_distance_score": response_object[
-                        "scored_response"
-                    ][
-                        "scores"
-                    ][
-                        "binned_distance_score"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_normalized_distance_score": response_object[
-                        "scored_response"
-                    ][
-                        "scores"
-                    ][
-                        "normalized_distance_score"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_total_analyzer_raw": response_object[
-                        "scored_response"
-                    ][
-                        "scores"
-                    ][
-                        "total_analyzer_raw"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
-                        "scored_response"
-                    ][
-                        "scores"
-                    ][
-                        "distance"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
-                        "scored_response"
-                    ][
-                        "scores"
-                    ][
-                        "speed"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
-                        "scored_response"
-                    ][
-                        "raw_scores"
-                    ][
-                        "distance"
-                    ]
-                },
-                {
-                    f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
-                        "scored_response"
-                    ][
-                        "raw_scores"
-                    ][
-                        "speed"
-                    ]
-                },
+            token_class = [
+                data
+                for data in response.output["engines"]
+                if "token_classification" in data["name"]
             ]
 
-            for entry in response_object["engine_data"]:
-                wandb_logs.append(
+            engine_data = []
+
+            if token_class:
+                if len(token_class) > 0:
+                    engine_data.append(token_class[0])
+
+            if uid not in responses_valid_uids:
+                responses_valid_uids.append(uid)
+
+            if response.output["subnet_version"]:
+                if response.output["subnet_version"] > validator.subnet_version:
+                    bt.logging.warning(
+                        f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.'
+                    )
+
+            # Populate response data
+            response_object["response"] = miner_response
+            response_object["engine_data"] = engine_data
+            response_object["scored_response"] = scored_response
+            response_object["weight"] = query["weight"]
+
+            response_objects.append(response_object)
+
+            if validator.wandb_enabled:
+                wandb_logs = [
                     {
-                        f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence": entry[
+                        f"{response_object['UID']}:{response_object['hotkey']}_confidence": response_object[
+                            "response"
+                        ][
                             "confidence"
                         ]
                     },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_binned_distance_score": response_object[
+                            "scored_response"
+                        ][
+                            "scores"
+                        ][
+                            "binned_distance_score"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_normalized_distance_score": response_object[
+                            "scored_response"
+                        ][
+                            "scores"
+                        ][
+                            "normalized_distance_score"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_total_analyzer_raw": response_object[
+                            "scored_response"
+                        ][
+                            "scores"
+                        ][
+                            "total_analyzer_raw"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_scores_distance": response_object[
+                            "scored_response"
+                        ][
+                            "scores"
+                        ][
+                            "distance"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_scores_speed": response_object[
+                            "scored_response"
+                        ][
+                            "scores"
+                        ][
+                            "speed"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_distance": response_object[
+                            "scored_response"
+                        ][
+                            "raw_scores"
+                        ][
+                            "distance"
+                        ]
+                    },
+                    {
+                        f"{response_object['UID']}:{response_object['hotkey']}_raw_scores_speed": response_object[
+                            "scored_response"
+                        ][
+                            "raw_scores"
+                        ][
+                            "speed"
+                        ]
+                    },
+                ]
+
+                for entry in response_object["engine_data"]:
+                    wandb_logs.append(
+                        {
+                            f"{response_object['UID']}:{response_object['hotkey']}_{entry['name']}_confidence": entry[
+                                "confidence"
+                            ]
+                        },
+                    )
+                for wandb_log in wandb_logs:
+                    validator.wandb_handler.log(wandb_log)
+
+                bt.logging.trace(
+                    f"Adding wandb logs for response data: {wandb_logs} for uid: {uid}"
                 )
-            for wandb_log in wandb_logs:
-                validator.wandb_handler.log(wandb_log)
 
-            bt.logging.trace(
-                f"Adding wandb logs for response data: {wandb_logs} for uid: {uid}"
-            )
+        bt.logging.debug(f"Processed response: {response_object}")
 
-    bt.logging.debug(f"Processed response: {response_object}")
-
-    return response_object, responses_invalid_uids, responses_valid_uids
+    return response_objects, responses_invalid_uids, responses_valid_uids
 
 
 def calculate_analyzer_score(

@@ -235,10 +235,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         # Check each response
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
-                response_object, responses_invalid_uids, responses_valid_uids = (
+                responses_object, responses_invalid_uids, responses_valid_uids = (
                     LLMDefenderCore.prompt_injection_process.process_response(
                         prompt=query["prompt"],
-                        response=response,
+                        responses=response,
                         uid=processed_uids[i],
                         target=target,
                         synapse_uuid=synapse_uuid,
@@ -249,10 +249,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     )
                 )
             elif query["analyzer"] == "Sensitive Information":
-                response_object, responses_invalid_uids, responses_valid_uids = (
+                responses_object, responses_invalid_uids, responses_valid_uids = (
                     LLMDefenderCore.sensitive_information_process.process_response(
                         prompt=query["prompt"],
-                        response=response,
+                        responses=response,
                         uid=processed_uids[i],
                         target=target,
                         synapse_uuid=synapse_uuid,
@@ -265,11 +265,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             else:
                 bt.logging.error(f"Received unsupported analyzer: {query}")
                 raise AttributeError(f"Received unsupported analyzer: {query}")
-
-            # Handle response
-            response_data.append(response_object)
-            if response_object["response"]:
-                response_logger["miner_metrics"].append(response_object)
+            response_data.append(responses_object)
+            for response_object in responses_object:
+                # Handle response
+                if response_object["response"]:
+                    response_logger["miner_metrics"].append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(

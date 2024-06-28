@@ -74,7 +74,7 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompts: List[str] = None, name: str = "sensitive_info:token_classification"):
+    def __init__(self, prompt: str = None, name: str = "sensitive_info:token_classification"):
         """
         Initializes the TokenClassificationEngine object with the name and prompt attributes.
 
@@ -90,7 +90,7 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
             None
         """        
         super().__init__(name=name)
-        self.prompts = prompts
+        self.prompt = prompt
 
     def _calculate_confidence(self):
         # Determine the confidence based on the score
@@ -230,7 +230,7 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
                 tokenizer=tokenizer,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            nested_results = pipe([self.prompts[0], self.prompts[0]], aggregation_strategy="first")
+            nested_results = pipe([self.prompt, self.prompt], aggregation_strategy="first")
             results = [item for sublist in nested_results if isinstance(sublist, list) for item in sublist]
         except Exception as e:
             raise Exception(

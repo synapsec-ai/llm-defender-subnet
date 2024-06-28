@@ -46,58 +46,64 @@ class SensitiveInformationAnalyzer:
             self.wandb_enabled = False
 
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]):
-        output = {
-            "analyzer": "Sensitive Information",
-            "confidence": None,
-            "engines": [],
-        }
-        engine_confidences = []
 
-        # Execute Token Classification engine
-        token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
-            prompts=prompts
-        )
-        token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        token_classification_response = (
-            token_classification_engine.get_response().get_dict()
-        )
-        output["engines"].append(token_classification_response)
-        engine_confidences.append(token_classification_response["confidence"])
+        output = []
 
-        # Calculate confidence score
-        output["confidence"] = sum(engine_confidences) / len(engine_confidences)
+        for prompt in prompts:
+            response_output = {
+                "analyzer": "Sensitive Information",
+                "confidence": None,
+                "engines": [],
+            }
+            engine_confidences = []
 
-        # Add subnet version and UUID to the output
-        output["subnet_version"] = self.subnet_version
-        output["synapse_uuid"] = synapse.synapse_uuid
-        output["nonce"] = secrets.token_hex(24)
-        output["timestamp"] = str(int(time.time()))
+            # Execute Token Classification engine
+            token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
+                prompts=prompt
+            )
+            token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+            token_classification_response = (
+                token_classification_engine.get_response().get_dict()
+            )
+            response_output["engines"].append(token_classification_response)
+            engine_confidences.append(token_classification_response["confidence"])
 
-        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
+            # Calculate confidence score
+            response_output["confidence"] = sum(engine_confidences) / len(engine_confidences)
 
-        # Generate signature for the response
-        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+            # Add subnet version and UUID to the response_output
+            response_output["subnet_version"] = self.subnet_version
+            response_output["synapse_uuid"] = synapse.synapse_uuid
+            response_output["nonce"] = secrets.token_hex(24)
+            response_output["timestamp"] = str(int(time.time()))
 
-        # Wandb logging
-        if self.wandb_enabled:
-            self.wandb_handler.set_timestamp()
+            data_to_sign = f'{response_output["synapse_uuid"]}{response_output["nonce"]}{self.wallet.hotkey.ss58_address}{response_output["timestamp"]}'
 
-            wandb_logs = [
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
-                        "confidence"
-                    ]
-                },
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output[
-                        "confidence"
-                    ]
-                },
-            ]
+            # Generate signature for the response
+            response_output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
 
-            for wandb_log in wandb_logs:
-                self.wandb_handler.log(data=wandb_log)
+            output.append(response_output)
 
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            # Wandb logging
+            if self.wandb_enabled:
+                self.wandb_handler.set_timestamp()
+
+                wandb_logs = [
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Token Classification Confidence": token_classification_response[
+                            "confidence"
+                        ]
+                    },
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": response_output[
+                            "confidence"
+                        ]
+                    },
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(data=wandb_log)
+
+                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
         return output

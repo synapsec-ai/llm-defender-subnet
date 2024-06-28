@@ -193,13 +193,14 @@ def handle_invalid_prompt(validator):
 
 
 def attach_response_to_validator(validator, response_data):
-    for res in response_data:
-        hotkey = res['hotkey']
+    for response in response_data:
+        for res in response:
+            hotkey = res['hotkey']
 
-        if hotkey not in validator.miner_responses:
-            validator.miner_responses[hotkey] = [res]
-        else:
-            validator.miner_responses[hotkey].append(res)
+            if hotkey not in validator.miner_responses:
+                validator.miner_responses[hotkey] = [res]
+            else:
+                validator.miner_responses[hotkey].append(res)
 
 
 def update_weights(validator: LLMDefenderCore.SubnetValidator):

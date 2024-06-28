@@ -73,7 +73,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             attributes based on the outcome of the classifier.
     """
 
-    def __init__(self, prompts: List[str] = None, name: str = "prompt_injection:text_classification"):
+    def __init__(self, prompt: str = None, name: str = "prompt_injection:text_classification"):
         """
         Initializes the TextClassificationEngine object with the name and prompt attributes.
 
@@ -89,7 +89,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
             None
         """        
         super().__init__(name=name)
-        self.prompts = prompts
+        self.prompt = prompt
 
     def _calculate_confidence(self):
         """
@@ -239,7 +239,7 @@ class TextClassificationEngine(LLMDefenderBase.BaseEngine):
                 max_length=512,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
             )
-            results = pipe(self.prompts)
+            results = pipe([self.prompt])
         except Exception as e:
             raise Exception(
                 f"Error occurred during text classification pipeline execution: {e}"

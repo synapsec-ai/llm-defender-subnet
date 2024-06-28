@@ -14,7 +14,7 @@ class SubnetProtocol(bt.Synapse):
     """
 
     # Parse variables
-    output: dict | None = None
+    output: list | None = None
 
     synapse_uuid: str = pydantic.Field(
         ...,
