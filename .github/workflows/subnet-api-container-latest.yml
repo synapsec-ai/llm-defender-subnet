@@ -13,7 +13,7 @@ jobs:
       packages: write # Permission to write to GitHub Packages
 
     env:
-      IMAGE_NAME: llm-defender-development-api
+      IMAGE_NAME: llm-defender-api
 
     steps:
       - name: Checkout code
