@@ -8,9 +8,6 @@ services:
     command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && ls -la /var/run/llm-defender-subnet/ && ls -la /var/run/llm-defender-subnet/llm_defender && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level DEBUG"
     volumes:
       - .bittensor:/tmp/.bittensor
-    networks:
-      llm-defender-subnet-network-development:
-        ipv4_address: ${VALIDATOR_IP}
   
   # validator2:
   #   image: llm-defender-subnet
@@ -32,9 +29,6 @@ services:
     command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER_WALLET} --wallet.hotkey ${MINER_HOTKEY} --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP} --log_level DEBUG"
     volumes:
       - .bittensor:/tmp/.bittensor
-    networks:
-      llm-defender-subnet-network-development:
-        ipv4_address: ${MINER_IP}
   miner2:
     image: llm-defender-subnet
     build:
@@ -43,25 +37,27 @@ services:
     command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER2_WALLET} --wallet.hotkey ${MINER2_HOTKEY} --axon.port ${MINER2_PORT} --validator_min_stake 0 --axon.external_ip ${MINER2_IP} --log_level DEBUG"
     volumes:
       - .bittensor:/tmp/.bittensor
-    networks:
-      llm-defender-subnet-network-development:
-        ipv4_address: ${MINER2_IP}
-  llm-defender-api:
+  llm-defender-api-latest:
     restart: unless-stopped
-    build:
-      context: .
-      dockerfile: Dockerfile_API
-    command: /bin/bash -c "source /var/run/llm-defender-subnet/.venv/bin/activate && python3 /var/run/llm-defender-subnet/llm_defender/subnet_api/main.py"
+    pull_policy: always
+    user: "${UID}:${GID}"
+    image: ghcr.io/synapsec-ai/llm-defender-api:latest
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
       - "8080:8080"
     volumes:
-      - ${HOME}/.bittensor/:/tmp/
+      - ${HOME}/.bittensor:/.bittensor
     env_file:
       - .api-env
-networks:
-  llm-defender-subnet-network-development:
-    driver: bridge
-    ipam:
-     config:
-       - subnet: ${DOCKER_NETWORK_SUBNET}
-         gateway: ${DOCKER_NETWORK_GATEWAY}
+  llm-defender-api:
+    restart: unless-stopped
+    pull_policy: always
+    user: "${UID}:${GID}"
+    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.1rc0
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.bittensor:/.bittensor
+    env_file:
+      - .api-env

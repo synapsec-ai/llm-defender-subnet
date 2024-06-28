@@ -39,7 +39,7 @@ def get_parser():
         "--wallet.name", type=str, default=os.getenv("WALLET_NAME", "validator")
     )
     parser.add_argument(
-        "--wallet.path", type=str, default="/tmp/.bittensor/wallets"
+        "--wallet.path", type=str, default="/.bittensor/wallets"
     )
     parser.add_argument(
         "--wallet.hotkey", type=str, default=os.getenv("WALLET_HOTKEY", "default")
