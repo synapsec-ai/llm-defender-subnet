@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
     pull_policy: always
     user: "${UID}:${GID}"
-    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.1rc0
+    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.1rc1
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
       - "8080:8080"
