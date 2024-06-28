@@ -40,7 +40,7 @@ class Handler:
     def _check_metagraph_update(self):
 
         # Update metagraph if updated more than 10 minutes ago
-        if self.metagraph_updated < (time.time()):
+        if self.metagraph_updated < (time.time() + 60*10):
             bt.logging.info(
                 f"Updating metagraph. Current block: {self.metagraph.block}"
             )
@@ -125,8 +125,6 @@ class Handler:
             else:
                 top_axons_only = False
 
-            bt.logging.info(f'OS TOP_AXONS_ONLY: {os.environ["TOP_AXONS_ONLY"]}')
-            bt.logging.info(f'OS AXONS_TO_QUERY: {os.environ["AXONS_TO_QUERY"]}')
             # Get UIDs to query and send out the request
             uids_to_query = self.get_uids_to_query(
                 top_axons_only=top_axons_only,
@@ -150,8 +148,6 @@ class Handler:
     def determine_singular_response(self, responses, prompt, analyzer):
         try:
             outputs = [response.output for response in responses if response.output]
-
-            print(outputs)
 
             # If zero responses contained an output the response cant be determined
             if len(outputs) < 1:
