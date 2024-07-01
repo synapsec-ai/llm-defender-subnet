@@ -12,6 +12,7 @@ from transformers import (
 )
 from transformers import pipeline
 import bittensor as bt
+import time 
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -96,8 +97,8 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
             output attribute.
         """
         # Determine the confidence based on the score
-        if self.output["token_data"]:
-            highest_score_entity = max(self.output["token_data"], key=lambda x: x['score'])
+        if self.outputs[-1]["token_data"]:
+            highest_score_entity = max(self.outputs[-1]["token_data"], key=lambda x: x['score'])
             return float(highest_score_entity["score"])
         
         return 0.0
@@ -220,53 +221,56 @@ class ModerationClassificationEngine(LLMDefenderBase.BaseEngine):
                 try/except syntax.
         """
 
-        if not model or not tokenizer:
-            raise ValueError("Model or tokenizer is empty")
-        
-        try:
-            inputs = tokenizer(self.prompt, return_tensors='pt')
-            with torch.no_grad():
-                outputs = model(**inputs)
+        for prompt in self.prompts:
 
-            logits = outputs.logits
-            softmax = torch.nn.functional.softmax(logits, dim=2)
-            confidence_scores = softmax.detach().numpy()
-            predictions = np.argmax(confidence_scores, axis=2)
-            tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
-            labels = predictions[0]
-            tokens = tokens[1:-1]
-            labels = labels[1:-1]
-            confidence_scores = confidence_scores[0][1:-1]
-
-            results = []
-            for i in range(len(labels)):
-                score = (1 - confidence_scores[i][labels[i]])
-
-                if i > 0 and inputs.word_ids()[i+1] == inputs.word_ids()[i]:
-                    if score >= 0.5:
-                        results.append({
-                            "entity_group":tokens[i-1] + tokens[i][2:],
-                            "classification":model.config.id2label[labels[i-1]],
-                            "score":score
-                        })
-
-                else:
-                    if score >= 0.5:
-                        results.append({
-                            "entity_group":tokens[i],
-                            "classification":model.config.id2label[labels[i]],
-                            "score":score
-                        })
+            if not model or not tokenizer:
+                raise ValueError("Model or tokenizer is empty")
             
-        except Exception as e:
-            raise Exception(
-                f"Error occurred during moderation classification pipeline execution: {e}"
-            ) from e
+            try:
+                inputs = tokenizer(prompt, return_tensors='pt')
+                with torch.no_grad():
+                    outputs = model(**inputs)
 
-        self.output = self._populate_data(results)
-        self.confidence = self._calculate_confidence()
+                logits = outputs.logits
+                softmax = torch.nn.functional.softmax(logits, dim=2)
+                confidence_scores = softmax.detach().numpy()
+                predictions = np.argmax(confidence_scores, axis=2)
+                tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+                labels = predictions[0]
+                tokens = tokens[1:-1]
+                labels = labels[1:-1]
+                confidence_scores = confidence_scores[0][1:-1]
 
-        bt.logging.debug(
-            f"Moderation engine executed (Confidence: {self.confidence} - Output: {self.output})"
-        )
+                results = []
+                for i in range(len(labels)):
+                    score = (1 - confidence_scores[i][labels[i]])
+
+                    if i > 0 and inputs.word_ids()[i+1] == inputs.word_ids()[i]:
+                        if score >= 0.5:
+                            results.append({
+                                "entity_group":tokens[i-1] + tokens[i][2:],
+                                "classification":model.config.id2label[labels[i-1]],
+                                "score":score
+                            })
+
+                    else:
+                        if score >= 0.5:
+                            results.append({
+                                "entity_group":tokens[i],
+                                "classification":model.config.id2label[labels[i]],
+                                "score":score
+                            })
+                
+            except Exception as e:
+                raise Exception(
+                    f"Error occurred during moderation classification pipeline execution: {e}"
+                ) from e
+
+            self.outputs.append(self._populate_data(results))
+            self.confidences.append(self._calculate_confidence())
+            self.timestamps.append(str(int(time.time())))
+
+            bt.logging.debug(
+                f"Moderation engine executed (Confidence: {self.confidences[-1]} - Output: {self.outputs[-1]})"
+            )
         return True
