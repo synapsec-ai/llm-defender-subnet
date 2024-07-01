@@ -96,7 +96,7 @@ class SensitiveInformationAnalyzer:
 
                 wandb_logs = [
                     {
-                        f"{self.miner_uid}:{self.miner_hotkey}_Sensitive_Information_Analyzer_Token_Classification_Confidence": token_classification_response[
+                        f"{self.miner_uid}:{self.miner_hotkey}_Sensitive_Information_Analyzer_Token_Classification_Confidence": response_output[
                             "confidence"
                         ]
                     },
