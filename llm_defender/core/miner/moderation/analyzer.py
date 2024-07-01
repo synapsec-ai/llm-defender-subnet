@@ -48,53 +48,69 @@ class ModerationAnalyzer:
             self.wandb_enabled = False
 
     def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
-        # Responses are stored in a dict
-        output = {"analyzer": "Moderation", "confidence": None, "engines": []}
+
+        output = []
 
         # Execute Moderation engine
         moderation_engine = LLMDefenderCore.ModerationEngine(
             prompts=prompts
         )
         moderation_engine.execute(model=self.model, tokenizer=self.tokenizer)
-        moderation_response = (
+        moderation_responses = (
             moderation_engine.get_response().get_dict()
         )
-        output["engines"].append(moderation_response)
 
-        # Calculate confidence score
-        output["confidence"] = moderation_response["confidence"]
+        for moderation_response in moderation_responses:
 
-        # Add subnet version and UUID to the output
-        output["subnet_version"] = self.subnet_version
-        output["synapse_uuid"] = synapse.synapse_uuid
-        output["nonce"] = secrets.token_hex(24)
-        output["timestamp"] = str(int(time.time()))
+            # Responses are stored in a dict
+            response_output = {
+                "analyzer": "Moderation", 
+                "confidence": None, 
+                "engines": []
+            }
 
-        data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
+            engine_data = {
+                'name':moderation_response['name'],
+                'confidence':moderation_response['confidence'],
+                'data':moderation_response['data']
+            }
 
-        # Generate signature for the response
-        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+            response_output["engines"].append(engine_data)
 
-        # Wandb logging
-        if self.wandb_enabled:
-            self.wandb_handler.set_timestamp()
+            # Calculate confidence score
+            response_output["confidence"] = moderation_response["confidence"]
 
-            wandb_logs = [
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Moderation Confidence": moderation_response[
-                        "confidence"
-                    ]
-                },
-                {
-                    f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": output[
-                        "confidence"
-                    ]
-                },
-            ]
+            # Add subnet version and UUID to the output
+            response_output["subnet_version"] = self.subnet_version
+            response_output["synapse_uuid"] = synapse.synapse_uuid
+            response_output["nonce"] = secrets.token_hex(24)
+            response_output["timestamp"] = moderation_response['timestamp']
 
-            for wandb_log in wandb_logs:
-                self.wandb_handler.log(data=wandb_log)
+            data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            # Generate signature for the response
+            response_output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+
+            # Wandb logging
+            if self.wandb_enabled:
+                self.wandb_handler.set_timestamp()
+
+                wandb_logs = [
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Moderation_Analyzer_Text_Classification_Confidence": response_output[
+                            "confidence"
+                        ]
+                    },
+                    {
+                        f"{self.miner_uid}:{self.miner_hotkey}_Moderation_Analyzer_Total_Confidence": response_output[
+                            "confidence"
+                        ]
+                    },
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(data=wandb_log)
+
+                bt.logging.trace(f"Wandb logs added: {wandb_logs}")
 
         return output
