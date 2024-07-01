@@ -16,6 +16,7 @@ class ModuleConfig:
         # Determine module code version
         self.__version__ = "0.8.2"
 
+
         # Determine the score version
         self.__score_version__ = "1"
 
