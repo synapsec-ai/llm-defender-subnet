@@ -244,9 +244,9 @@ async def get_average_score_per_analyzer(validator):
             if analyzer not in weights:
                 weights[analyzer] = []
             if analyzer not in missed_responses:
-                missed_responses[analyzer] = 0
+                missed_responses[analyzer] = 1
             if analyzer not in successful_responses:
-                successful_responses[analyzer] = 0
+                successful_responses[analyzer] = 1
 
             analyzer_scores[analyzer].append(score)
             weights[analyzer].append(weight)
