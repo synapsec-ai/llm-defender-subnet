@@ -99,12 +99,12 @@ class PromptInjectionAnalyzer:
 
                 wandb_logs = [
                     {
-                        f"{self.miner_uid}:{self.miner_hotkey}_Text Classification Confidence": text_classification_response[
+                        f"{self.miner_uid}:{self.miner_hotkey}_Prompt_Injection_Analyzer_Text_Classification_Confidence": text_classification_response[
                             "confidence"
                         ]
                     },
                     {
-                        f"{self.miner_uid}:{self.miner_hotkey}_Total Confidence": response_output[
+                        f"{self.miner_uid}:{self.miner_hotkey}_Prompt_Injection_Analyzer_Total Confidence": response_output[
                             "confidence"
                         ]
                     },
