@@ -163,8 +163,8 @@ def handle_empty_responses(validator, list_of_uids):
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-    time.sleep(bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__/3)
 
 
 def format_responses(
@@ -188,8 +188,8 @@ def handle_invalid_prompt(validator):
     )
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-    time.sleep(bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__/3)
 
 
 def attach_response_to_validator(validator, response_data):
@@ -370,8 +370,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
             if not axons_with_valid_ip:
                 bt.logging.warning("No axons with valid IPs found")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-                time.sleep(bt.__blocktime__)
+                bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+                time.sleep(bt.__blocktime__/3)
                 continue
 
             if validator.target_group == 0:
@@ -494,9 +494,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             # End the current step and prepare for the next iteration.
             validator.step += 1
 
-            # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-            time.sleep(bt.__blocktime__)
+            # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
+            bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+            time.sleep(bt.__blocktime__/3)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
@@ -549,6 +549,11 @@ if __name__ == "__main__":
         "--debug_mode",
         action="store_true",
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
+    )
+    parser.add_argument(
+        "--disable_prompt_generation",
+        action="store_true",
+        help="Setting this value disables the prompt generation and only uses the dataset to query the miners.",
     )
 
     parser.add_argument(

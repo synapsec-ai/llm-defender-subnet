@@ -18,14 +18,15 @@ from os import path, rename
 import secrets
 import time
 import bittensor as bt
-import requests
 import numpy as np
+import datasets
 from collections import defaultdict 
 import logging
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
+
 
 class SuppressPydanticFrozenFieldFilter(logging.Filter):
     def filter(self, record):
@@ -42,8 +43,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser, profile="validator")
-
-        self.max_engines = 3
+        
         self.timeout = 18
         self.neuron_config = None
         self.wallet = None
@@ -59,7 +59,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.target_group = None
         self.load_validator_state = None
         self.prompt = None
-        self.remote_logging = None
         self.query = None
         self.debug_mode = True
         self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
@@ -143,6 +142,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
+    
 
 
         # Setup the bittensor objects
@@ -181,11 +181,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             else:
                 self.max_targets = 256
 
-            if args.disable_remote_logging and args.disable_remote_logging is True:
-                self.remote_logging = False
-            else:
-                self.remote_logging = True
-
         else:
             # Setup initial scoring weights
             self.init_default_scores()
@@ -193,12 +188,44 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         self.target_group = 0
 
+        # Setup prompt generation
+        self.prompt_api = LLMDefenderCore.PromptGenerator(disabled=args.disable_prompt_generation)
+
         return True
+
+    async def send_metrics_synapse(self, response_object, synapse_uuid, target_uid):
+        """This method sends a synapse to the target_uid containing the
+        response_object"""
+
+        # Generate signature
+        nonce = secrets.token_hex(24)
+        timestamp = str(int(time.time()))
+        data_to_sign = (
+            f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
+        )
+
+        # Send Synapse
+        await self.dendrite.forward(
+            self.metagraph.axons[target_uid],
+            LLMDefenderBase.MetricsProtocol(
+                response_object=response_object,
+                synapse_uuid=synapse_uuid,
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_signature=LLMDefenderBase.sign_data(
+                    hotkey=self.wallet.hotkey, data=data_to_sign
+                ),
+            ),
+            timeout=2,
+            deserialize=False
+        )
+
+        bt.logging.debug(f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}')
 
     def _parse_args(self, parser):
         return parser.parse_args()
 
-    def process_responses(
+    async def process_responses(
         self,
         processed_uids: np.ndarray,
         query: dict,
@@ -223,14 +250,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Initiate the response objects
         response_data = []
-        response_logger = {
-            "logger": "validator",
-            "validator_hotkey": self.wallet.hotkey.ss58_address,
-            "timestamp": str(time.time()),
-            "miner_metrics": [],
-        }
         responses_invalid_uids = []
         responses_valid_uids = []
+
+        # Collect tasks in a set
+        background_tasks = set()
 
         # Check each response
         for i, response in enumerate(responses):
@@ -269,28 +293,73 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             # Handle response
             response_data.append(response_object)
             if response_object["response"]:
-                response_logger["miner_metrics"].append(response_object)
+                # Add asyncio task to background tasks
+                task = asyncio.create_task(self.send_metrics_synapse(response_object=response_object, synapse_uuid=synapse_uuid, target_uid=processed_uids[i]))
+                background_tasks.add(task)
+        
+        # Handle background tasks
+        try:
+            for task in background_tasks:
+                await task
+        except Exception as e:
+            bt.logging.error(f'Error while handling background tasks for metric synapses: {e}')
+    
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        # If remote logging is disabled, do not log to remote server
-        if self.remote_logging is False:
-            bt.logging.debug(
-                f"Remote metrics not stored because remote logging is disabled."
-            )
-        else:
-            bt.logging.trace(f"Message to log: {response_logger}")
-            if not self.remote_logger(
-                hotkey=self.wallet.hotkey, message=response_logger
-            ):
-                bt.logging.warning(
-                    "Unable to push miner validation results to the logger service"
-                )
-
         return response_data
+    
+
+    def determine_overall_scores(
+        self, specialization_bonus_n=5
+    ):
+
+        top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
+        top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
+
+        for uid, _ in enumerate(self.scores):
+
+            analyzer_avg = (
+                self.prompt_injection_scores[uid]
+                + self.sensitive_information_scores[uid]
+            ) / 2
+            self.scores[uid] = analyzer_avg
+
+            top_prompt_injection_uid = 0
+            top_sensitive_informaiton_uid = 0
+
+            if uid in top_prompt_injection_uids:
+                top_prompt_injection_uid = 1
+                if self.prompt_injection_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.prompt_injection_scores[uid]
+
+            if uid in top_sensitive_information_uids:
+                top_sensitive_informaiton_uid = 1
+                if self.sensitive_information_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.sensitive_information_scores[uid]
+
+            miner_hotkey = self.metagraph.hotkeys[uid]
+
+            if self.wandb_enabled:
+                wandb_logs = [
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid": top_prompt_injection_uid
+                    },
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_sensitive_information_uid": top_sensitive_informaiton_uid
+                    },
+                    {f"{uid}:{miner_hotkey}_total_score": self.scores[uid]},
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(wandb_log)
+
+        bt.logging.trace(f"Calculated miner scores: {self.scores}")
 
     def determine_overall_scores(
         self, specialization_bonus_n=5
@@ -359,53 +428,55 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-    def get_api_prompt(self, hotkey, signature, synapse_uuid, timestamp, nonce) -> dict:
+    def get_api_prompt(self) -> dict:
         """Retrieves a prompt from the prompt API"""
-
-        headers = {
-            "X-Hotkey": hotkey,
-            "X-Signature": signature,
-            "X-SynapseUUID": synapse_uuid,
-            "X-Timestamp": timestamp,
-            "X-Nonce": nonce,
-            "X-Version": str(self.subnet_version),
-            "X-API-Key": hotkey,
-        }
-
-        prompt_api_url = "https://api.synapsec.ai/prompt"
 
         try:
             # get prompt
-            res = requests.post(url=prompt_api_url, headers=headers, timeout=12)
-            # check for correct status code
-            if res.status_code == 200:
-                # get prompt entry from the API output
-                prompt_entry = res.json()
-                # check to make sure prompt is valid
-                if LLMDefenderBase.validate_validator_api_prompt_output(prompt_entry):
-                    bt.logging.trace(
-                        f"Loaded remote prompt to serve to miners: {prompt_entry}"
-                    )
-                    return prompt_entry
-                else:
-                    return None
-
+            analyzer = secrets.choice(["Prompt Injection"])
+            prompt = self.prompt_api.construct(analyzer=analyzer)
+            
+            # check to make sure prompt is valid
+            if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
+                bt.logging.trace(f'Validated prompt: {prompt}')
+                return prompt
             else:
-                bt.logging.warning(
-                    f"Unable to get prompt from the Prompt API: HTTP/{res.status_code} - {res.json()}"
-                )
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Prompt API request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the prompt API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the prompt API: {e}")
+                bt.logging.debug(f'Failed to validate prompt: {prompt}')
+                return {}
         except Exception as e:
-            bt.logging.error(f"Generic error during request: {e}")
+            bt.logging.error(f"Failed to get prompt from prompt API: {e}")
 
         return {}
 
-    def serve_prompt_injection_prompt(self, synapse_uuid) -> dict:
+    def get_prompt_from_dataset(self, analyzer: str):
+        """Fetches prompt from the dataset as a fallback to the prompt generation"""
+        
+        # Randomly choose which dataset to use
+        if analyzer == "Prompt Injection":
+            dataset = datasets.load_dataset("synapsecai/synthetic-prompt-injections")
+        elif analyzer == "Sensitive Information":
+            dataset = datasets.load_dataset("synapsecai/synthetic-sensitive-information")
+        
+        # Use prompts from the test dataset
+        test_dataset = dataset["test"]
+
+        # Shuffle the dataset and select random sample
+        shuffled_dataset = test_dataset.shuffle()
+        dataset_entry = shuffled_dataset.select(range(1))
+
+        prompt = {
+            "analyzer": analyzer,
+            "category": dataset_entry["category"][0],
+            "prompt": dataset_entry["text"][0],
+            "label": dataset_entry["label"][0],
+            "weight": 0.1, # Prompts from dataset should be given low weight in the scoring
+        }
+
+        bt.logging.debug(f'Fetched prompt from the dataset: {prompt}')
+        return prompt
+
+
+    def serve_prompt_injection_prompt(self) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -419,42 +490,33 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             entry:
                 A dict instance
         """
-        # Attempt to get prompt from prompt API
-        nonce = str(secrets.token_hex(24))
-        timestamp = str(int(time.time()))
 
-        data = f"{synapse_uuid}{nonce}{timestamp}"
+        # Load prompt from the prompt API
+        entry = self.get_api_prompt()
 
-        entry = self.get_api_prompt(
-            hotkey=self.wallet.hotkey.ss58_address,
-            signature=LLMDefenderBase.sign_data(hotkey=self.wallet.hotkey, data=data),
-            synapse_uuid=synapse_uuid,
-            timestamp=timestamp,
-            nonce=nonce,
-        )
-
+        # Fallback to dataset if prompt loading from the API failed
+        if not entry:
+            entry = self.get_prompt_from_dataset(analyzer="Prompt Injection")
+        
         self.prompt = entry
 
         return self.prompt
     
-    def serve_sensitive_information_prompt(self, synapse_uuid):
-        prompt, category, target, created_at = self.sensitive_info_generator.get_prompt_to_serve_miners()
+    def serve_sensitive_information_prompt(self):
+        prompt, category, target = self.sensitive_info_generator.get_prompt_to_serve_miners()
         return {
             "prompt":prompt,
             "analyzer":'Sensitive Information',
             "category":category,
             "label":target,
-            "synapse_uuid":synapse_uuid,
-            "hotkey":self.wallet.hotkey.ss58_address,
-            "created_at":created_at,
             "weight": 1.0
         }
 
     async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
         if analyzer == 'Prompt Injection':
-            return await asyncio.to_thread(self.serve_prompt_injection_prompt, synapse_uuid)
+            return await asyncio.to_thread(self.serve_prompt_injection_prompt)
         elif analyzer == 'Sensitive Information':
-            return await asyncio.to_thread(self.serve_sensitive_information_prompt, synapse_uuid)
+            return await asyncio.to_thread(self.serve_sensitive_information_prompt)
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""

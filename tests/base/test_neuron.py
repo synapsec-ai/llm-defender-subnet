@@ -106,17 +106,3 @@ def test_requests_generic_error(mock_post, mock_logging, neuron_instance: BaseNe
     mock_post.side_effect = Exception("Generic Exception")
     neuron_instance.requests_post(url="https://example.com", headers={}, data={})
     mock_logging.error.assert_called_with("Generic error during request: Generic Exception")
-
-
-def test_remote_logger_successful_flow(neuron_instance: BaseNeuron, mock_sign_data, mock_requests_post, get_mock_wallet: MagicMock):
-    mock_requests_post.return_value = {"result": "success"}
-    hotkey = get_mock_wallet.hotkey
-    result = neuron_instance.remote_logger(hotkey, {"test": "message"})
-    assert result
-
-
-def test_remote_logger_error_flow(neuron_instance: BaseNeuron, mock_sign_data, mock_requests_post, get_mock_wallet: MagicMock):
-    mock_requests_post.return_value = None
-    hotkey = get_mock_wallet.hotkey
-    result = neuron_instance.remote_logger(hotkey, {"test": "message"})
-    assert not result
