@@ -1,9 +1,20 @@
-FROM ubuntu:22.04
+from python:3.10.14-bookworm
 
-RUN apt-get update && apt-get install -y python3 python3-pip python3.10-venv
+ARG USER_UID=10001
+ARG USER_GID=$USER_UID
+ARG USERNAME=llm-defender-api-user
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
 # Copy required files
-COPY llm_defender /var/run/llm-defender-subnet/llm_defender
-COPY pyproject.toml /var/run/llm-defender-subnet
+RUN mkdir -p /llm-defender-subnet && mkdir -p /.bittensor
+COPY llm_defender /llm-defender-subnet/llm_defender
+COPY pyproject.toml /llm-defender-subnet
 
-RUN /bin/bash -c "python3 -m venv /tmp/.venv && source /tmp/.venv/bin/activate && pip3 install -e /var/run/llm-defender-subnet/.[validator]"
+# Setup permissions
+RUN chown -R $USER_UID:$USER_GID /llm-defender-subnet/ && chown -R $USER_UID:$USER_GID /.bittensor && chmod -R 755 /llm-defender-subnet && chmod -R 755 /.bittensor
+
+USER $USERNAME
+
+RUN /bin/bash -c "python3 -m venv /llm-defender-subnet/.venv && source /llm-defender-subnet/.venv/bin/activate && pip3 install -e /llm-defender-subnet/.[validator]"

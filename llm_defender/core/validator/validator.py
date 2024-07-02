@@ -61,6 +61,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = None
         self.query = None
         self.debug_mode = True
+        self.prompt_api = None
         self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:

@@ -1,12 +1,27 @@
 services:
+  llm-defender-validator-remote-vllm:
+    restart: unless-stopped
+    env_file:
+      - .validator-env
+    build:
+      context: .
+      dockerfile: validator.Dockerfile
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet[validator] && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
+    volumes:
+      - ./:/var/run/llm-defender-subnet/
+      - llm-defender-subnet:/root/.llm-defender-subnet
+      - ~/.bittensor/:/root/
+
   llm-defender-validator:
     depends_on: 
       - prompt-generation-api
     restart: unless-stopped
+    env_file:
+      - .validator-env
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet[validator] && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
+    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet[validator] && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
       - ./:/var/run/llm-defender-subnet/
       - llm-defender-subnet:/root/.llm-defender-subnet
@@ -27,11 +42,11 @@ services:
     command: [
       "--model", "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
       "--revision", "gptq-8bit-128g-actorder_True",
-      "--tensor-parallel-size", "4"
+      "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
       - ${HOME}.cache/huggingface:/root/.cache/huggingface
-      
+  
   llm-defender-api-latest:
     restart: unless-stopped
     pull_policy: always
@@ -56,3 +71,6 @@ services:
       - ${HOME}/.bittensor:/.bittensor
     env_file:
       - .api-env
+
+  volumes:
+    llm-defender-subnet:

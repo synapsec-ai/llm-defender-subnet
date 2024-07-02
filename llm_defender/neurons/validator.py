@@ -563,10 +563,7 @@ if __name__ == "__main__":
         choices=["INFO", "DEBUG", "TRACE"],
         help="Determine the logging level used by the subnet modules",
     )
-
-    # Disable TOKENIZERS_PARALLELISM
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
+    
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderCore.SubnetValidator(parser=parser)
     if (

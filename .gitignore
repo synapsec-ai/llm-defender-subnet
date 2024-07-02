@@ -167,11 +167,10 @@ llm-defender*.config.js
 .bittensor
 
 *.env
+*.*-env
 
 # Wandb
 wandb
 
 # chromadb
 chroma
-
-.api-env
