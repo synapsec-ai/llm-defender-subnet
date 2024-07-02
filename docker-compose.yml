@@ -6,7 +6,6 @@ services:
     build:
       context: .
       dockerfile: validator.Dockerfile
-    user: "1000:1000"
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --wallet.path /.bittensor/wallets"
     volumes:
       - llm-defender-subnet:/root/.llm-defender-subnet
@@ -18,7 +17,6 @@ services:
     restart: unless-stopped
     env_file:
       - .validator-env
-    user: "1000:1000"
     build:
       context: .
       dockerfile: validator.Dockerfile
@@ -52,7 +50,6 @@ services:
   llm-defender-api-latest:
     restart: unless-stopped
     pull_policy: always
-    user: "${UID}:${GID}"
     image: ghcr.io/synapsec-ai/llm-defender-api:latest
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
@@ -64,7 +61,6 @@ services:
   llm-defender-api:
     restart: unless-stopped
     pull_policy: always
-    user: "${UID}:${GID}"
     image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
