@@ -322,54 +322,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
         bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
 
-        for uid, _ in enumerate(self.scores):
-
-            analyzer_avg = (
-                self.prompt_injection_scores[uid]
-                + self.sensitive_information_scores[uid]
-            ) / 2
-            self.scores[uid] = analyzer_avg
-
-            top_prompt_injection_uid = 0
-            top_sensitive_informaiton_uid = 0
-
-            if uid in top_prompt_injection_uids:
-                top_prompt_injection_uid = 1
-                if self.prompt_injection_scores[uid] > self.scores[uid]:
-                    self.scores[uid] = self.prompt_injection_scores[uid]
-
-            if uid in top_sensitive_information_uids:
-                top_sensitive_informaiton_uid = 1
-                if self.sensitive_information_scores[uid] > self.scores[uid]:
-                    self.scores[uid] = self.sensitive_information_scores[uid]
-
-            miner_hotkey = self.metagraph.hotkeys[uid]
-
-            if self.wandb_enabled:
-                wandb_logs = [
-                    {
-                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid": top_prompt_injection_uid
-                    },
-                    {
-                        f"{uid}:{miner_hotkey}_is_top_sensitive_information_uid": top_sensitive_informaiton_uid
-                    },
-                    {f"{uid}:{miner_hotkey}_total_score": self.scores[uid]},
-                ]
-
-                for wandb_log in wandb_logs:
-                    self.wandb_handler.log(wandb_log)
-
-        bt.logging.trace(f"Calculated miner scores: {self.scores}")
-
-    def determine_overall_scores(
-        self, specialization_bonus_n=5
-    ):
-
-        top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
-        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
-        top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
-        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
-
         for uid, _ in enumerate(self.hotkeys):
 
             analyzer_avg = (
