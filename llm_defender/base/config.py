@@ -16,6 +16,9 @@ class ModuleConfig:
         # Determine module code version
         self.__version__ = "0.9.0"
 
+        # Determine the score version
+        self.__score_version__ = "1"
+
         # Convert the version into a single integer
         self.__version_split__ = self.__version__.split(".")
         self.__spec_version__ = (
@@ -28,6 +31,7 @@ class ModuleConfig:
         self.__config__ = {
             "wandb_enabled": False,
             "module_version": self.__spec_version__,
+            "score_version": self.__score_version__,
         }
 
     def _read_environmental_variables(self) -> None:

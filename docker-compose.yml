@@ -31,6 +31,28 @@ services:
     ]
     volumes:
       - ${HOME}.cache/huggingface:/root/.cache/huggingface
-
-volumes:
-  llm-defender-subnet:
+      
+  llm-defender-api-latest:
+    restart: unless-stopped
+    pull_policy: always
+    user: "${UID}:${GID}"
+    image: ghcr.io/synapsec-ai/llm-defender-api:latest
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.bittensor:/.bittensor
+    env_file:
+      - .api-env
+  llm-defender-api:
+    restart: unless-stopped
+    pull_policy: always
+    user: "${UID}:${GID}"
+    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.bittensor:/.bittensor
+    env_file:
+      - .api-env

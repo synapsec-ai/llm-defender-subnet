@@ -1,0 +1,44 @@
+name: Push Docker image with version tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on:
+      group: synapsec-larger-runners
+    permissions:
+      contents: read  # Default permission to read repository contents
+      packages: write # Permission to write to GitHub Packages
+
+    env:
+      IMAGE_NAME: llm-defender-api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Determine Image Tag
+        id: tag
+        run: |
+          TAG=$(echo $GITHUB_REF | sed 's/refs\/tags\///')
+          echo "tag=${TAG}" >> $GITHUB_ENV
+
+      - name: Build Podman image
+        run: podman build -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.tag }} -f Dockerfile_API
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+      - name: Push Podman image
+        run: podman push ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.tag }}
+
+      - name: Store image details
+        run: echo "{name}={image::ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.tag }}}" >> $GITHUB_OUTPUT

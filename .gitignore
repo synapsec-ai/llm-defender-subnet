@@ -173,3 +173,5 @@ wandb
 
 # chromadb
 chroma
+
+.api-env

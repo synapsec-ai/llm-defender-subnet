@@ -14,3 +14,4 @@ from .sensitive_information import (
 )
 
 from .prompt_generator import PromptGenerator
+from .sensitive_information.generation.generator import SensitiveInfoGenerator

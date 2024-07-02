@@ -13,21 +13,24 @@ import asyncio
 import copy
 import pickle
 from argparse import ArgumentParser
-from typing import Tuple
-from sys import getsizeof
 from datetime import datetime
 from os import path, rename
 import secrets
 import time
 import bittensor as bt
 import numpy as np
-from collections import defaultdict 
 import datasets
+from collections import defaultdict 
+import logging
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
-from .sensitive_information.generation.generator import SensitiveInfoGenerator
+
+
+class SuppressPydanticFrozenFieldFilter(logging.Filter):
+    def filter(self, record):
+        return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -41,7 +44,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser, profile="validator")
         
-        self.timeout = 6
+        self.timeout = 18
         self.neuron_config = None
         self.wallet = None
         self.subtensor = None
@@ -58,8 +61,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = None
         self.query = None
         self.debug_mode = True
-        self.sensitive_info_generator = SensitiveInfoGenerator()
-        self.prompt_api = None
+        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -84,9 +86,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return True
 
-    def setup_bittensor_objects(
-        self, neuron_config
-    ) -> Tuple[bt.wallet, bt.subtensor, bt.dendrite, bt.metagraph]:
+    def setup_bittensor_objects(self, neuron_config):
         """Setups the bittensor objects"""
         try:
             wallet = bt.wallet(config=neuron_config)
@@ -99,7 +99,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
 
-        return wallet, subtensor, dendrite, metagraph
+        self.wallet = wallet
+        self.subtensor = subtensor
+        self.dendrite = dendrite
+        self.metagraph = metagraph
+
+        return self.wallet, self.subtensor, self.dendrite, self.metagraph
 
     def initialize_neuron(self) -> bool:
         """This function initializes the neuron.
@@ -130,37 +135,34 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+
+        # Suppress specific validation errors from pydantic
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
         
         bt.logging.info(
             f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
     
 
+
         # Setup the bittensor objects
-        wallet, subtensor, dendrite, metagraph = self.setup_bittensor_objects(
-            self.neuron_config
-        )
+        self.setup_bittensor_objects(self.neuron_config)
 
         bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {metagraph}\nSubtensor: {subtensor}\nWallet: {wallet}"
+            f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
         if not args or not args.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
-            if not self.validator_validation(metagraph, wallet, subtensor):
+            if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
 
             # Get the unique identity (UID) from the network
-            validator_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
+            validator_uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             bt.logging.info(f"Validator is running with UID: {validator_uid}")
 
             # Disable debug mode
             self.debug_mode = False
-
-        self.wallet = wallet
-        self.subtensor = subtensor
-        self.dendrite = dendrite
-        self.metagraph = metagraph
 
         if args:
             if args.load_state == "False":
@@ -359,6 +361,54 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         bt.logging.trace(f"Calculated miner scores: {self.scores}")
 
+    def determine_overall_scores(
+        self, specialization_bonus_n=5
+    ):
+
+        top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
+        top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
+        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
+
+        for uid, _ in enumerate(self.hotkeys):
+
+            analyzer_avg = (
+                self.prompt_injection_scores[uid]
+                + self.sensitive_information_scores[uid]
+            ) / 2
+            self.scores[uid] = analyzer_avg
+
+            top_prompt_injection_uid = 0
+            top_sensitive_informaiton_uid = 0
+
+            if uid in top_prompt_injection_uids:
+                top_prompt_injection_uid = 1
+                if self.prompt_injection_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.prompt_injection_scores[uid]
+
+            if uid in top_sensitive_information_uids:
+                top_sensitive_informaiton_uid = 1
+                if self.sensitive_information_scores[uid] > self.scores[uid]:
+                    self.scores[uid] = self.sensitive_information_scores[uid]
+
+            miner_hotkey = self.metagraph.hotkeys[uid]
+
+            if self.wandb_enabled:
+                wandb_logs = [
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_prompt_injection_uid": top_prompt_injection_uid
+                    },
+                    {
+                        f"{uid}:{miner_hotkey}_is_top_sensitive_information_uid": top_sensitive_informaiton_uid
+                    },
+                    {f"{uid}:{miner_hotkey}_total_score": self.scores[uid]},
+                ]
+
+                for wandb_log in wandb_logs:
+                    self.wandb_handler.log(wandb_log)
+
+        bt.logging.trace(f"Calculated miner scores: {self.scores}")
+
     def calculate_penalized_scores(
         self,
         score_weights,
@@ -470,7 +520,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""
-        if self.hotkeys is None:
+        if np.size(self.hotkeys) > 0:
             # Check if known state len matches with current metagraph hotkey length
             if len(self.hotkeys) == len(self.metagraph.hotkeys):
                 current_hotkeys = self.metagraph.hotkeys
@@ -479,9 +529,12 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         bt.logging.debug(
                             f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                         )
-                        bt.logging.debug(f"Score before reset: {self.scores[i]}")
+                        bt.logging.debug(f"Score before reset: {self.scores[i]}, Prompt Injeciton scores before reset: {self.prompt_injection_scores}, Sensitive Information scores before reset: {self.sensitive_information_scores}")
                         self.scores[i] = 0.0
-                        bt.logging.debug(f"Score after reset: {self.scores[i]}")
+                        self.prompt_injection_scores[i] = 0.0
+                        self.sensitive_information_scores[i] = 0.0
+                        self.miner_responses[self.hotkeys[i]] = []
+                        bt.logging.debug(f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}")
             else:
                 # Init default scores
                 bt.logging.info(
@@ -492,6 +545,37 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         else:
             self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+    
+    async def send_payload_message(self,
+        synapse_uuid, uids_to_query, prompt_to_analyze, timeout
+    ):
+        # Broadcast query to valid Axons
+        nonce = secrets.token_hex(24)
+        timestamp = str(int(time.time()))
+        data_to_sign = (
+            f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
+        )
+        bt.logging.trace(
+            f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}."
+        )
+        prompts = [prompt_to_analyze["prompt"]]
+        responses = await self.dendrite.forward(
+            uids_to_query,
+            LLMDefenderBase.SubnetProtocol(
+                analyzer=prompt_to_analyze["analyzer"],
+                subnet_version=self.subnet_version,
+                synapse_uuid=synapse_uuid,
+                synapse_signature=LLMDefenderBase.sign_data(
+                    hotkey=self.wallet.hotkey, data=data_to_sign
+                ),
+                synapse_nonce=nonce,
+                synapse_timestamp=timestamp,
+                synapse_prompts=prompts,
+            ),
+            timeout=timeout,
+            deserialize=True,
+        )
+        return responses
 
     def save_miner_state(self):
         """Saves the miner state to a file."""
@@ -724,30 +808,63 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             transformed_scores = np.power(scores, power)
             normalized_scores = (transformed_scores - transformed_scores.min()) / (transformed_scores.max() - transformed_scores.min())
             return normalized_scores
-
-        weights = power_scaling(self.scores)
-
         
+        def get_weights_list(weights):
+
+            max_value = 65535
+
+            # Find the maximum value in the array
+            original_max = np.max(weights)
+
+            # Scale the array so the highest value becomes max_value
+            if original_max == 0:
+                scaled_array = weights
+            else:
+                scaled_array = (weights / original_max) * max_value
+
+            # Round the scaled values to the nearest integer
+            rounded_array = np.round(scaled_array).astype(int)
+
+            # Convert the rounded array to a list
+            preprocessed_result_list = rounded_array.tolist()
+            result_list = []
+
+            for result in preprocessed_result_list:
+                if result == 0:
+                    result_list.append(1)
+                else:
+                    result_list.append(result)
+
+            return [(x/max(result_list)) for x in result_list]
+
+        if np.all(self.scores == 0.0):
+            power_weights = self.scores 
+        else:
+            power_weights = power_scaling(self.scores)
+
+        weights = get_weights_list(power_weights)
         
         bt.logging.info(f"Setting weights: {weights}")
-
-        bt.logging.debug(
-            f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
-        )
-        # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-        # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-        result = self.subtensor.set_weights(
-            netuid=self.neuron_config.netuid,  # Subnet to set weights on.
-            wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-            uids=self.metagraph.uids,  # Uids of the miners to set weights for.
-            weights=weights,  # Weights to set for the miners.
-            wait_for_inclusion=False,
-            version_key=self.subnet_version,
-        )
-        if result:
-            bt.logging.success("Successfully set weights.")
+        if not self.debug_mode:
+            bt.logging.debug(
+                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+            )
+            # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+            result = self.subtensor.set_weights(
+                netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+                wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+                uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+                weights=weights,  # Weights to set for the miners.
+                wait_for_inclusion=False,
+                version_key=self.subnet_version,
+            )
+            if result:
+                bt.logging.success("Successfully set weights.")
+            else:
+                bt.logging.error("Failed to set weights.")
         else:
-            bt.logging.error("Failed to set weights.")
+            bt.logging.info(f"Skipped setting weights due to debug mode")
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--

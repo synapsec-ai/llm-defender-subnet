@@ -80,9 +80,7 @@ def process_response(
         response_object["response"] = miner_response
         response_object["engine_data"] = engine_data
         response_object["scored_response"] = scored_response
-        response_object["analyzer_weight_scores"] = {
-            "weight": query["weight"],
-        }
+        response_object["weight"] = query["weight"]
 
         if validator.wandb_enabled:
             wandb_logs = [
@@ -333,10 +331,10 @@ def get_response_penalties(validator, response, hotkey, target):
     distance_penalty_multiplier = 1.0
     speed_penalty = 1.0
 
-    if base_penalty >= 20:
+    if sum([base_penalty, false_positive_penalty]) >= 20:
         distance_penalty_multiplier = 0.0
-    elif base_penalty > 0.0:
-        distance_penalty_multiplier = 1 - ((base_penalty / 2.0) / 10)
+    elif sum([base_penalty, false_positive_penalty]) > 0.0:
+        distance_penalty_multiplier = 1 - ((sum([base_penalty, false_positive_penalty]) / 20.0))
 
     if sum([false_positive_penalty, duplicate_penalty]) >= 20:
         speed_penalty = 0.0
