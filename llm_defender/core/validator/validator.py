@@ -62,7 +62,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.query = None
         self.debug_mode = True
         self.prompt_api = None
-        self.prompt_generation_disabled = False
+        self.prompt_generation_disabled = True
         self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
@@ -383,9 +383,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
                 bt.logging.trace(f'Validated prompt: {prompt}')
                 return prompt
-            else:
-                bt.logging.debug(f'Failed to validate prompt: {prompt}')
-                return {}
+            bt.logging.debug(f'Failed to validate prompt: {prompt}')
+            return {}
         except Exception as e:
             bt.logging.error(f"Failed to get prompt from prompt API: {e}")
 

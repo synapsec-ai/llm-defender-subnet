@@ -13,9 +13,14 @@ COPY llm_defender /llm-defender-subnet/llm_defender
 COPY pyproject.toml /llm-defender-subnet
 
 # Setup permissions
-RUN chown -R $USER_UID:$USER_GID /llm-defender-subnet/ && chown -R $USER_UID:$USER_GID /home/$USERNAME/.bittensor \
-&& chmod -R 755 /llm-defender-subnet && chmod -R 755 /home/$USERNAME/.bittensor \
-&& chown -R $USER_ID:$USER_GID /home/$USERNAME/.llm-defender-subnet && chmod 777 /home/$USERNAME/.llm-defender-subnet
+RUN chown -R $USER_UID:$USER_GID /llm-defender-subnet \
+&& chown -R $USER_UID:$USER_GID /home/$USERNAME/.bittensor \
+&& chown -R $USER_ID:$USER_GID /home/$USERNAME \
+&& chown -R $USER_ID:$USER_GID /home/$USERNAME/.llm-defender-subnet \
+&& chmod -R 755 /home/$USERNAME \
+&& chmod -R 755 /llm-defender-subnet \
+&& chmod -R 755 /home/$USERNAME/.bittensor \
+&& chmod -R 777 /home/$USERNAME/.llm-defender-subnet
 
 # Change to the user and do subnet installation
 USER $USERNAME

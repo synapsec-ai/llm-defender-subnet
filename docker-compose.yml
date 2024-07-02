@@ -1,4 +1,15 @@
 services:
+  llm-defender-validator-debug-mode:
+    restart: unless-stopped
+    user: llm-defender-validator-user
+    build:
+      context: .
+      dockerfile: validator.Dockerfile
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --debug_mode"
+    volumes:
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
+  
   llm-defender-validator-remote-vllm:
     restart: unless-stopped
     user: llm-defender-validator-user
@@ -8,7 +19,7 @@ services:
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
       - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
-      - ${HOME}/.bittensor:/home/llm-defender-validator-user/
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
 
   llm-defender-validator:
     depends_on: 
