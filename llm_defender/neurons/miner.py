@@ -29,7 +29,7 @@ def main(miner: LLMDefenderCore.SubnetMiner):
         blacklist_fn=miner.analysis_blacklist,
         priority_fn=miner.analysis_priority,
     ).attach(
-        forward_fn=miner.metric_forward,
+        forward_fn=miner.feedback_forward,
         blacklist_fn=miner.metric_blacklist,
         priority_fn=miner.metric_priority
     )

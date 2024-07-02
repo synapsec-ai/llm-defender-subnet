@@ -13,7 +13,7 @@ from .utils import (
 
 from .config import ModuleConfig
 
-from .protocol import SubnetProtocol, MetricsProtocol
+from .protocol import SubnetProtocol, FeedbackProtocol
 
 from .neuron import BaseNeuron
 

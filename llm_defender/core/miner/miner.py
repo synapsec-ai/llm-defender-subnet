@@ -46,7 +46,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             This function defines the priority based on which the validators are
             selected. Higher priority value means the input from the validator is
             processed faster.
-        metric_forward():
+        feedback_forward():
             This function is executed when a metric synapse is received from a validator.
         analysis_forward():
             The function is executed once the data from the validator has been
@@ -241,7 +241,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         return False
     
-    def blacklist_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.MetricsProtocol) -> Tuple[bool, str]:
+    def blacklist_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.FeedbackProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -301,7 +301,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
     
-    def metric_blacklist(self, synapse: LLMDefenderBase.MetricsProtocol) -> Tuple[bool, str]:
+    def metric_blacklist(self, synapse: LLMDefenderBase.FeedbackProtocol) -> Tuple[bool, str]:
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
 
@@ -309,7 +309,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
 
-    def metric_priority(self, synapse: LLMDefenderBase.MetricsProtocol) -> float:
+    def metric_priority(self, synapse: LLMDefenderBase.FeedbackProtocol) -> float:
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
 
@@ -317,7 +317,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
 
-    def priority_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.MetricsProtocol) -> float:
+    def priority_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.FeedbackProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -347,7 +347,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         return stake
     
-    def metric_forward(self, synapse: LLMDefenderBase.MetricsProtocol) -> LLMDefenderBase.MetricsProtocol:
+    def feedback_forward(self, synapse: LLMDefenderBase.FeedbackProtocol) -> LLMDefenderBase.FeedbackProtocol:
         """Forward function that accepts the metrics synapse."""
 
         bt.logging.info(f'Received response object for the synapse_uuid: {synapse.synapse_uuid}. Response object: {synapse.response_object}')

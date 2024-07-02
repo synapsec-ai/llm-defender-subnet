@@ -208,7 +208,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         # Send Synapse
         await self.dendrite.forward(
             self.metagraph.axons[target_uid],
-            LLMDefenderBase.MetricsProtocol(
+            LLMDefenderBase.FeedbackProtocol(
                 response_object=response_object,
                 synapse_uuid=synapse_uuid,
                 synapse_nonce=nonce,
@@ -296,27 +296,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             # Handle response
             response_data.append(response_object)
-            if response_object["response"]:
-                response_logger["miner_metrics"].append(response_object)
 
         bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
         bt.logging.info(
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
-
-        # If remote logging is disabled, do not log to remote server
-        if self.remote_logging is False:
-            bt.logging.debug(
-                f"Remote metrics not stored because remote logging is disabled."
-            )
-        else:
-            bt.logging.trace(f"Message to log: {response_logger}")
-            if not self.remote_logger(
-                hotkey=self.wallet.hotkey, message=response_logger
-            ):
-                bt.logging.warning(
-                    "Unable to push miner validation results to the logger service"
-                )
 
         return response_data
     
@@ -472,7 +456,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             "weight": 1.0
         }
 
-    async def load_prompt_to_validator_async(self, synapse_uuid, analyzer):
+    async def load_prompt_to_validator_async(self, analyzer):
         if analyzer == 'Prompt Injection':
             return await asyncio.to_thread(self.serve_prompt_injection_prompt)
         elif analyzer == 'Sensitive Information':

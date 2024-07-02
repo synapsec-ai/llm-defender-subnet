@@ -3,7 +3,7 @@ import bittensor as bt
 import pydantic
 
 
-class MetricsProtocol(bt.Synapse):
+class FeedbackProtocol(bt.Synapse):
     """This class implements the Synapse responsible for the
     feedback-loop back towards the miner after processing the response
     received from the miner"""

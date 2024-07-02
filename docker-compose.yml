@@ -1,34 +1,34 @@
 services:
   llm-defender-validator-remote-vllm:
     restart: unless-stopped
+    user: llm-defender-validator-user
     env_file:
       - .validator-env
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --wallet.path /.bittensor/wallets"
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
-      - llm-defender-subnet:/root/.llm-defender-subnet
-      - ${HOME}/.bittensor:/.bittensor
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/
 
   llm-defender-validator:
     depends_on: 
       - prompt-generation-api
     restart: unless-stopped
+    user: llm-defender-validator-user
     env_file:
       - .validator-env
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --wallet.path /.bittensor/wallets"
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
-      - llm-defender-subnet:/root/.llm-defender-subnet
-      - ${HOME}/.bittensor:/.bittensor
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
   prompt-generation-api:
     restart: unless-stopped
     image: vllm/vllm-openai:v0.5.0
-    env_file:
-      - .validator-env
     ports:
       - "8000:8000"
     deploy:
