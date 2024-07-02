@@ -519,11 +519,6 @@ if __name__ == "__main__":
         action="store_true",
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
     )
-    parser.add_argument(
-        "--disable_prompt_generation",
-        action="store_true",
-        help="Setting this value disables the prompt generation and only uses the dataset to query the miners.",
-    )
 
     parser.add_argument(
         "--log_level",

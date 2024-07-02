@@ -62,6 +62,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.query = None
         self.debug_mode = True
         self.prompt_api = None
+        self.prompt_generation_disabled = False
         self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
 
     def apply_config(self, bt_classes) -> bool:
@@ -165,6 +166,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             # Disable debug mode
             self.debug_mode = False
 
+            # Enable prompt generation
+            self.prompt_generation_disabled = False
+
         
         if args.load_state == "False":
             self.load_validator_state = False
@@ -185,7 +189,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.target_group = 0
 
         # Setup prompt generation
-        self.prompt_api = LLMDefenderCore.PromptGenerator(disabled=args.disable_prompt_generation, base_url=args.vllm_base_url, api_key=args.vllm_api_key)
+        self.prompt_api = LLMDefenderCore.PromptGenerator(prompt_generation_disabled=self.prompt_generation_disabled, base_url=args.vllm_base_url, api_key=args.vllm_api_key)
 
         return True
 

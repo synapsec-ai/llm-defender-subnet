@@ -20,7 +20,7 @@ class PromptGenerator:
         api_key: str = "default_api_key",
         base_url: str = "http://prompt-generation-api:8000/v1",
         model: str = "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
-        disabled: bool = False
+        prompt_generation_disabled: bool = False
     ):
 
         # Parameters
@@ -29,7 +29,7 @@ class PromptGenerator:
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
         self.model = model
-        self.disabled = disabled
+        self.prompt_generation_disabled = prompt_generation_disabled
 
         # Initialize the OpenAI client
         self.openai_client = openai.OpenAI(
@@ -180,7 +180,7 @@ class PromptGenerator:
     def construct(self, analyzer) -> dict:
 
         # Only run if prompt generation is enabled
-        if not self.disabled: 
+        if not self.prompt_generation_disabled: 
             if analyzer == "Prompt Injection":
                 try:
                     prompt = self.construct_pi_prompt()
