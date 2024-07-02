@@ -485,18 +485,18 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         # Remove the message from the notification field
         # self.notification_synapses.pop(prompt_hash, None)
         bt.logging.debug(
-            f'Processed prompt "{prompts}" with analyzer: {output["analyzer"]}'
+            f'Processed prompt "{prompts}" with analyzer: {synapse.analyzer}'
         )
         bt.logging.debug(
-            f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
+            f'Engine data for {synapse.analyzer} analyzer: {[response_output["engines"] for response_output in output]}'
         )
         if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
             bt.logging.success(
-                f'Processed payload synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+                f'Processed payload synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidences: {[response_output["confidence"] for response_output in output]} - UUIDs: {[response_output["synapse_uuid"] for response_output in output]}'
             )
         else:
             bt.logging.success(
-                f'Processed payload synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+                f'Processed payload synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidences: {[response_output["confidence"] for response_output in output]} - UUIDs: {[response_output["synapse_uuid"] for response_output in output]}'
             )
 
         self._update_validator_stats(hotkey, "processed_payload_synapse_count")
