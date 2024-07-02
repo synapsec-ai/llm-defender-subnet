@@ -153,7 +153,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
-        if not args or not args.debug_mode:
+        if not args.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
             if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
@@ -165,32 +165,27 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             # Disable debug mode
             self.debug_mode = False
 
-        if args:
-            if args.load_state == "False":
-                self.load_validator_state = False
-            else:
-                self.load_validator_state = True
-
-            if self.load_validator_state:
-                self.load_state()
-                self.load_miner_state()
-            else:
-                self.init_default_scores()
-
-            if args.max_targets:
-                self.max_targets = args.max_targets
-            else:
-                self.max_targets = 256
-
+        
+        if args.load_state == "False":
+            self.load_validator_state = False
         else:
-            # Setup initial scoring weights
-            self.init_default_scores()
-            self.max_targets = 256
+            self.load_validator_state = True
 
+        if self.load_validator_state:
+            self.load_state()
+            self.load_miner_state()
+        else:
+            self.init_default_scores()
+
+        if args.max_targets:
+            self.max_targets = args.max_targets
+        else:
+            self.max_targets = 256
+        
         self.target_group = 0
 
         # Setup prompt generation
-        self.prompt_api = LLMDefenderCore.PromptGenerator(disabled=args.disable_prompt_generation)
+        self.prompt_api = LLMDefenderCore.PromptGenerator(disabled=args.disable_prompt_generation, base_url=args.vllm_base_url, api_key=args.vllm_api_key)
 
         return True
 

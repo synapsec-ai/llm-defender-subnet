@@ -17,8 +17,8 @@ class PromptGenerator:
         self,
         presence_penalty: float = 0.5,
         frequency_penalty: float = 0.5,
-        api_key: str = os.getenv("VLLM_API_KEY", "no_api_key_needed_by_default"),
-        base_url: str = os.getenv("VLLM_BASE_URL", "http://prompt-generation-api:8000/v1"),
+        api_key: str = "default_api_key",
+        base_url: str = "http://prompt-generation-api:8000/v1",
         model: str = "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
         disabled: bool = False
     ):

@@ -2,8 +2,6 @@ services:
   llm-defender-validator-remote-vllm:
     restart: unless-stopped
     user: llm-defender-validator-user
-    env_file:
-      - .validator-env
     build:
       context: .
       dockerfile: validator.Dockerfile
@@ -17,8 +15,6 @@ services:
       - prompt-generation-api
     restart: unless-stopped
     user: llm-defender-validator-user
-    env_file:
-      - .validator-env
     build:
       context: .
       dockerfile: validator.Dockerfile

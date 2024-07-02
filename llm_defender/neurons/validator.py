@@ -532,6 +532,20 @@ if __name__ == "__main__":
         choices=["INFO", "DEBUG", "TRACE"],
         help="Determine the logging level used by the subnet modules",
     )
+
+    parser.add_argument(
+        "--vllm_base_url",
+        type=str,
+        default="http://prompt-generation-api:8000/v1",
+        help="Determine the vLLM base url used for the prompt generation",
+    )
+
+    parser.add_argument(
+        "--vllm_api_key",
+        type=str,
+        default="default_api_key",
+        help="Determine the vLLM api key used for the prompt generation",
+    )
     
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderCore.SubnetValidator(parser=parser)
