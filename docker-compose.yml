@@ -29,6 +29,8 @@ services:
   prompt-generation-api:
     restart: unless-stopped
     image: vllm/vllm-openai:v0.5.0
+    env_file:
+      - .validator-env
     ports:
       - "8000:8000"
     deploy:
@@ -72,5 +74,5 @@ services:
     env_file:
       - .api-env
 
-  volumes:
-    llm-defender-subnet:
+volumes:
+  llm-defender-subnet:
