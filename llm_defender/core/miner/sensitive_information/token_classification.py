@@ -95,8 +95,8 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
 
     def _calculate_confidence(self):
         # Determine the confidence based on the score
-        if self.output[-1]["token_data"]:
-            highest_score_entity = max(self.output[-1]["token_data"], key=lambda x: x['score'])
+        if self.outputs[-1]["token_data"]:
+            highest_score_entity = max(self.outputs[-1]["token_data"], key=lambda x: x['score'])
             return float(highest_score_entity["score"])
         
         return 0.0
