@@ -5,7 +5,6 @@ Validator docstring here
 # Import standard modules
 import asyncio
 import hashlib
-import os
 import secrets
 import sys
 import time
@@ -373,54 +372,25 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
                 time.sleep(bt.__blocktime__/3)
                 continue
+            
+            # Generate prompt to be analyzed by the miners
+            synapse_uuid = str(uuid4())
+            analyzer = random.choice(['Prompt Injection', 'Sensitive Information'])
+            prompt_to_analyze = await validator.load_prompt_to_validator_async(
+                analyzer=analyzer
+            )
 
-            if validator.target_group == 0:
+            bt.logging.debug(f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}")
 
-                synapse_uuid = str(uuid4())
-                analyzer = random.choice(['Prompt Injection', 'Sensitive Information'])
-                prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    analyzer=analyzer
-                )
-
-                bt.logging.debug(f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}")
-
-                is_prompt_invalid = (
-                    prompt_to_analyze is None
-                    or "analyzer" not in prompt_to_analyze.keys()
-                    or "label" not in prompt_to_analyze.keys()
-                    or "weight" not in prompt_to_analyze.keys()
-                )
-                if is_prompt_invalid:
-                    handle_invalid_prompt(validator)
-                    continue
-
-                # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
-                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
-                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
-
-                # notification_responses = send_notification_synapse(
-                #     synapse_uuid=synapse_uuid,
-                #     validator=validator,
-                #     axons_with_valid_ip=axons_with_valid_ip,
-                #     prompt_to_analyze=prompt_to_analyze
-                # )
-                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(e  # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
-                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
-                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
-
-                # notification_responses = send_notification_synapse(
-                #     synapse_uuid=synapse_uuid,
-                #     validator=validator,
-                #     axons_with_valid_ip=axons_with_valid_ip,
-                #     prompt_to_analyze=prompt_to_analyze
-                # )
-                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
-
-                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
-                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')ntry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
-
-                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
-                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')
+            is_prompt_invalid = (
+                prompt_to_analyze is None
+                or "analyzer" not in prompt_to_analyze.keys()
+                or "label" not in prompt_to_analyze.keys()
+                or "weight" not in prompt_to_analyze.keys()
+            )
+            if is_prompt_invalid:
+                handle_invalid_prompt(validator)
+                continue
 
             # Get list of UIDs to send the payload synapse
             (uids_to_query, list_of_uids, uids_not_to_query) = (
