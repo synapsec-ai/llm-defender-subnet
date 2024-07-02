@@ -6,11 +6,11 @@ services:
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet[validator] && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
+    user: "1000:1000"
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --wallet.path /.bittensor/wallets"
     volumes:
-      - ./:/var/run/llm-defender-subnet/
       - llm-defender-subnet:/root/.llm-defender-subnet
-      - ~/.bittensor/:/root/
+      - ${HOME}/.bittensor:/.bittensor
 
   llm-defender-validator:
     depends_on: 
@@ -18,14 +18,14 @@ services:
     restart: unless-stopped
     env_file:
       - .validator-env
+    user: "1000:1000"
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e /var/run/llm-defender-subnet[validator] && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --wallet.path /.bittensor/wallets"
     volumes:
-      - ./:/var/run/llm-defender-subnet/
       - llm-defender-subnet:/root/.llm-defender-subnet
-      - ~/.bittensor/:/root/
+      - ${HOME}/.bittensor:/.bittensor
   prompt-generation-api:
     restart: unless-stopped
     image: vllm/vllm-openai:v0.5.0
