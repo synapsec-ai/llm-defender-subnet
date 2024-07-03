@@ -23,6 +23,8 @@ def process_response(
 
     for response in responses:
 
+        bt.logging.trace(f"TEMP LOGGING RESPONSE: {response}")
+
         # Get the default response object
         response_object = LLMDefenderCore.sensitive_information_scoring.get_response_object(
             uid,
