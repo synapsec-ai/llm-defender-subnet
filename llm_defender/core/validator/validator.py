@@ -774,7 +774,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     result_list.append(result)
 
             if all(x == 1 for x in result_list):
-                return [(1/len(result_list)) for _ in result_list]
+                return [(x/max_value) for x in result_list]
             else:
                 return [(x/max(result_list)) for x in result_list]
 
