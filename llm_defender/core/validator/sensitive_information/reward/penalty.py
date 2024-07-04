@@ -40,6 +40,8 @@ def check_false_positive_penalty(uid, response, target):
     penalty = 0.0
 
     penalty += _check_for_false_positives(response, target)
+    
+    bt.logging.trace(f"False positive penalty score: {penalty}")
 
     return penalty
 
@@ -81,6 +83,8 @@ def check_duplicate_penalty(uid, miner_responses, response):
         # Apply penalty if invalid values are provided to the function
         return 20.0
     
+    bt.logging.trace(f"Dupicate penalty score: {penalty}")
+
     return penalty
 
 def check_base_penalty(uid, miner_responses, response):
@@ -153,5 +157,7 @@ def check_base_penalty(uid, miner_responses, response):
 
     penalty = 0.0
     penalty += _check_confidence_validity(uid, response)
+
+    bt.logging.trace(f"Base penalty score: {penalty}")
 
     return penalty

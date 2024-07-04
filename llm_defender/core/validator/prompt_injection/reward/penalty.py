@@ -41,6 +41,8 @@ def check_false_positive_penalty(response, target):
 
     penalty += _check_for_false_positives(response, target)
 
+    bt.logging.trace(f"False positive penalty score: {penalty}")
+
     return penalty
 
 
@@ -84,6 +86,8 @@ def check_duplicate_penalty(uid, miner_responses, response):
 
     # penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
     # penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
+
+    bt.logging.trace(f"Duplicate penalty score: {penalty}")
 
     return penalty
 
@@ -172,5 +176,7 @@ def check_base_penalty(uid, miner_responses, response):
 
     penalty = 0.0
     penalty += _check_response_validity(uid, response)
+
+    bt.logging.trace(f"Base penalty score: {penalty}")
 
     return penalty
