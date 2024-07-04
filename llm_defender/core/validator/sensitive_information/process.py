@@ -202,6 +202,8 @@ def calculate_analyzer_score(
         )
     )
 
+    bt.logging.trace(f"Disance scores for hotkey: {hotkey} are: distance_score: {distance_score}, normalized_distance_score{normalized_distance_score}, binned_distance_score: {binned_distance_score}")
+
     # Calculate speed score
     speed_score = LLMDefenderCore.sensitive_information_scoring.calculate_subscore_speed(
         validator.timeout, response_time
