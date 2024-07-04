@@ -6,7 +6,6 @@ features and their engines.
 import asyncio
 import bittensor as bt
 
-
 class EngineResponse:
     """
     This class implements a consistent way of representing different
@@ -333,3 +332,35 @@ def validate_validator_api_prompt_output(api_output):
         bt.logging.trace("Prompt API query validation succeeded.")
 
     return good_output
+
+def subnet_logger(severity: str, message: str):
+    """This method is a wrapper for the bt.logging function to add extra
+    functionality around the native logging capabilities. This method is
+    used together with the neuron_logger() method."""
+    
+    severity_emoji = {
+        "SUCCESS": chr(0x2705),
+        "ERROR": chr(0x274C),
+        "WARNING": chr(0x1F6A8),
+        "INFO": chr(0x1F4A1),
+        "DEBUG": chr(0x1F527),
+        "TRACE": chr(0x1F50D),
+    }
+
+    if severity.upper() == "SUCCESS":
+        bt.logging.success(msg=message, prefix=severity_emoji["SUCCESS"])
+
+    elif severity.upper() == "ERROR":
+        bt.logging.error(msg=message, prefix=severity_emoji["ERROR"])
+
+    elif severity.upper() == "WARNING":
+        bt.logging.warning(msg=message, prefix=severity_emoji["WARNING"])
+
+    elif severity.upper() == "INFO":
+        bt.logging.info(msg=message, prefix=severity_emoji["INFO"])
+
+    elif severity.upper() == "DEBUG":
+        bt.logging.debug(msg=message, prefix=severity_emoji["DEBUG"])
+
+    if severity.upper() == "TRACE":
+        bt.logging.trace(msg=message, prefix=severity_emoji["TRACE"])

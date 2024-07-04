@@ -87,7 +87,15 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+            
+        # Enable healthcheck API if it is to be enabled
+        if not args.disable_healthcheck:
+            self.healthcheck_api = LLMDefenderBase.HealthCheckAPI(
+                host=args.healthcheck_host, port=args.healthcheck_port
+            )
 
+            # Run healthcheck API
+            self.healthcheck_api.run()
 
 
         self.validator_min_stake = args.validator_min_stake

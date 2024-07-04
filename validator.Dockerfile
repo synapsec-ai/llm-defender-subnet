@@ -1,4 +1,4 @@
-from python:3.10.14-bookworm
+FROM python:3.10.14-bookworm
 
 ARG USER_UID=10001
 ARG USER_GID=$USER_UID

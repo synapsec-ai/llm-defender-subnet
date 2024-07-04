@@ -172,6 +172,26 @@ if __name__ == "__main__":
         help="Determine the logging level used by the subnet modules",
     )
 
+    parser.add_argument(
+        "--disable_healthcheck",
+        action="store_true",
+        help="Set this argument if you want to disable the healthcheck API. Enabled by default."
+    )
+
+    parser.add_argument(
+        "--healthcheck_host",
+        type=str,
+        default="0.0.0.0",
+        help="Set the healthcheck API host. Defaults to 0.0.0.0 to expose it outside of the container.",
+    )
+
+    parser.add_argument(
+        "--healthcheck_port",
+        type=int,
+        default=6000,
+        help="Determine the port used by the healthcheck API.",
+    )
+
     # Create a miner based on the Class definitions
     subnet_miner = LLMDefenderCore.SubnetMiner(parser=parser)
 

@@ -137,6 +137,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+        
+        # Enable healthcheck API if it is to be enabled
+        if not args.disable_healthcheck:
+            self.healthcheck_api = LLMDefenderBase.HealthCheckAPI(
+                host=args.healthcheck_host, port=args.healthcheck_port
+            )
+
+            # Run healthcheck API
+            self.healthcheck_api.run()
 
         # Suppress specific validation errors from pydantic
         bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())

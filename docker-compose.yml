@@ -2,6 +2,8 @@ services:
   llm-defender-validator-debug-mode:
     restart: unless-stopped
     user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
     build:
       context: .
       dockerfile: validator.Dockerfile
@@ -13,6 +15,8 @@ services:
   llm-defender-validator-remote-vllm:
     restart: unless-stopped
     user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
     build:
       context: .
       dockerfile: validator.Dockerfile
@@ -26,6 +30,8 @@ services:
       - prompt-generation-api
     restart: unless-stopped
     user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
     build:
       context: .
       dockerfile: validator.Dockerfile
