@@ -304,10 +304,10 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
         response, target
     )
     base += LLMDefenderCore.prompt_injection_penalty.check_base_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
     duplicate += LLMDefenderCore.prompt_injection_penalty.check_duplicate_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
 
     bt.logging.trace(

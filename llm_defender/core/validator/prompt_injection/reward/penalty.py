@@ -46,7 +46,7 @@ def check_false_positive_penalty(response, target):
     return penalty
 
 
-def check_duplicate_penalty(uid, miner_responses, response):
+def check_duplicate_penalty(uid, response):
     """
     This function checks the total penalty score within duplicate category.
 
@@ -92,7 +92,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
     return penalty
 
 
-def check_base_penalty(uid, miner_responses, response):
+def check_base_penalty(uid, response):
     """
     This function checks the total penalty score within the base category.
 
@@ -171,7 +171,7 @@ def check_base_penalty(uid, miner_responses, response):
 
     if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
-        bt.logging.debug(f"Validation failed: {uid}, {miner_responses}, {response}")
+        bt.logging.debug(f"Validation failed: {uid}, {response}")
         return 10.0
 
     penalty = 0.0

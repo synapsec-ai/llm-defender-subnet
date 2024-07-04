@@ -300,13 +300,13 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
     false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
     false_positive += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
-        uid, response, target
+        response, target
     )
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
     duplicate += LLMDefenderCore.sensitive_information_penalty.check_duplicate_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
 
     bt.logging.trace(

@@ -2,7 +2,7 @@ import bittensor as bt
 from llm_defender.base import validate_uid
 import bittensor as bt
 
-def check_false_positive_penalty(uid, response, target):
+def check_false_positive_penalty(response, target):
     """
     This function checks the total penalty score within the false positive category.
 
@@ -46,7 +46,7 @@ def check_false_positive_penalty(uid, response, target):
     return penalty
 
 
-def check_duplicate_penalty(uid, miner_responses, response):
+def check_duplicate_penalty(uid, response):
     """
     This function checks the total penalty score within duplicate category.
 
@@ -87,7 +87,7 @@ def check_duplicate_penalty(uid, miner_responses, response):
 
     return penalty
 
-def check_base_penalty(uid, miner_responses, response):
+def check_base_penalty(uid, response):
     """
     This function checks the total penalty score within the base category.
 
