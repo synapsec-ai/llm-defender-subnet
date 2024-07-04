@@ -293,13 +293,6 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
     responses received from the miner.
     """
 
-    # If hotkey is not found from list of responses, penalties
-    # cannot be calculated.
-    if not validator.miner_responses:
-        return 5.0, 5.0, 5.0
-    if not hotkey in validator.miner_responses.keys():
-        return 5.0, 5.0, 5.0
-
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
