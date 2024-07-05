@@ -791,7 +791,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 else:
                     result_list.append(result)
 
-            return [(x/max(result_list)) for x in result_list]
+            if all(x == 1 for x in result_list):
+                return [(x/max_value) for x in result_list]
+            else:
+                return [(x/max(result_list)) for x in result_list]
 
         if np.all(self.scores == 0.0):
             power_weights = self.scores 

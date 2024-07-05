@@ -202,6 +202,8 @@ def calculate_analyzer_score(
         )
     )
 
+    bt.logging.trace(f"Disance scores for hotkey: {hotkey} are: distance_score: {distance_score}, normalized_distance_score{normalized_distance_score}, binned_distance_score: {binned_distance_score}")
+
     # Calculate speed score
     speed_score = LLMDefenderCore.sensitive_information_scoring.calculate_subscore_speed(
         validator.timeout, response_time
@@ -292,26 +294,19 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
     responses received from the miner.
     """
 
-    # If hotkey is not found from list of responses, penalties
-    # cannot be calculated.
-    if not validator.miner_responses:
-        return 5.0, 5.0, 5.0
-    if not hotkey in validator.miner_responses.keys():
-        return 5.0, 5.0, 5.0
-
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
     false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
     false_positive += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
-        uid, response, target
+        response, target
     )
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
     duplicate += LLMDefenderCore.sensitive_information_penalty.check_duplicate_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
 
     bt.logging.trace(
