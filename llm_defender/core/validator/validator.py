@@ -234,6 +234,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Check each response
         for i, response in enumerate(responses):
+
+            bt.logging.trace(f"TEMP LOGGING: VALIDATOR PROCESS RESPONSE: {resposne}")
+
             if query["analyzer"] == "Prompt Injection":
                 responses_object, responses_invalid_uids, responses_valid_uids = (
                     LLMDefenderCore.prompt_injection_process.process_response(
