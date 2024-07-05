@@ -178,13 +178,13 @@ def format_responses(
     validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
 ):
     # Process the responses
-    response_data = validator.process_responses(
+    response_data, responses_invalid_uids, responses_valid_uids = validator.process_responses(
         query=prompt_to_analyze,
         processed_uids=list_of_uids,
         responses=responses,
         synapse_uuid=synapse_uuid,
     )
-    return response_data
+    return response_data, responses_invalid_uids, responses_valid_uids
 
 
 def handle_invalid_prompt(validator):
@@ -463,7 +463,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 message=f"Received responses: {responses}"
             )
 
-            response_data = format_responses(
+            response_data, responses_invalid_uids, responses_valid_uids = format_responses(
                 validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
             )
             attach_response_to_validator(validator, response_data)
@@ -517,9 +517,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
+
             validator.neuron_logger(
                 severity="SUCCESS", 
-                message=f"Iteration completed successfully. Scored {len(list_of_uids)} neurons."
+                message=f"Processed {len(list_of_uids)} neurons out of which {len(responses_valid_uids)} provided valid response and {len(responses_invalid_uids)} invalid response."
             )
             validator.step += 1
 

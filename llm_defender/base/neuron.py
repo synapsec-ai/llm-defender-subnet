@@ -185,30 +185,18 @@ class BaseNeuron:
             # Use utils.subnet_logger() to write the logs
             LLMDefenderBase.utils.subnet_logger(severity=severity, message=message)
 
-            # And append to healthcheck metrics within this method
-            if severity.upper() == "SUCCESS":
-                # Append errors to healthcheck API if enabled
-                if self.healthcheck_api:
+            # Append extra information to to the logs if healthcheck API is enabled
+            if self.healthcheck_api:
+                if severity.upper() in ("SUCCESS", "ERROR", "WARNING"):
+
+                    event_severity = severity.lower()
+
+                    # Metric
                     self.healthcheck_api.append_metric(
-                        metric_name="log_entries.success", value=1
+                        metric_name=f"log_entries.{event_severity}", value=1
                     )
 
-            elif severity.upper() == "ERROR":
-                # Append errors to healthcheck API if enabled
-                if self.healthcheck_api:
+                    # Store event
                     self.healthcheck_api.add_event(
-                        event_name="error", event_data=message
-                    )
-                    self.healthcheck_api.append_metric(
-                        metric_name="log_entries.error", value=1
-                    )
-
-            elif severity.upper() == "WARNING":
-                # Append warnings to healthcheck API if enabled
-                if self.healthcheck_api:
-                    self.healthcheck_api.add_event(
-                        event_name="warning", event_data=message
-                    )
-                    self.healthcheck_api.append_metric(
-                        metric_name="log_entries.warning", value=1
+                        event_name=f"{event_severity}", event_data=message
                     )

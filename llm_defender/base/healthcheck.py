@@ -31,11 +31,11 @@ from typing import Dict
 import datetime
 import uvicorn
 import threading
-import bittensor as bt
 
 
 class HealthCheckResponse(BaseModel):
     status: bool
+    checks: Dict
     timestamp: str
 
 
@@ -71,12 +71,13 @@ class HealthCheckAPI:
             "responses.total_valid_responses": 0,
             "responses.total_invalid_responses": 0,
             "weights.targets": 0,
-            "weights.last_set_timestamp": None
+            "weights.last_set_timestamp": None,
         }
         self.healthy = True
         self.health_events = {
             "warning": [],
             "error": [],
+            "success": []
         }
 
         # App
@@ -101,10 +102,10 @@ class HealthCheckAPI:
     def _healthcheck(self):
         try:
             # Update health status when the /healthcheck API is invoked
-            self.healthy = self._get_health()
+            self.healthy, checks = self._get_health()
 
             # Return status
-            return {"status": self.healthy, "timestamp": str(datetime.datetime.now())}
+            return {"status": self.healthy, "checks": checks, "timestamp": str(datetime.datetime.now())}
         except Exception:
             return {"status": False, "timestamp": str(datetime.datetime.now())}
 
@@ -117,40 +118,69 @@ class HealthCheckAPI:
             }
         except Exception:
             return {"status": False, "timestamp": str(datetime.datetime.now())}
-        
+
     def _healthcheck_events(self):
         try:
             # Return the events collected by the HealthCheckAPI
-            return {"data": self.health_events, "timestamp": str(datetime.datetime.now())}
+            return {
+                "data": self.health_events,
+                "timestamp": str(datetime.datetime.now()),
+            }
         except Exception:
             return {"status": False, "timestamp": str(datetime.datetime.now())}
-        
-    def _get_health(self):
+
+    def _get_health(self) -> tuple[bool,dict]:
         """This method is responsible for updating the health status based on the metrics"""
+        
+        # By default everything is healthy
+        health_checks = {
+            "is_neuron_running": True
+        }
+        health_status = True
 
         # Is Neuron running?
         if self.health_metrics["neuron_running"] is not True:
-            return False
+            health_checks["is_neuron_running"] = False
+            health_status = False
 
         # If all checks passed we can conclude the neuron is healthy
-        return True
+        return health_status, health_checks
 
     def run(self):
         """This method runs the HealthCheckAPI"""
-        threading.Thread(target=uvicorn.run, args=(self.app,), kwargs={"host": self.host, "port": self.port}, daemon=True).start()
+        threading.Thread(
+            target=uvicorn.run,
+            args=(self.app,),
+            kwargs={"host": self.host, "port": self.port},
+            daemon=True,
+        ).start()
 
-    def add_event(self, event_name: str, event_data: str):
+    def add_event(self, event_name: str, event_data: str) -> bool:
         """This method adds an event to self.health_events dictionary"""
-        if event_name == "warning" and isinstance(event_data, str):
-            self.health_events["warning"].append(event_data)
-        elif event_name == "error" and isinstance(event_data, str):
-            self.health_events["error"].append(event_data)
-        else:
-            return False
+        if isinstance(event_name, str) and event_name.upper() in (
+            "SUCCESS",
+            "ERROR",
+            "WARNING",
+        ):
+
+            # Append the received event under the correct key if it is str
+            if isinstance(event_data, str) and not isinstance(event_data, bool):
+                event_severity = event_name.lower()
+                self.health_events[event_severity].append(
+                    {"timestamp": str(datetime.datetime.now()), "message": event_data}
+                )
+
+                # Reduce the number of events if more than 250
+                if len(self.health_events[event_severity]) > 250:
+                    self.health_events[event_severity] = self.health_events[
+                        event_severity
+                    ][-250:]
+
+                return True
 
         return True
 
-    def append_metric(self, metric_name: str, value: int | bool):
+    def append_metric(self, metric_name: str, value: int | bool) -> bool:
         """This method increases the metric counter by the value defined
         in the counter. If the counter is bool, sets the metric value to
         the provided value. This function must be executed whenever the

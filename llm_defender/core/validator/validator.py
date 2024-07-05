@@ -259,12 +259,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Initiate the response objects
         response_data = []
-        response_logger = {
-            "logger": "validator",
-            "validator_hotkey": self.wallet.hotkey.ss58_address,
-            "timestamp": str(time.time()),
-            "miner_metrics": [],
-        }
         responses_invalid_uids = []
         responses_valid_uids = []
 
@@ -310,7 +304,18 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
-        return response_data
+        # Add metrics
+        self.healthcheck_api.append_metric(
+            metric_name = "responses.total_valid_responses",
+            value = len(responses_valid_uids)
+        )
+        
+        self.healthcheck_api.append_metric(
+            metric_name = "responses.total_invalid_responses",
+            value = len(responses_invalid_uids)
+        )
+        
+        return response_data, responses_invalid_uids, responses_valid_uids
     
 
     def determine_overall_scores(
