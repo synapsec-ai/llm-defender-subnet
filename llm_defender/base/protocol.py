@@ -14,10 +14,7 @@ class SubnetProtocol(bt.Synapse):
     """
 
     # Parse variables
-    output: List[dict] | None = pydantic.Field(
-        ...,
-        description="Miner outputs for prompts sent in by validators.",
-    )
+    output: List | None = None
 
     synapse_uuid: str = pydantic.Field(
         ...,
