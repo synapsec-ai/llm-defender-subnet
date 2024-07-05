@@ -481,6 +481,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         bt.logging.debug(f"Setting synapse.output to: {output}")
         synapse.output = output
+        bt.logging.debug(f"Synapse: {synapse}")
 
         # Remove the message from the notification field
         # self.notification_synapses.pop(prompt_hash, None)
