@@ -77,30 +77,6 @@ def test_process_responses(validator_instance):
         validator_instance.process_responses(processed_uids, query, responses, synapse_uuid)
 
 
-def test_get_api_prompt_success(mock_post_success, validator_instance):
-    prompt = validator_instance.get_api_prompt(
-        hotkey='mock_hotkey',
-        signature='mock_signature',
-        synapse_uuid='mock_synapse_uuid',
-        timestamp='mock_timestamp',
-        nonce='mock_nonce',
-        miner_hotkeys=['mock_miner_hotkey']
-    )
-    assert prompt == {"prompt": "Your mock prompt data"}
-
-
-def test_get_api_prompt_failure(mock_post_failure, validator_instance):
-    prompt = validator_instance.get_api_prompt(
-        hotkey='mock_hotkey',
-        signature='mock_signature',
-        synapse_uuid='mock_synapse_uuid',
-        timestamp='mock_timestamp',
-        nonce='mock_nonce',
-        miner_hotkeys=['mock_miner_hotkey']
-    )
-    assert prompt == {}
-
-
 def test_save_miner_state(validator_instance):
     assert validator_instance.save_miner_state() is None
 

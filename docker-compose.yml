@@ -1,46 +1,68 @@
-version: '3'
 services:
-  validator1:
-    image: llm-defender-subnet
+  llm-defender-validator-debug-mode:
+    restart: unless-stopped
+    user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
     build:
       context: .
-      dockerfile: Dockerfile   
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && ls -la /var/run/llm-defender-subnet/ && ls -la /var/run/llm-defender-subnet/llm_defender && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level DEBUG"
+      dockerfile: validator.Dockerfile
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --debug_mode"
     volumes:
-      - .bittensor:/tmp/.bittensor
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
   
-  # validator2:
-  #   image: llm-defender-subnet
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile   
-  #   command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${VALIDATOR_PIP_INSTALL_PATH} && python3 /var/run/llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${VALIDATOR2_WALLET} --wallet.hotkey ${VALIDATOR2_HOTKEY} --log_level DEBUG"
-  #   volumes:
-  #     - .:/var/run/llm-defender-subnet
-  #   networks:
-  #     llm-defender-subnet-network-development:
-  #       ipv4_address: ${VALIDATOR2_IP}
+  llm-defender-validator-remote-vllm:
+    restart: unless-stopped
+    user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
+    build:
+      context: .
+      dockerfile: validator.Dockerfile
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
+    volumes:
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
 
-  miner1:
-    image: llm-defender-subnet
+  llm-defender-validator:
+    depends_on: 
+      - prompt-generation-api
+    restart: unless-stopped
+    user: llm-defender-validator-user
+    ports:
+      - "6000:6000"
     build:
       context: .
-      dockerfile: Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER_WALLET} --wallet.hotkey ${MINER_HOTKEY} --axon.port ${MINER_PORT} --validator_min_stake 0 --axon.external_ip ${MINER_IP} --log_level DEBUG"
+      dockerfile: validator.Dockerfile
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
-      - .bittensor:/tmp/.bittensor
-  miner2:
-    image: llm-defender-subnet
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: /bin/bash -c "source /tmp/.venv/bin/activate && pip install -e ${MINER_PIP_INSTALL_PATH} && pip uninstall -y uvloop && python3 /var/run/llm-defender-subnet/llm_defender/neurons/miner.py --netuid ${NETUID} --subtensor.network ${SUBTENSOR_NETWORK} --wallet.path ${WALLET_PATH} --wallet.name ${MINER2_WALLET} --wallet.hotkey ${MINER2_HOTKEY} --axon.port ${MINER2_PORT} --validator_min_stake 0 --axon.external_ip ${MINER2_IP} --log_level DEBUG"
+      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
+  prompt-generation-api:
+    restart: unless-stopped
+    image: vllm/vllm-openai:v0.5.0
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ipc: host
+    command: [
+      "--model", "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
+      "--revision", "gptq-8bit-128g-actorder_True",
+      "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
+    ]
     volumes:
-      - .bittensor:/tmp/.bittensor
+      - ${HOME}.cache/huggingface:/root/.cache/huggingface
+  
   llm-defender-api-latest:
     restart: unless-stopped
     pull_policy: always
-    user: "${UID}:${GID}"
     image: ghcr.io/synapsec-ai/llm-defender-api:latest
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
@@ -52,8 +74,7 @@ services:
   llm-defender-api:
     restart: unless-stopped
     pull_policy: always
-    user: "${UID}:${GID}"
-    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2
+    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
       - "8080:8080"
@@ -61,3 +82,6 @@ services:
       - ${HOME}/.bittensor:/.bittensor
     env_file:
       - .api-env
+
+volumes:
+  llm-defender-subnet:
