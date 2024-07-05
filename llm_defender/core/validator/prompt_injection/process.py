@@ -21,7 +21,7 @@ def process_response(
 
     response_objects = []
 
-    for response in responses:
+    for response in responses.output:
 
         # Get the default response object
         response_object = LLMDefenderCore.prompt_injection_scoring.get_response_object(
@@ -37,8 +37,8 @@ def process_response(
 
         # Set the score for invalid responses or responses that fail nonce validation to 0.0
         if not LLMDefenderCore.prompt_injection_scoring.validate_response(
-            hotkey, response.output
-        ) or not validator.validate_nonce(response.output["nonce"]):
+            hotkey, response
+        ) or not validator.validate_nonce(response["nonce"]):
             bt.logging.debug(f"Empty response or nonce validation failed: {response}")
             
             scored_response = LLMDefenderCore.prompt_injection_scoring.get_engine_response_object()
@@ -50,19 +50,19 @@ def process_response(
             response_time = response.dendrite.process_time
 
             scored_response = calculate_analyzer_score(
-                prompt, validator, response.output, target, response_time, hotkey
+                prompt, validator, response, target, response_time, hotkey
             )
 
             miner_response = {
-                "confidence": response.output["confidence"],
-                "timestamp": response.output["timestamp"],
-                "category": response.output["analyzer"],
+                "confidence": response["confidence"],
+                "timestamp": response["timestamp"],
+                "category": response["analyzer"],
                 "response_time": response_time,
             }
 
             text_class = [
                 data
-                for data in response.output["engines"]
+                for data in response["engines"]
                 if "text_classification" in data["name"]
             ]
 
@@ -75,10 +75,10 @@ def process_response(
             if uid not in responses_valid_uids:
                 responses_valid_uids.append(uid)
 
-            if response.output["subnet_version"]:
-                if response.output["subnet_version"] > validator.subnet_version:
+            if response["subnet_version"]:
+                if response["subnet_version"] > validator.subnet_version:
                     bt.logging.warning(
-                        f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.'
+                        f'Received a response from a miner with higher subnet version ({response["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.'
                     )
 
             # Populate response data
