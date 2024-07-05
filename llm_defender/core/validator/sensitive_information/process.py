@@ -21,7 +21,9 @@ def process_response(
 
     response_objects = []
 
-    for response in responses:
+    for response_tuple in responses:
+
+        response = response_tuple[1]
 
         bt.logging.trace(f"TEMP LOGGING RESPONSE: {response}")
 
