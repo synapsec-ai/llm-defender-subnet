@@ -202,6 +202,8 @@ def calculate_analyzer_score(
         )
     )
 
+    bt.logging.trace(f"Disance scores for hotkey: {hotkey} are: distance_score: {distance_score}, normalized_distance_score{normalized_distance_score}, binned_distance_score: {binned_distance_score}")
+
     # Calculate speed score
     speed_score = LLMDefenderCore.prompt_injection_scoring.calculate_subscore_speed(
         validator.timeout, response_time
@@ -293,13 +295,6 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
     responses received from the miner.
     """
 
-    # If hotkey is not found from list of responses, penalties
-    # cannot be calculated.
-    if not validator.miner_responses:
-        return 5.0, 5.0, 5.0
-    if not hotkey in validator.miner_responses.keys():
-        return 5.0, 5.0, 5.0
-
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
@@ -309,10 +304,10 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
         response, target
     )
     base += LLMDefenderCore.prompt_injection_penalty.check_base_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
     duplicate += LLMDefenderCore.prompt_injection_penalty.check_duplicate_penalty(
-        uid, validator.miner_responses[hotkey], response
+        uid, response
     )
 
     bt.logging.trace(

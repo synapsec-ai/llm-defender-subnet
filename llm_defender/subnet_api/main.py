@@ -39,7 +39,7 @@ def get_parser():
         "--wallet.name", type=str, default=os.getenv("WALLET_NAME", "validator")
     )
     parser.add_argument(
-        "--wallet.path", type=str, default="/tmp/.bittensor/wallets"
+        "--wallet.path", type=str, default="/.bittensor/wallets"
     )
     parser.add_argument(
         "--wallet.hotkey", type=str, default=os.getenv("WALLET_HOTKEY", "default")
@@ -56,6 +56,22 @@ parser = get_parser()
 app = FastAPI()
 handler = LLMDefenderSubnetAPI.Handler(parser=parser)
 
+@app.post("/")
+async def default(response: Response, item: SingularItem):
+    """This method analyzes a single string with the prompt injection
+    analyzer"""
+
+    res = handler.process_singular_prompt(item.prompt, analyzer="Prompt Injection")
+
+    if res:
+        response.status_code = 200
+        bt.logging.trace(f"Processed prompt with response: {res}")
+        return res
+
+    # If we cant get the result, return HTTP/500
+    bt.logging.trace(f"Failed to process request: {item}")
+    response.status_code = 500
+    return {"message": "Internal Server Error"}
 
 @app.post("/prompt_injection")
 async def analyze_prompt_injection(response: Response, item: SingularItem):

@@ -1,0 +1,37 @@
+name: Push Docker image to latest
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    if: ${{ github.event.pull_request != null }}
+    runs-on:
+      group: synapsec-larger-runners
+    permissions:
+      contents: read  # Default permission to read repository contents
+      packages: write # Permission to write to GitHub Packages
+
+    env:
+      IMAGE_NAME: llm-defender-api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Build Podman image
+        run: podman build -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest -f Dockerfile_API
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+      - name: Push Podman image
+        run: podman push ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Store image details
+        run: echo "{name}={image::ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest}" >> $GITHUB_OUTPUT
