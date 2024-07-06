@@ -24,10 +24,3 @@ class ETH_address:
                 out_str = str_iter 
             invalid_address += out_str
         return invalid_address
-
-    def verify(self,address):
-        """Verifies that an Ethereum address is valid and correctly checksummed per EIP-55."""
-        try:
-            return address == eth_utils.to_checksum_address(address)
-        except ValueError:
-            return False
