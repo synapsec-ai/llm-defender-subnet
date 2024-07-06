@@ -6,6 +6,7 @@ from .data_types.general.ipv4 import IPv4_Address
 from .data_types.general.ipv6 import IPv6_Address
 from .data_types.general.email import Email
 from .data_types.countries.US.ssn import US_SSN
+from .data_types.countries.PL.pesel import PL_PESEL
 from .data_types.keys.github_personal_access_token import GitHub_PersonalAccessToken
 from .data_types.keys.aws_s3_secure_access_key import AWS_S3_secret_access_key
 from .data_types.keys.btc_address import BTC_address
@@ -22,6 +23,7 @@ class SensitiveInfoGenerator:
             'IPv6_Address':IPv6_Address(),
             'Email':Email(),
             'US_SSN':US_SSN(),
+            'PL_PESEL':PL_PESEL(),
             'GitHub_PersonalAccessToken': GitHub_PersonalAccessToken(),
             'AWS_S3_Secret_Access_Key': AWS_S3_secret_access_key(),
             'BTC_address': BTC_address(),
