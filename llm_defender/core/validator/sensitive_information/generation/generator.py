@@ -1,7 +1,5 @@
 import random
-from pathlib import Path
 from wonderwords import RandomSentence 
-from datetime import datetime
 
 # Data type imports 
 from .data_types.general.ipv4 import IPv4_Address
@@ -9,6 +7,10 @@ from .data_types.general.ipv6 import IPv6_Address
 from .data_types.general.email import Email
 from .data_types.countries.US.ssn import US_SSN
 from .data_types.keys.github_personal_access_token import GitHub_PersonalAccessToken
+from .data_types.keys.aws_s3_secure_access_key import AWS_S3_secret_access_key
+from .data_types.keys.btc_address import BTC_address
+from .data_types.keys.eth_address import ETH_address
+from .data_types.keys.google_api_key import Google_API_Key
 
 class SensitiveInfoGenerator:
 
@@ -20,7 +22,11 @@ class SensitiveInfoGenerator:
             'IPv6_Address':IPv6_Address(),
             'Email':Email(),
             'US_SSN':US_SSN(),
-            'GitHub_PersonalAccessToken': GitHub_PersonalAccessToken()
+            'GitHub_PersonalAccessToken': GitHub_PersonalAccessToken(),
+            'AWS_S3_Secret_Access_Key': AWS_S3_secret_access_key(),
+            'BTC_address': BTC_address(),
+            'ETH_address': ETH_address(),
+            'Google_API_Key': Google_API_Key()
             }
 
     def generate_sentence_to_insert_into(self):
@@ -55,26 +61,20 @@ class SensitiveInfoGenerator:
         # Check that data_type is correct
         if isinstance(data_type, str) and data_type in [k for k in self.data_types]:
 
-            # Loop until we get a valid instance
-            while True:
-
-                # Generate
-                valid_instance = self.data_types[data_type].generate_valid()
-                
-                return self.insert_sensitive_info_into_sentence(valid_instance)
+            # Generate
+            valid_instance = self.data_types[data_type].generate_valid()
+            
+            return self.insert_sensitive_info_into_sentence(valid_instance)
 
     def generate_invalid(self, data_type):
         "Generates invalid instance of data_type"
         # Check that data_type is correct
         if isinstance(data_type, str) and data_type in [k for k in self.data_types]:
-
-            # Loop until we get a valid instance
-            while True:
-                
-                # Generate
-                invalid_instance = self.data_types[data_type].generate_invalid()
-                
-                return self.insert_sensitive_info_into_sentence(invalid_instance)
+            
+            # Generate
+            invalid_instance = self.data_types[data_type].generate_invalid()
+            
+            return self.insert_sensitive_info_into_sentence(invalid_instance)
 
     def get_prompt_to_serve_miners(self):
 

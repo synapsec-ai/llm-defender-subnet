@@ -5,11 +5,12 @@ import string
 class GitHub_PersonalAccessToken:
     def __init__(self):
         self.valid_prefixes = ['ghp', 'gho', 'ghu', 'ghs', 'ghr']
+        self.other_valid_prefixes = ['AIza']
 
     def _generate_invalid_prefix(self):
         invalid_length = random.randint(2,5)
         prefix = ''.join(random.choices((string.ascii_letters), k=invalid_length)) 
-        if prefix not in self.valid_prefixes:
+        if prefix not in self.valid_prefixes and prefix not in self.other_valid_prefixes:
             return prefix + '_'
         else:
             return self._generate_invalid_prefix()
