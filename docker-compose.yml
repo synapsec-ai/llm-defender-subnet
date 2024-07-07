@@ -3,11 +3,22 @@ services:
     image: ghcr.io/synapsec-ai/llm-defender-validator:latest
     restart: unless-stopped
     user: llm-defender-validator-user
+    pull_policy: always
     ports:
       - "6000:6000"
     volumes:
       - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
       - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
+  common-api: &common-api
+    restart: unless-stopped
+    pull_policy: always
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.bittensor:/.bittensor
+    env_file:
+      - .api-env
 
   llm-defender-validator-debug-mode:
     <<: *common-validator
@@ -37,35 +48,19 @@ services:
               capabilities: [gpu]
     ipc: host
     command: [
-      "--model", "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
-      "--revision", "gptq-8bit-32g-actorder_True",
+      "--model", "${LLM_MODEL_NAME}",
+      "--revision", "${LLM_MODEL_REVISION},
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
   
   llm-defender-api-latest:
-    restart: unless-stopped
-    pull_policy: always
+    <<: *common-api
     image: ghcr.io/synapsec-ai/llm-defender-api:latest
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
-    ports:
-      - "8080:8080"
-    volumes:
-      - ${HOME}/.bittensor:/.bittensor
-    env_file:
-      - .api-env
   llm-defender-api:
-    restart: unless-stopped
-    pull_policy: always
+    <<: *common-api
     image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
-    ports:
-      - "8080:8080"
-    volumes:
-      - ${HOME}/.bittensor:/.bittensor
-    env_file:
-      - .api-env
 
 volumes:
   llm-defender-subnet:
