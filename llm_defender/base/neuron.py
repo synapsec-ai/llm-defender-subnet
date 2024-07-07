@@ -203,7 +203,7 @@ class BaseNeuron:
             }
 
             # Use utils.subnet_logger() to write the logs
-            if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or int(self.log_level) >= log_levels[severity.upper()]:
+            if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or log_levels[self.log_level] >= log_levels[severity.upper()]:
                 LLMDefenderBase.utils.subnet_logger(severity=bittensor_severities[severity.upper()], message=message)
 
             # Append extra information to to the logs if healthcheck API is enabled
