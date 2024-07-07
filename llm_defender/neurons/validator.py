@@ -552,12 +552,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 if __name__ == "__main__":
     # Parse command line arguments
     parser = ArgumentParser()
-    parser.add_argument(
-        "--alpha",
-        default=0.9,
-        type=float,
-        help="The weight moving average scoring.",
-    )
+    
     parser.add_argument("--netuid", type=int, default=14, help="The chain subnet uid.")
 
     parser.add_argument(
@@ -565,19 +560,6 @@ if __name__ == "__main__":
         type=str,
         default="True",
         help="WARNING: Setting this value to False clears the old state.",
-    )
-
-    parser.add_argument(
-        "--max_targets",
-        type=int,
-        default=64,
-        help="Sets the value for the number of targets to query at once",
-    )
-
-    parser.add_argument(
-        "--disable_remote_logging",
-        action="store_true",
-        help="This flag must be set if you want to disable remote logging",
     )
 
     parser.add_argument(

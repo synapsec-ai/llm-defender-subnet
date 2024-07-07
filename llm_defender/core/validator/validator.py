@@ -55,7 +55,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.sensitive_information_scores = None
         self.hotkeys = None
         self.miner_responses = {}
-        self.max_targets = None
+        self.max_targets = 64
         self.target_group = None
         self.load_validator_state = None
         self.prompt = None
@@ -191,11 +191,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.load_miner_state()
         else:
             self.init_default_scores()
-
-        if args.max_targets:
-            self.max_targets = args.max_targets
-        else:
-            self.max_targets = 256
         
         self.target_group = 0
 
