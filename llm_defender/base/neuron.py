@@ -194,6 +194,9 @@ class BaseNeuron:
             }
 
             bittensor_severities = {
+                "SUCCESS": "SUCCESS",
+                "WARNING": "WARNING",
+                "ERROR": "ERROR",
                 "INFO": "INFO",
                 "INFOX": "INFO",
                 "DEBUG": "DEBUG",
