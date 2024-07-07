@@ -19,7 +19,7 @@ class PromptGenerator:
         frequency_penalty: float = 0.5,
         api_key: str = "default_api_key",
         base_url: str = "http://prompt-generation-api:8000/v1",
-        model: str = "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
+        model: str = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
         prompt_generation_disabled: bool = False
     ):
 
