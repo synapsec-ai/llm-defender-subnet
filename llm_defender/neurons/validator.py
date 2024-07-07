@@ -590,7 +590,7 @@ if __name__ == "__main__":
         "--log_level",
         type=str,
         default="INFO",
-        choices=["INFO", "DEBUG", "TRACE"],
+        choices=["INFO", "INFOX", "DEBUG", "DEBUGX", "TRACE", "TRACEX"],
         help="Determine the logging level used by the subnet modules",
     )
 
