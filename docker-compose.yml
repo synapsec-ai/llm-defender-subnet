@@ -47,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --vllm_base_url ${VLLM_BASE_URL} --vllm_api_key ${VLLM_API_KEY}"
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --vllm_base_url ${VLLM_BASE_URL} --vllm_api_key ${VLLM_API_KEY} --vllm_model_name ${VLLM_MODEL_NAME}"
 
   llm-defender-validator-dev:
     <<: *common-validator
