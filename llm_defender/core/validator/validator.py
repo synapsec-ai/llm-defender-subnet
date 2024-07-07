@@ -63,7 +63,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.debug_mode = True
         self.prompt_api = None
         self.prompt_generation_disabled = True
-        self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
         self.log_level = None
 
     def apply_config(self, bt_classes) -> bool:
@@ -382,12 +381,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return total_score, final_distance_score, final_speed_score
 
-    def get_api_prompt(self) -> dict:
+    def get_api_prompt(self, analyzer: str) -> dict:
         """Retrieves a prompt from the prompt API"""
 
         try:
             # get prompt
-            analyzer = secrets.choice(["Prompt Injection"])
             prompt = self.prompt_api.construct(analyzer=analyzer)
             
             # check to make sure prompt is valid
@@ -429,7 +427,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         return prompt
 
 
-    def serve_prompt_injection_prompt(self) -> dict:
+    def serve_prompt(self, analyzer: str) -> dict:
         """Generates a prompt to serve to a miner
 
         This function queries a prompt from the API, and if the API
@@ -445,31 +443,19 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         """
 
         # Load prompt from the prompt API
-        entry = self.get_api_prompt()
+        entry = self.get_api_prompt(analyzer=analyzer)
 
         # Fallback to dataset if prompt loading from the API failed
         if not entry:
-            entry = self.get_prompt_from_dataset(analyzer="Prompt Injection")
+            entry = self.get_prompt_from_dataset(analyzer=analyzer)
         
         self.prompt = entry
 
         return self.prompt
-    
-    def serve_sensitive_information_prompt(self):
-        prompt, category, target = self.sensitive_info_generator.get_prompt_to_serve_miners()
-        return {
-            "prompt":prompt,
-            "analyzer":'Sensitive Information',
-            "category":category,
-            "label":target,
-            "weight": 1.0
-        }
+
 
     async def load_prompt_to_validator_async(self, analyzer):
-        if analyzer == 'Prompt Injection':
-            return await asyncio.to_thread(self.serve_prompt_injection_prompt)
-        elif analyzer == 'Sensitive Information':
-            return await asyncio.to_thread(self.serve_sensitive_information_prompt)
+        return await asyncio.to_thread(self.serve_prompt(analyzer))
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""

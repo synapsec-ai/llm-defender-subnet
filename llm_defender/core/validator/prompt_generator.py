@@ -5,11 +5,12 @@ miners."""
 import openai
 import bittensor as bt
 import random
-import os
 
 # Import custom modules
 from llm_defender.core.validator import generator_data
-
+from llm_defender.core.validator import (
+    IPv4_Address, IPv6_Address, Email, US_SSN, GitHub_PersonalAccessToken
+)
 
 class PromptGenerator:
 
@@ -36,6 +37,15 @@ class PromptGenerator:
             base_url=self.openai_base_url, api_key=self.open_api_key
         )
 
+        # Sensitive information
+        self.data_types = {
+            'IPv4_Address':IPv4_Address(),
+            'IPv6_Address':IPv6_Address(),
+            'Email':Email(),
+            'US_SSN':US_SSN(),
+            'GitHub_PersonalAccessToken': GitHub_PersonalAccessToken()
+        }
+
     def generate_chat_completion(
         self, messages: list, model: str, max_tokens: int = 256
     ) -> str:
@@ -50,7 +60,7 @@ class PromptGenerator:
 
         return chat_completion.choices[0].message.content
     
-    def construct_pi_prompt(self) -> tuple[str, str]:
+    def construct_pi_prompt(self) -> dict:
         # Generate label
         label = random.choice(tuple({0, 1}))
 
@@ -176,7 +186,65 @@ class PromptGenerator:
             }
 
             return prompt_data
+    
+    def generate_si(self, data_type, label) -> str:
+        """Generates valid instances of data_type"""
+        # Check that data_type is correct
+        if isinstance(data_type, str) and data_type in [k for k in self.data_types]:
+            
+            if label == 1: 
+                data = self.data_types[data_type].generate_valid()
+            else:
+                data = self.data_types[data_type].generate_invalid()
+
+            return data
+
+    def construct_si_prompt(self) -> dict:
+
+        # Randomly select the data type
+        data_type = random.choice([k for k in self.data_types])
         
+        # Randomly select the label
+        label = random.choice([0,1])
+
+        # Generate 3 pieces of sensitive information
+        sensitive_words = []
+        n = 3
+        
+        if label == 0:
+            for _ in range (0,n):
+                sensitive_words.append(self.generate_si(data_type=data_type, label=label))
+        else:
+            # If label is 1 ensure at least one entry in the list is label=1 and one is label=
+            sensitive_words.append(self.generate_si(data_type=data_type, label=1))
+            sensitive_words.append(self.generate_si(data_type=data_type, label=0))
+            
+            # Fill in rest of the words randomly
+            for _ in range (2,n):
+                buffer_label = random.choice([0,1])
+                sensitive_words.append(self.generate_si(data_type=data_type, label=buffer_label))
+        
+        # Generate prompt using LLM
+        topic = (random.choice(tuple(generator_data.TOPICS))).lower()
+        messages = [
+            {
+                "role": "user",
+                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing four to seven sentences related to the following topic: {topic}. Additionally, you must use the following words in your paragraph event if they are out-of-place or make no sense within the context: {sensitive_words}"
+            }
+        ]
+
+        openai_message = self.generate_chat_completion(messages=messages,model=self.model)
+
+        prompt_data = {
+            "analyzer": "Sensitive Information",
+            "category": data_type,
+            "prompt": openai_message.strip(),
+            "label": label,
+            "weight": 1.0,
+        }
+
+        return prompt_data
+    
     def construct(self, analyzer) -> dict:
 
         # Only run if prompt generation is enabled
@@ -184,6 +252,13 @@ class PromptGenerator:
             if analyzer == "Prompt Injection":
                 try:
                     prompt = self.construct_pi_prompt()
+                    bt.logging.debug(f'Generated prompt: {prompt}')
+                    return prompt
+                except Exception as e:
+                    bt.logging.error(f'Failed to construct prompt: {e}')
+            elif analyzer == "Sensitive Information":
+                try:
+                    prompt = self.construct_si_prompt()
                     bt.logging.debug(f'Generated prompt: {prompt}')
                     return prompt
                 except Exception as e:
