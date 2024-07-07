@@ -1,8 +1,6 @@
 services:
   common-validator: &common-validator
-    build:
-      context: .
-      dockerfile: validator.Dockerfile
+    image: ghcr.io/synapsec-ai/llm-defender-validator:latest
     restart: unless-stopped
     pull_policy: always
     user: llm-defender-validator-user
@@ -45,7 +43,7 @@ services:
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
-      - ${HOME}.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
   
   llm-defender-api-latest:
     restart: unless-stopped

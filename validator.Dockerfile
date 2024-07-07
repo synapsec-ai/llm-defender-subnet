@@ -5,7 +5,7 @@ ARG USER_GID=$USER_UID
 ARG USERNAME=llm-defender-validator-user
 
 RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+&& useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
 # Copy required files
 RUN mkdir -p /llm-defender-subnet && mkdir -p /home/$USERNAME/.bittensor && mkdir -p /home/$USERNAME/.llm-defender-subnet
