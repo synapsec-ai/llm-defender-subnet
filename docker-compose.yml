@@ -1,44 +1,28 @@
 services:
-  llm-defender-validator-debug-mode:
+  common-validator: &common-validator
+    image: ghcr.io/synapsec-ai/llm-defender-validator:latest
     restart: unless-stopped
     user: llm-defender-validator-user
     ports:
       - "6000:6000"
-    build:
-      context: .
-      dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --debug_mode"
-    volumes:
-      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
-      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
-  
-  llm-defender-validator-remote-vllm:
-    restart: unless-stopped
-    user: llm-defender-validator-user
-    ports:
-      - "6000:6000"
-    build:
-      context: .
-      dockerfile: validator.Dockerfile
-    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
     volumes:
       - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
       - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
 
+  llm-defender-validator-debug-mode:
+    <<: *common-validator
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --debug_mode"
+  
+  llm-defender-validator-remote-vllm:
+    <<: *common-validator
+    command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL} --vllm_base_url ${VLLM_BASE_URL} --vllm_api_key ${VLLM_API_KEY}"
+
   llm-defender-validator:
+    <<: *common-validator
     depends_on: 
       - prompt-generation-api
-    restart: unless-stopped
-    user: llm-defender-validator-user
-    ports:
-      - "6000:6000"
-    build:
-      context: .
-      dockerfile: validator.Dockerfile
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/neurons/validator.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${VALIDATOR_WALLET} --wallet.hotkey ${VALIDATOR_HOTKEY} --log_level ${LOG_LEVEL}"
-    volumes:
-      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
-      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
+  
   prompt-generation-api:
     restart: unless-stopped
     image: vllm/vllm-openai:v0.5.0
@@ -54,7 +38,7 @@ services:
     ipc: host
     command: [
       "--model", "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
-      "--revision", "gptq-8bit-128g-actorder_True",
+      "--revision", "gptq-3bit--1g-actorder_True",
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
