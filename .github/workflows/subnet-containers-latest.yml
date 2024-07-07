@@ -1,7 +1,7 @@
 name: Push Docker image to latest
 
 on:
-  pull_request:
+  push:
     branches:
       - 'release/**'
 
