@@ -416,7 +416,7 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             )
 
             validator.neuron_logger(
-                    severity="DEBUG", 
+                    severity="INFOX", 
                     message=f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}"
             )
 

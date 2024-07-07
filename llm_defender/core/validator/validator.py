@@ -64,6 +64,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt_api = None
         self.prompt_generation_disabled = True
         self.sensitive_info_generator = LLMDefenderCore.SensitiveInfoGenerator()
+        self.log_level = None
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -128,12 +129,13 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         """
         # Read command line arguments and perform actions based on them
         args = self._parse_args(parser=self.parser)
+        self.log_level = args.log_level
 
         # Setup logging
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
-        if args.log_level == "DEBUG":
+        if args.log_level in ("DEBUG", "DEBUGX"):
             bt.logging.enable_debug()
-        elif args.log_level == "TRACE":
+        elif args.log_level in ("TRACE", "TRACEX"):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()

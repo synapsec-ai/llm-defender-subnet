@@ -61,6 +61,7 @@ class BaseNeuron:
         self.cache_path = None
         self.log_path = None
         self.healthcheck_api = None
+        self.log_level = 0
 
         # Load used nonces if they exists
         self.load_used_nonces()
@@ -182,8 +183,28 @@ class BaseNeuron:
         if (isinstance(severity, str) and not isinstance(severity, bool)) and (
             isinstance(message, str) and not isinstance(message, bool)
         ):
+            # Do mapping of custom log levels
+            log_levels = {
+                "INFO": 0,
+                "INFOX": 1,
+                "DEBUG": 2,
+                "DEBUGX": 3,
+                "TRACE": 4,
+                "TRACEX": 5
+            }
+
+            bittensor_severities = {
+                "INFO": "INFO",
+                "INFOX": "INFO",
+                "DEBUG": "DEBUG",
+                "DEBUGX": "DEBUG",
+                "TRACE": "TRACE",
+                "TRACEX": "TRACE"
+            }
+
             # Use utils.subnet_logger() to write the logs
-            LLMDefenderBase.utils.subnet_logger(severity=severity, message=message)
+            if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or self.log_level >= log_levels[severity.upper()]:
+                LLMDefenderBase.utils.subnet_logger(severity=bittensor_severities[severity.upper()], message=message)
 
             # Append extra information to to the logs if healthcheck API is enabled
             if self.healthcheck_api:
