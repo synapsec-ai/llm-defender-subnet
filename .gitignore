@@ -167,7 +167,6 @@ llm-defender*.config.js
 .bittensor
 
 *.env
-*.*-env
 
 # Wandb
 wandb
