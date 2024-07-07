@@ -8,9 +8,7 @@ import random
 
 # Import custom modules
 from llm_defender.core.validator import generator_data
-from llm_defender.core.validator import (
-    IPv4_Address, IPv6_Address, Email, US_SSN, GitHub_PersonalAccessToken
-)
+from llm_defender.core.validator import data_types
 
 class PromptGenerator:
 
@@ -39,11 +37,11 @@ class PromptGenerator:
 
         # Sensitive information
         self.data_types = {
-            'IPv4_Address':IPv4_Address(),
-            'IPv6_Address':IPv6_Address(),
-            'Email':Email(),
-            'US_SSN':US_SSN(),
-            'GitHub_PersonalAccessToken': GitHub_PersonalAccessToken()
+            'IPv4_Address': data_types.IPv4_Address(),
+            'IPv6_Address': data_types.IPv6_Address(),
+            'Email': data_types.Email(),
+            'US_SSN': data_types.US_SSN(),
+            'GitHub_PersonalAccessToken': data_types.GitHub_PersonalAccessToken()
         }
 
     def generate_chat_completion(

@@ -73,7 +73,7 @@ services:
     ipc: host
     command: [
       "--model", "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
-      "--revision", "gptq-8bit-32g-actorder_True",
+      "--revision", "gptq-8bit-128g-actorder_True",
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:

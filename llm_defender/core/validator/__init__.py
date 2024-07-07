@@ -14,9 +14,3 @@ from .sensitive_information import (
 )
 
 from .prompt_generator import PromptGenerator
-
-from .generator_data.data_types.general.ipv4 import IPv4_Address
-from .generator_data.data_types.general.ipv6 import IPv6_Address
-from .generator_data.data_types.general.email import Email
-from .generator_data.data_types.countries.US.ssn import US_SSN
-from .generator_data.data_types.keys.github_personal_access_token import GitHub_PersonalAccessToken

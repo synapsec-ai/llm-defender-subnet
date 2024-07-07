@@ -399,7 +399,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         return {}
 
-    def get_prompt_from_dataset(self, analyzer: str):
+    def get_prompt_from_dataset(self, analyzer: str) -> dict:
         """Fetches prompt from the dataset as a fallback to the prompt generation"""
         
         # Randomly choose which dataset to use
@@ -452,10 +452,6 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.prompt = entry
 
         return self.prompt
-
-
-    async def load_prompt_to_validator_async(self, analyzer):
-        return await asyncio.to_thread(self.serve_prompt(analyzer))
 
     def check_hotkeys(self):
         """Checks if some hotkeys have been replaced in the metagraph"""

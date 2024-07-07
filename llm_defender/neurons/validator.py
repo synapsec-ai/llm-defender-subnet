@@ -411,13 +411,13 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             # Generate prompt to be analyzed by the miners
             synapse_uuid = str(uuid4())
             analyzer = random.choice(["Prompt Injection", "Sensitive Information"])
-            prompt_to_analyze = await validator.load_prompt_to_validator_async(
+            prompt_to_analyze = validator.serve_prompt(
                 analyzer=analyzer
             )
 
             validator.neuron_logger(
-                    severity="INFOX", 
-                    message=f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}"
+                severity="INFOX", 
+                message=f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}"
             )
 
             is_prompt_invalid = (
