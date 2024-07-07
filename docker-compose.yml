@@ -2,6 +2,7 @@ services:
   common-validator: &common-validator
     image: ghcr.io/synapsec-ai/llm-defender-validator:latest
     restart: unless-stopped
+    pull_policy: always
     user: llm-defender-validator-user
     ports:
       - "6000:6000"
