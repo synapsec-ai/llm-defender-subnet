@@ -1,3 +1,17 @@
+.bittensor
+.local
+.github
+.pytest_cache
+.venv
+.vscode
+chroma
+*.egg-info
+tests
+wandb
+.coverage
+*.config.js
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -167,7 +181,6 @@ llm-defender*.config.js
 .bittensor
 
 *.env
-*.*-env
 
 # Wandb
 wandb

@@ -1,0 +1,8 @@
+NETUID=38                                                               # Set this to either 14 (mainnet) or 38 (testnet)
+SUBTENSOR_CHAIN_ENDPOINT=wss://test.finney.opentensor.ai:443            # Set this to your subtensor chain endpoint
+VALIDATOR_WALLET=validator                                              # Set this to your validator wallet
+VALIDATOR_HOTKEY=default                                                # Set this to your validator hotkey name
+LOG_LEVEL=INFO                                                          # Determines the logging level for Bittensor
+VLLM_BASE_URL=                                                          # Set this value only if you want to use vLLM not running on the local machine
+VLLM_API_KEY=                                                           # Set this value only if you want to use vLLM not running on the local machine
+TENSOR_PARALLEL_SIZE=4                                                  # Set this value to the number of GPUs you are running

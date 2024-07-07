@@ -25,9 +25,13 @@ def main(miner: LLMDefenderCore.SubnetMiner):
 
     # Attach the miner functions to the Axon
     axon.attach(
-        forward_fn=miner.forward,
-        blacklist_fn=miner.blacklist,
-        priority_fn=miner.priority,
+        forward_fn=miner.analysis_forward,
+        blacklist_fn=miner.analysis_blacklist,
+        priority_fn=miner.analysis_priority,
+    ).attach(
+        forward_fn=miner.feedback_forward,
+        blacklist_fn=miner.metric_blacklist,
+        priority_fn=miner.metric_priority
     )
     bt.logging.info(f"Attached functions to Axon: {axon}")
 
@@ -166,6 +170,26 @@ if __name__ == "__main__":
         default="INFO",
         choices=["INFO", "DEBUG", "TRACE"],
         help="Determine the logging level used by the subnet modules",
+    )
+
+    parser.add_argument(
+        "--disable_healthcheck",
+        action="store_true",
+        help="Set this argument if you want to disable the healthcheck API. Enabled by default."
+    )
+
+    parser.add_argument(
+        "--healthcheck_host",
+        type=str,
+        default="0.0.0.0",
+        help="Set the healthcheck API host. Defaults to 0.0.0.0 to expose it outside of the container.",
+    )
+
+    parser.add_argument(
+        "--healthcheck_port",
+        type=int,
+        default=6000,
+        help="Determine the port used by the healthcheck API.",
     )
 
     # Create a miner based on the Class definitions

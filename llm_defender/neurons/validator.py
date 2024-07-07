@@ -5,14 +5,13 @@ Validator docstring here
 # Import standard modules
 import asyncio
 import hashlib
-import os
 import secrets
 import sys
 import time
 import traceback
 from argparse import ArgumentParser
 from uuid import uuid4
-import random 
+import random
 
 # Import custom modules
 import bittensor as bt
@@ -55,7 +54,9 @@ def save_validator_state(validator: LLMDefenderCore.SubnetValidator) -> None:
     validator.save_state()
 
 
-async def save_validator_state_async(validator: LLMDefenderCore.SubnetValidator) -> None:
+async def save_validator_state_async(
+    validator: LLMDefenderCore.SubnetValidator,
+) -> None:
     await asyncio.to_thread(save_validator_state, validator)
 
 
@@ -67,12 +68,18 @@ async def save_miner_state_async(validator: LLMDefenderCore.SubnetValidator):
     await asyncio.to_thread(save_miner_state, validator)
 
 
-def truncate_miner_state(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
+def truncate_miner_state(
+    validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int
+):
     validator.truncate_miner_state(max_number_of_responses_per_miner)
 
 
-async def truncate_miner_state_async(validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int):
-    await asyncio.to_thread(truncate_miner_state, validator, max_number_of_responses_per_miner)
+async def truncate_miner_state_async(
+    validator: LLMDefenderCore.SubnetValidator, max_number_of_responses_per_miner: int
+):
+    await asyncio.to_thread(
+        truncate_miner_state, validator, max_number_of_responses_per_miner
+    )
 
 
 def save_used_nonces(validator: LLMDefenderCore.SubnetValidator):
@@ -163,21 +170,21 @@ def handle_empty_responses(validator, list_of_uids):
     bt.logging.info("Received empty response from all miners")
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-    time.sleep(bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__ / 3)
 
 
 def format_responses(
     validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
 ):
     # Process the responses
-    response_data = validator.process_responses(
+    response_data, responses_invalid_uids, responses_valid_uids = validator.process_responses(
         query=prompt_to_analyze,
         processed_uids=list_of_uids,
         responses=responses,
         synapse_uuid=synapse_uuid,
     )
-    return response_data
+    return response_data, responses_invalid_uids, responses_valid_uids
 
 
 def handle_invalid_prompt(validator):
@@ -188,13 +195,13 @@ def handle_invalid_prompt(validator):
     )
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-    time.sleep(bt.__blocktime__)
+    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    time.sleep(bt.__blocktime__ / 3)
 
 
 def attach_response_to_validator(validator, response_data):
     for res in response_data:
-        hotkey = res['hotkey']
+        hotkey = res["hotkey"]
 
         if hotkey not in validator.miner_responses:
             validator.miner_responses[hotkey] = [res]
@@ -224,7 +231,7 @@ async def get_average_score_per_analyzer(validator):
     for hotkey, response_list in validator.miner_responses.items():
         
         if not response_list:
-            bt.logging.debug(f'Response list is empty: {response_list}')
+            bt.logging.debug(f"Response list is empty: {response_list}")
             continue
         
         analyzer_scores = {}
@@ -234,7 +241,7 @@ async def get_average_score_per_analyzer(validator):
         
         for response in response_list:
 
-            analyzer = response["analyzer"] 
+            analyzer = response["analyzer"]
 
             score = response["scored_response"]["scores"]["total_analyzer_raw"]
             weight = response["weight"]
@@ -296,7 +303,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
     version = LLMDefenderBase.config["module_version"]
 
     # Step 7: The Main Validation Loop
-    bt.logging.info(f"Starting validator loop with version: {version}")
+    validator.neuron_logger(
+        severity="INFO", message=f"Starting validator loop with version: {version}"
+    )
+    validator.healthcheck_api.append_metric(metric_name="neuron_running", value=True)
 
     while True:
         try:
@@ -319,154 +329,159 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
             # Get all axons
             all_axons = validator.metagraph.axons
-            bt.logging.trace(f"All axons: {all_axons}")
-
+            validator.neuron_logger(
+                severity="TRACE", 
+                message=f"All axons: {all_axons}"
+            )
             # If there are more axons than scores, append the scores list
             if len(validator.metagraph.uids.tolist()) > len(validator.scores):
-                bt.logging.info(
-                    f"Discovered new Axons, current scores: {validator.scores}"
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Discovered new Axons, current scores: {validator.scores}"
                 )
                 additional_zeros = np.zeros(
                     (len(validator.metagraph.uids.tolist()) - len(validator.scores)),
-                    dtype=np.float32
+                    dtype=np.float32,
                 )
                 validator.scores = np.concatenate((validator.scores, additional_zeros))
-                bt.logging.info(f"Updated scores, new scores: {validator.scores}")
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Updated scores, new scores: {validator.scores}"
+                )
 
             # if there are more axons than prompt_injection_scores, append the prompt_injection_scores list
             if len(validator.metagraph.uids.tolist()) > len(
                 validator.prompt_injection_scores
             ):
-                bt.logging.info(
-                    f"Discovered new Axons, current prompt_injection_scores: {validator.prompt_injection_scores}"
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Discovered new Axons, current prompt_injection_scores: {validator.prompt_injection_scores}"
                 )
                 additional_zeros = np.zeros(
-                    (len(validator.metagraph.uids.tolist()) - len(validator.prompt_injection_scores)),
-                    dtype=np.float32
+                    (
+                        len(validator.metagraph.uids.tolist())
+                        - len(validator.prompt_injection_scores)
+                    ),
+                    dtype=np.float32,
                 )
-                validator.prompt_injection_scores = np.concatenate((validator.prompt_injection_scores, additional_zeros))
-                bt.logging.info(
-                    f"Updated prompt_injection_scores, new prompt_injection_scores: {validator.prompt_injection_scores}"
+                validator.prompt_injection_scores = np.concatenate(
+                    (validator.prompt_injection_scores, additional_zeros)
+                )
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Updated prompt_injection_scores, new prompt_injection_scores: {validator.prompt_injection_scores}"
                 )
 
             # if there are more axons than sensitive_information_socres, append the sensitive_information_scores list
             if len(validator.metagraph.uids.tolist()) > len(
                 validator.sensitive_information_scores
             ):
-                bt.logging.info(
-                    f"Discovered new Axons, current scores: {validator.scores}"
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Discovered new Axons, current scores: {validator.scores}"
                 )
                 additional_zeros = np.zeros(
-                    (len(validator.metagraph.uids.tolist()) - len(validator.sensitive_information_scores)),
-                    dtype=np.float32
+                    (
+                        len(validator.metagraph.uids.tolist())
+                        - len(validator.sensitive_information_scores)
+                    ),
+                    dtype=np.float32,
                 )
-                validator.sensitive_information_scores = np.concatenate((validator.sensitive_information_scores, additional_zeros))
-                bt.logging.info(
-                    f"Updated sensitive_information_scores, new sensitive_information_scores: {validator.sensitive_information_scores}"
+                validator.sensitive_information_scores = np.concatenate(
+                    (validator.sensitive_information_scores, additional_zeros)
+                )
+                validator.neuron_logger(
+                    severity="INFO", 
+                    message=f"Updated sensitive_information_scores, new sensitive_information_scores: {validator.sensitive_information_scores}"
                 )
 
             axons_with_valid_ip = validator.determine_valid_axons(all_axons)
             # miner_hotkeys_to_broadcast = [valid_ip_axon.hotkey for valid_ip_axon in axons_with_valid_ip]
 
             if not axons_with_valid_ip:
-                bt.logging.warning("No axons with valid IPs found")
-                bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-                time.sleep(bt.__blocktime__)
+                validator.neuron_logger(
+                    severity="WARNING", 
+                    message="No axons with valid IPs found")
+                validator.neuron_logger(
+                    severity="DEBUG", 
+                    message=f"Sleeping for: {bt.__blocktime__/3} seconds")
+                time.sleep(bt.__blocktime__ / 3)
                 continue
 
-            if validator.target_group == 0:
+            # Generate prompt to be analyzed by the miners
+            synapse_uuid = str(uuid4())
+            analyzer = random.choice(["Prompt Injection", "Sensitive Information"])
+            prompt_to_analyze = await validator.load_prompt_to_validator_async(
+                analyzer=analyzer
+            )
 
-                synapse_uuid = str(uuid4())
-                analyzer = random.choice(['Prompt Injection', 'Sensitive Information'])
-                prompt_to_analyze = await validator.load_prompt_to_validator_async(
-                    synapse_uuid=synapse_uuid,
-                    analyzer=analyzer
-                )
+            validator.neuron_logger(
+                    severity="DEBUG", 
+                    message=f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}"
+            )
 
-                bt.logging.debug(f"Serving prompt: {prompt_to_analyze} for analyzer: {analyzer}")
-
-                is_prompt_invalid = (
-                    prompt_to_analyze is None
-                    or "analyzer" not in prompt_to_analyze.keys()
-                    or "label" not in prompt_to_analyze.keys()
-                    or "weight" not in prompt_to_analyze.keys()
-                )
-                if is_prompt_invalid:
-                    handle_invalid_prompt(validator)
-                    continue
-
-                # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
-                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
-                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
-
-                # notification_responses = send_notification_synapse(
-                #     synapse_uuid=synapse_uuid,
-                #     validator=validator,
-                #     axons_with_valid_ip=axons_with_valid_ip,
-                #     prompt_to_analyze=prompt_to_analyze
-                # )
-                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(e  # bt.logging.info(f'Sending Notification Synapse to {len(axons_with_valid_ip)} targets')
-                # bt.logging.debug(f'Notification Synapse target UIDs: {[validator.metagraph.hotkeys.index(axon.hotkey) for axon in axons_with_valid_ip]}')
-                # bt.logging.trace(f'Notification Synapse targets: {axons_with_valid_ip}')
-
-                # notification_responses = send_notification_synapse(
-                #     synapse_uuid=synapse_uuid,
-                #     validator=validator,
-                #     axons_with_valid_ip=axons_with_valid_ip,
-                #     prompt_to_analyze=prompt_to_analyze
-                # )
-                # valid_response, invalid_response = [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
-
-                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
-                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')ntry.axon.hotkey) for entry in notification_responses if entry.output and entry.output["outcome"]], [validator.metagraph.hotkeys.index(entry.axon.hotkey) for entry in notification_responses if not (entry.output and entry.output["outcome"])]
-
-                # bt.logging.debug(f'Response to notification synapse received from: {valid_response}')
-                # bt.logging.debug(f'Response to notification synapse not received from: {invalid_response}')
+            is_prompt_invalid = (
+                prompt_to_analyze is None
+                or "analyzer" not in prompt_to_analyze.keys()
+                or "label" not in prompt_to_analyze.keys()
+                or "weight" not in prompt_to_analyze.keys()
+            )
+            if is_prompt_invalid:
+                handle_invalid_prompt(validator)
+                continue
 
             # Get list of UIDs to send the payload synapse
             (uids_to_query, list_of_uids, uids_not_to_query) = (
                 await validator.get_uids_to_query_async(all_axons=all_axons)
             )
             if not uids_to_query:
-                bt.logging.warning(f"UIDs to query is empty: {uids_to_query}")
+                validator.neuron_logger(
+                    severity="WARNING",
+                    message=f"UIDs to query is empty: {uids_to_query}")
                 continue
 
-            bt.logging.info(
-                f"Sending Payload Synapse to {len(uids_to_query)} targets starting with UID: {list_of_uids[0]} and ending with UID: {list_of_uids[-1]}"
+            validator.neuron_logger(
+                severity="INFO", 
+                message=f"Sending Payload Synapse to {len(uids_to_query)} targets starting with UID: {list_of_uids[0]} and ending with UID: {list_of_uids[-1]}"
             )
 
             responses = await validator.send_payload_message(
                 synapse_uuid=synapse_uuid,
                 uids_to_query=uids_to_query,
                 prompt_to_analyze=prompt_to_analyze,
-                timeout=validator.timeout
+                timeout=validator.timeout,
             )
             # await score_unused_axons_async(validator, uids_not_to_query)
 
             # are_responses_empty = all(item.output is None for item in responses)
             # if are_responses_empty:
-                # handle_empty_responses(validator, list_of_uids)
-                # continue
+            # handle_empty_responses(validator, list_of_uids)
+            # continue
 
-            bt.logging.trace(f"Received responses: {responses}")
+            validator.neuron_logger(
+                severity="TRACE", 
+                message=f"Received responses: {responses}"
+            )
 
-            response_data = format_responses(
+            response_data, responses_invalid_uids, responses_valid_uids = format_responses(
                 validator, list_of_uids, responses, synapse_uuid, prompt_to_analyze
             )
             attach_response_to_validator(validator, response_data)
 
             # Print stats
-            bt.logging.debug(f"Processed UIDs: {list(list_of_uids)}")
+            validator.neuron_logger(
+                severity="DEBUG", 
+                message=f"Processed UIDs: {list(list_of_uids)}"
+            )
 
             current_block = validator.subtensor.get_current_block()
-            bt.logging.debug(
-                f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
+            validator.neuron_logger(
+                severity="DEBUG", 
+                message=f"Current step: {validator.step}. Current block: {current_block}. Last updated block: {validator.last_updated_block}"
             )
 
             # Calculate analyzer average scores, calculate overall scores and then set weights
-            if (
-                current_block - validator.last_updated_block > 100
-            ):
+            if current_block - validator.last_updated_block > 100:
                 averages = await get_average_score_per_analyzer(validator)
                 
                 for hotkey, data in averages.items():
@@ -475,28 +490,46 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                     
                     data_keys = [k for k in data]
 
-                    if 'Prompt Injection' in data_keys:
-                        validator.prompt_injection_scores[uid] = data["Prompt Injection"]
+                    if "Prompt Injection" in data_keys:
+                        validator.prompt_injection_scores[uid] = data[
+                            "Prompt Injection"
+                        ]
                     else:
                         validator.prompt_injection_scores[uid] = 0.0
-                    
-                    if 'Sensitive Information' in data_keys:
-                        validator.sensitive_information_scores[uid] = data["Sensitive Information"]
+
+                    if "Sensitive Information" in data_keys:
+                        validator.sensitive_information_scores[uid] = data[
+                            "Sensitive Information"
+                        ]
                     else:
                         validator.sensitive_information_scores[uid] = 0.0
 
-                bt.logging.debug(f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}")
-                bt.logging.debug(f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}")
-                
+                validator.neuron_logger(
+                    severity="DEBUG", 
+                    message=f"Prompt Injection Analyzer scores: {validator.prompt_injection_scores}"
+                )
+                validator.neuron_logger(
+                    severity="DEBUG", 
+                    message=f"Sensitive Information Analyzer scores: {validator.sensitive_information_scores}"
+                )
+
                 validator.determine_overall_scores()
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
+
+            validator.neuron_logger(
+                severity="SUCCESS", 
+                message=f"Processed {len(list_of_uids)} neurons out of which {len(responses_valid_uids)} provided valid response and {len(responses_invalid_uids)} invalid response."
+            )
             validator.step += 1
 
-            # Sleep for a duration equivalent to the block time (i.e., time between successive blocks).
-            bt.logging.debug(f"Sleeping for: {bt.__blocktime__} seconds")
-            time.sleep(bt.__blocktime__)
+            # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
+            validator.neuron_logger(
+                severity="DEBUG", 
+                message=f"Sleeping for: {bt.__blocktime__/3} seconds"
+            )
+            time.sleep(bt.__blocktime__ / 3)
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
@@ -505,7 +538,9 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
         # If the user interrupts the program, gracefully exit.
         except KeyboardInterrupt:
-            bt.logging.success("Keyboard interrupt detected. Exiting validator.")
+            validator.neuron_logger(
+                severity="SUCCESS", 
+                message="Keyboard interrupt detected. Exiting validator.")
             sys.exit()
 
         except Exception as e:
@@ -559,8 +594,39 @@ if __name__ == "__main__":
         help="Determine the logging level used by the subnet modules",
     )
 
-    # Disable TOKENIZERS_PARALLELISM
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    parser.add_argument(
+        "--vllm_base_url",
+        type=str,
+        default="http://prompt-generation-api:8000/v1",
+        help="Determine the vLLM base url used for the prompt generation",
+    )
+
+    parser.add_argument(
+        "--vllm_api_key",
+        type=str,
+        default="default_api_key",
+        help="Determine the vLLM api key used for the prompt generation",
+    )
+
+    parser.add_argument(
+        "--disable_healthcheck",
+        action="store_true",
+        help="Set this argument if you want to disable the healthcheck API. Enabled by default."
+    )
+
+    parser.add_argument(
+        "--healthcheck_host",
+        type=str,
+        default="0.0.0.0",
+        help="Set the healthcheck API host. Defaults to 0.0.0.0 to expose it outside of the container.",
+    )
+
+    parser.add_argument(
+        "--healthcheck_port",
+        type=int,
+        default=6000,
+        help="Determine the port used by the healthcheck API.",
+    )
 
     # Create a validator based on the Class definitions and initialize it
     subnet_validator = LLMDefenderCore.SubnetValidator(parser=parser)
@@ -570,7 +636,9 @@ if __name__ == "__main__":
         )
         or not subnet_validator.initialize_neuron()
     ):
-        bt.logging.error("Unable to initialize Validator. Exiting.")
+        subnet_validator.neuron_logger(
+            severity="ERROR", 
+            message="Unable to initialize Validator. Exiting.")
         sys.exit()
 
     asyncio.run(main(subnet_validator))

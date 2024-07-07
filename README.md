@@ -1,5 +1,5 @@
 <h1 align="center">LLM Defender Subnet (SN14)</h1>
-<h4 align="center">| <a href="https://docs.synapsec.ai">Documentation</a> | <a href="https://metrics.synapsec.ai"> Subnet Metrics</a> | </h4>
+<h4 align="center">| <a href="https://docs.synapsec.ai">Documentation</a> | </h4>
 
 # Introduction
 This repository contains the source code for the LLM Defender subnet running on top of [Bittensor](https://github.com/opentensor/bittensor). The LLM Defender subnet provides Large Language Model (LLM) developers a way to decentralize the computing required to detect and prevent various attacks and exploits against LLM applications. 
