@@ -2,8 +2,8 @@ services:
   common-validator: &common-validator
     image: ghcr.io/synapsec-ai/llm-defender-validator:latest
     restart: unless-stopped
-    user: llm-defender-validator-user
     pull_policy: always
+    user: llm-defender-validator-user
     ports:
       - "6000:6000"
     volumes:
@@ -48,8 +48,8 @@ services:
               capabilities: [gpu]
     ipc: host
     command: [
-      "--model", "${LLM_MODEL_NAME}",
-      "--revision", "${LLM_MODEL_REVISION},
+      "--model", "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ",
+      "--revision", "gptq-8bit-32g-actorder_True",
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
