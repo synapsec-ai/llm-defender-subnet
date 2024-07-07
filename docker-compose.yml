@@ -12,6 +12,7 @@ services:
   common-api: &common-api
     restart: unless-stopped
     pull_policy: always
+    image: ghcr.io/synapsec-ai/llm-defender-api:latest
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
       - "8080:8080"
@@ -57,7 +58,6 @@ services:
   
   llm-defender-api-latest:
     <<: *common-api
-    image: ghcr.io/synapsec-ai/llm-defender-api:latest
   llm-defender-api:
     <<: *common-api
     image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
