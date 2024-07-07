@@ -589,6 +589,12 @@ if __name__ == "__main__":
         default="default_api_key",
         help="Determine the vLLM api key used for the prompt generation",
     )
+    parser.add_argument(
+        "--vllm_model_name",
+        type=str,
+        default="TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
+        help="Determines the vLLM model to utilize",
+    )
 
     parser.add_argument(
         "--disable_healthcheck",

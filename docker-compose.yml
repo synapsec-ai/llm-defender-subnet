@@ -72,8 +72,8 @@ services:
               capabilities: [gpu]
     ipc: host
     command: [
-      "--model", "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
-      "--revision", "gptq-8bit-128g-actorder_True",
+      "--model", "${VLLM_MODEL_NAME}",
+      "--revision", "${VLLM_MODEL_REVISION}",
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:

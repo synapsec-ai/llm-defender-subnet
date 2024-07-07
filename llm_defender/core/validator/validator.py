@@ -194,7 +194,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.target_group = 0
 
         # Setup prompt generation
-        self.prompt_api = LLMDefenderCore.PromptGenerator(prompt_generation_disabled=self.prompt_generation_disabled, base_url=args.vllm_base_url, api_key=args.vllm_api_key)
+        self.prompt_api = LLMDefenderCore.PromptGenerator(prompt_generation_disabled=self.prompt_generation_disabled, base_url=args.vllm_base_url, api_key=args.vllm_api_key, model=args.vllm_model_name)
 
         return True
 
