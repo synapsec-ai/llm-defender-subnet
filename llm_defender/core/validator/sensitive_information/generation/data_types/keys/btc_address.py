@@ -7,17 +7,14 @@ class BTC_address:
 
     def generate_valid(self):
         """Generates a valid Bitcoin address."""
-        # Generate a random public key hash (160 bits, 20 bytes)
         pubkey_hash = os.urandom(20)
-        return BTC_address.encode_address(pubkey_hash, b'\x00')  # P2PKH with version byte 0
+        return BTC_address.encode_address(pubkey_hash, b'\x00')  
 
     def generate_invalid(self):
         """Generates an invalid Bitcoin address by altering the checksum."""
-        # Generate a random public key hash
         pubkey_hash = os.urandom(20)
         valid_address = BTC_address.encode_address(pubkey_hash, b'\x00')
         if random.choice([True, False]):
-            # Alter one character in the address to make it invalid
             invalid_char = '0' if valid_address[-1] != '0' else '1'
             return valid_address[:-1] + invalid_char
         else:

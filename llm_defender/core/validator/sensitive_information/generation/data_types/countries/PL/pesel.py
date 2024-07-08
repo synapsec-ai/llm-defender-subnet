@@ -7,7 +7,7 @@ class PL_PESEL:
         """Generates a valid Polish PESEL number."""
         birth_date = self.random_date()
         serial = random.randint(100, 999)
-        sex_digit = random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])  # Even for female, odd for male
+        sex_digit = random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         month = birth_date.month + (20 if birth_date.year >= 2000 else 0)
         pesel_base = f"{birth_date.year % 100:02d}{month:02d}{birth_date.day:02d}{serial:03d}{sex_digit}"
         pesel_base = [int(digit) for digit in pesel_base]
@@ -18,7 +18,7 @@ class PL_PESEL:
         """Generates an invalid Polish PESEL number."""
         valid_pesel = self.generate_valid()
         pesel_list = list(valid_pesel)
-        wrong_digit = (int(pesel_list[-1]) + 5) % 10  # Alter the checksum digit
+        wrong_digit = (int(pesel_list[-1]) + 5) % 10
         pesel_list[-1] = str(wrong_digit)
         return ''.join(pesel_list)
 

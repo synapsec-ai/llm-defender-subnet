@@ -16,9 +16,7 @@ class GitHub_PersonalAccessToken:
             return self._generate_invalid_prefix()
 
     def calculate_checksum(self, data):
-        # Calculate CRC32 checksum
         checksum = zlib.crc32(data.encode('utf-8')) & 0xffffffff
-        # Convert checksum to Base62
         return self._to_base62(checksum)
 
     def _to_base62(self, num):
@@ -50,10 +48,8 @@ class GitHub_PersonalAccessToken:
 
     def generate_invalid(self):
         if random.choice([True, False, False]):
-            # Invalid prefix
             prefix = self._generate_invalid_prefix()
         else:
-            # Valid prefix but will corrupt checksum
             prefix = random.choice(self.valid_prefixes) + '_'
         random_part = ''.join(random.choices(string.ascii_letters + string.digits, k=30))
         full_token = prefix + random_part
