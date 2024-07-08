@@ -48,8 +48,8 @@ compute_spec:
       recommended_iops: 5000  # Recommended I/O operations per second
 
     os:
-      name: "Debian"  # Name of the preferred operating system(s)
-      version: 12  # Version of the preferred operating system(s)
+      name: "ubuntu"  # Name of the preferred operating system(s)
+      version: 22.04  # Version of the preferred operating system(s)
 
   validator:
 
@@ -67,11 +67,11 @@ compute_spec:
       cuda_cores: 0                             # Minimum number of CUDA cores (if applicable)
       min_compute_capability: 0                 # Minimum CUDA compute capability
       recommended_compute_capability: 0         # Recommended CUDA compute capability
-      recommended_gpu: "4xA10G"                 # provide a recommended GPU to purchase/rent
-      cuda_version: 12.2                        # CUDA version
+      recommended_gpu: "A100"                   # provide a recommended GPU to purchase/rent
+      cuda_version: 12.1                        # CUDA version
 
     memory:
-      min_ram: 128            # Minimum RAM (GB)
+      min_ram: 64            # Minimum RAM (GB)
       min_swap: 8             # Minimum swap space (GB)
       recommended_swap: 8     # Recommended swap space (GB)
       ram_type: "DDR4"        # RAM type (e.g., DDR4, DDR3, etc.)
@@ -89,5 +89,5 @@ compute_spec:
 
 network_spec:
   bandwidth:
-    download: 100  # Minimum download bandwidth (Mbps)
-    upload: 20     # Minimum upload bandwidth (Mbps)
+    download: 10000   # Minimum download bandwidth (Mbps)
+    upload: 10000     # Minimum upload bandwidth (Mbps)

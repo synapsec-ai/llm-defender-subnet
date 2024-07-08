@@ -3,7 +3,7 @@ name: Push Docker image to latest
 on:
   push:
     branches:
-      - 'release/**'
+      - 'main'
 
 jobs:
   build-api-container-latest:
