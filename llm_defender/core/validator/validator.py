@@ -70,10 +70,16 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         try:
             self.neuron_config = self.config(bt_classes=bt_classes)
         except AttributeError as e:
-            bt.logging.error(f"Unable to apply validator configuration: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to apply validator configuration: {e}"
+            )
             raise AttributeError from e
         except OSError as e:
-            bt.logging.error(f"Unable to create logging directory: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to create logging directory: {e}"
+            )
             raise OSError from e
 
         return True
@@ -81,8 +87,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     def validator_validation(self, metagraph, wallet, subtensor) -> bool:
         """This method validates the validator has registered correctly"""
         if wallet.hotkey.ss58_address not in metagraph.hotkeys:
-            bt.logging.error(
-                f"Your validator: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Your validator: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
             )
             return False
 
@@ -96,7 +103,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             dendrite = bt.dendrite(wallet=wallet)
             metagraph = subtensor.metagraph(neuron_config.netuid)
         except AttributeError as e:
-            bt.logging.error(f"Unable to setup bittensor objects: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to setup bittensor objects: {e}"
+            )
             raise AttributeError from e
 
         self.hotkeys = copy.deepcopy(metagraph.hotkeys)
@@ -151,8 +161,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         # Suppress specific validation errors from pydantic
         bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
         
-        bt.logging.info(
-            f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
     
 
@@ -160,8 +171,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         # Setup the bittensor objects
         self.setup_bittensor_objects(self.neuron_config)
 
-        bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
         if not args.debug_mode:
@@ -171,7 +183,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             # Get the unique identity (UID) from the network
             validator_uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-            bt.logging.info(f"Validator is running with UID: {validator_uid}")
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Validator is running with UID: {validator_uid}"
+            )
 
             # Disable debug mode
             self.debug_mode = False
@@ -225,7 +240,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             deserialize=False
         )
 
-        bt.logging.debug(f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}')
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f'Metrics synapse processed for UUID: {synapse_uuid} and UID: {target_uid}'
+        )
 
     def _parse_args(self, parser):
         return parser.parse_args()
@@ -249,9 +267,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             # Log target to wandb
             self.wandb_handler.log(data={"Target": target})
-            bt.logging.trace(f"Adding wandb logs for target: {target}")
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Adding wandb logs for target: {target}"
+            )
 
-        bt.logging.debug(f"Confidence target set to: {target}")
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Confidence target set to: {target}"
+        )
 
         # Initiate the response objects
         response_data = []
@@ -289,15 +313,22 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     )
                 )
             else:
-                bt.logging.error(f"Received unsupported analyzer: {query}")
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Received unsupported analyzer: {query}"
+                )
                 raise AttributeError(f"Received unsupported analyzer: {query}")
 
             # Handle response
             response_data.append(response_object)
 
-        bt.logging.info(f"Received valid responses from UIDs: {responses_valid_uids}")
-        bt.logging.info(
-            f"Received invalid responses from UIDs: {responses_invalid_uids}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Received valid responses from UIDs: {responses_valid_uids}"
+        )
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Received invalid responses from UIDs: {responses_invalid_uids}"
         )
 
         # Add metrics
@@ -319,9 +350,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     ):
 
         top_prompt_injection_uids = np.argsort(self.prompt_injection_scores)[-specialization_bonus_n:][::-1]
-        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Top {specialization_bonus_n} Miner UIDs for the Prompt Injection Analyzer: {top_prompt_injection_uids}"
+        )
         top_sensitive_information_uids = np.argsort(self.sensitive_information_scores)[-specialization_bonus_n:][::-1]
-        bt.logging.trace(f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Top {specialization_bonus_n} Miner UIDs for the Sensitive Information Analyzer: {top_sensitive_information_uids}"
+        )
 
         for uid, _ in enumerate(self.hotkeys):
 
@@ -360,7 +397,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 for wandb_log in wandb_logs:
                     self.wandb_handler.log(wandb_log)
 
-        bt.logging.trace(f"Calculated miner scores: {self.scores}")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Calculated miner scores: {self.scores}"
+        )
 
     def calculate_penalized_scores(
         self,
@@ -390,12 +430,21 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             
             # check to make sure prompt is valid
             if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
-                bt.logging.trace(f'Validated prompt: {prompt}')
+                self.neuron_logger(
+                    severity="TRACEX",
+                    message=f'Validated prompt: {prompt}'
+                )
                 return prompt
-            bt.logging.debug(f'Failed to validate prompt: {prompt}')
+            self.neuron_logger(
+                severity="INFOX",
+                message=f'Failed to validate prompt: {prompt}'
+            )
             return {}
         except Exception as e:
-            bt.logging.error(f"Failed to get prompt from prompt API: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Failed to get prompt from prompt API: {e}"
+            )
 
         return {}
 
@@ -423,7 +472,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             "weight": 0.1, # Prompts from dataset should be given low weight in the scoring
         }
 
-        bt.logging.debug(f'Fetched prompt from the dataset: {prompt}')
+        self.neuron_logger(
+            severity="INFO",
+            message=f'Fetched prompt from the dataset: {prompt}'
+        )
         return prompt
 
 
@@ -461,19 +513,27 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 current_hotkeys = self.metagraph.hotkeys
                 for i, hotkey in enumerate(current_hotkeys):
                     if self.hotkeys[i] != hotkey:
-                        bt.logging.debug(
-                            f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Index '{i}' has mismatching hotkey. Old hotkey: '{self.hotkeys[i]}', new hotkey: '{hotkey}. Resetting score to 0.0"
                         )
-                        bt.logging.debug(f"Score before reset: {self.scores[i]}, Prompt Injeciton scores before reset: {self.prompt_injection_scores}, Sensitive Information scores before reset: {self.sensitive_information_scores}")
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Score before reset: {self.scores[i]}, Prompt Injeciton scores before reset: {self.prompt_injection_scores}, Sensitive Information scores before reset: {self.sensitive_information_scores}"
+                        )
                         self.scores[i] = 0.0
                         self.prompt_injection_scores[i] = 0.0
                         self.sensitive_information_scores[i] = 0.0
                         self.miner_responses[self.hotkeys[i]] = []
-                        bt.logging.debug(f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}")
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Score after reset: {self.scores[i]}, Prompt Injeciton scores after reset: {self.prompt_injection_scores}, Sensitive Information scores after reset: {self.sensitive_information_scores}"
+                        )
             else:
                 # Init default scores
-                bt.logging.info(
-                    f"Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}"
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Init default scores because of state and metagraph hotkey length mismatch. Expected: {len(self.metagraph.hotkeys)} had: {len(self.hotkeys)}"
                 )
                 self.init_default_scores()
 
@@ -490,8 +550,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         data_to_sign = (
             f"{synapse_uuid}{nonce}{self.wallet.hotkey.ss58_address}{timestamp}"
         )
-        bt.logging.trace(
-            f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}."
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Sent payload synapse to: {uids_to_query} with prompt: {prompt_to_analyze}."
         )
         prompts = [prompt_to_analyze["prompt"]]
         responses = await self.dendrite.forward(
@@ -520,7 +581,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             pickle.dump(self.miner_responses, pickle_file)
 
         filename = f"{self.cache_path}/miners.pickle"
-        bt.logging.debug(f"Saved miner states to file: {filename}")
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Saved miner states to file: {filename}"
+        )
 
     def check_miner_responses_are_formatted_correctly(self, miner_responses):
 
@@ -592,10 +656,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         )
                         self.miner_responses = {}
 
-                bt.logging.debug("Loaded miner state from a file")
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message="Loaded miner state from a file"
+                )
             except Exception as e:
-                bt.logging.error(
-                    f"Miner response data reset because a failure to read the miner response data, error: {e}"
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Miner response data reset because a failure to read the miner response data, error: {e}"
                 )
 
                 # Rename the current miner state file if exception
@@ -627,7 +695,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
     def save_state(self):
         """Saves the state of the validator to a file."""
-        bt.logging.info("Saving validator state.")
+        self.neuron_logger(
+            severity="INFO",
+            message="Saving validator state."
+        )
 
         # Save the state of the validator to file.
         np.savez_compressed(
@@ -641,8 +712,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         )
 
         filename = f"{self.cache_path}/state.npz"
-        bt.logging.debug(
-            f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
         )
 
     def init_default_scores(self) -> None:
@@ -650,26 +722,34 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         with default score of 0.0 for each UID. The method can also be
         used to reset the scores in case of an internal error"""
 
-        bt.logging.info(
-            "Initiating validator with default Prompt Injection Analyzer scores for each UID"
+        self.neuron_logger(
+            severity="INFO",
+            message="Initiating validator with default Prompt Injection Analyzer scores for each UID"
         )
         self.prompt_injection_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
-        bt.logging.info(
-            f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Prompt Injection Analyzer weights for validation have been initialized: {self.prompt_injection_scores}"
         )
 
-        bt.logging.info(
-            "Initiating validator with default Sensiive Information Analyzer scores for each UID"
+        self.neuron_logger(
+            severity="INFO",
+            message="Initiating validator with default Sensiive Information Analyzer scores for each UID"
         )
         self.sensitive_information_scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
-        bt.logging.info(
-            f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Sensitive Information Analyzer weights for validation have been initialized: {self.sensitive_information_scores}"
         )
 
-        bt.logging.info("Initiating validator with default overall scores for each UID")
+        self.neuron_logger(
+            severity="INFO",
+            message="Initiating validator with default overall scores for each UID"
+            )
         self.scores = np.zeros_like(self.metagraph.S, dtype=np.float32)
-        bt.logging.info(
-            f"Overall weights for validation have been initialized: {self.scores}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Overall weights for validation have been initialized: {self.scores}"
         )
 
     def reset_validator_state(self, state_path):
@@ -695,9 +775,15 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         if path.exists(state_path):
             try:
-                bt.logging.info("Loading validator state.")
+                self.neuron_logger(
+                    severity="INFO",
+                    message="Loading validator state."
+                )
                 state = np.load(state_path)
-                bt.logging.debug(f"Loaded the following state from file: {state}")
+                self.neuron_logger(
+                    severity="INFOX",
+                    message=f"Loaded the following state from file: {state}"
+                )
                 self.step = state["step"]
                 self.scores = state["scores"]
 
@@ -713,10 +799,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
                 self.hotkeys = state["hotkeys"]
                 self.last_updated_block = state["last_updated_block"]
-                bt.logging.info(f"Scores loaded from saved file: {self.scores}")
+                self.neuron_logger(
+                    severity="INFOX",
+                    message=f"Scores loaded from saved file: {self.scores}"
+                )
             except Exception as e:
-                bt.logging.error(
-                    f"Validator state reset because an exception occurred: {e}"
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Validator state reset because an exception occurred: {e}"
                 )
                 self.reset_validator_state(state_path=state_path)
         else:
@@ -726,8 +816,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
     async def sync_metagraph(self, metagraph, subtensor):
         """Syncs the metagraph"""
 
-        bt.logging.debug(
-            f"Syncing metagraph: {self.metagraph} with subtensor: {self.subtensor}"
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Syncing metagraph: {self.metagraph} with subtensor: {self.subtensor}"
         )
 
         # Sync the metagraph
@@ -782,10 +873,14 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         weights = get_weights_list(power_weights)
         
-        bt.logging.info(f"Setting weights: {weights}")
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Setting weights: {weights}"
+        )
         if not self.debug_mode:
-            bt.logging.debug(
-                f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+            self.neuron_logger(
+                severity="DEBUGX",
+                message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
@@ -798,11 +893,20 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 version_key=self.subnet_version,
             )
             if result:
-                bt.logging.success("Successfully set weights.")
+                self.neuron_logger(
+                    severity="SUCCESS",
+                    message="Successfully set weights."
+                )
             else:
-                bt.logging.error("Failed to set weights.")
+                self.neuron_logger(
+                    severity="ERROR",
+                    message="Failed to set weights."
+                )
         else:
-            bt.logging.info(f"Skipped setting weights due to debug mode")
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Skipped setting weights due to debug mode"
+            )
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--
@@ -818,8 +922,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             if axon.ip_str() not in axon_ips and not axon_ips.add(axon.ip_str())
         ]
 
-        bt.logging.debug(
-            f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
+        self.neuron_logger(
+            severity="TRACEX",
+            message=f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
         )
 
         return filtered_axons
@@ -833,18 +938,33 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         # Determine list of Axons to not query
         invalid_axons = [axon for axon in all_axons if axon not in valid_axons]
 
-        bt.logging.trace(f"Axons to query: {valid_axons}")
-        bt.logging.trace(f"Axons not to query: {invalid_axons}")
+        self.neuron_logger(
+            severity="TRACEX",
+            message=f"Axons to query: {valid_axons}"
+        )
+        self.neuron_logger(
+            severity="TRACEX",
+            message=f"Axons not to query: {invalid_axons}"
+        )
 
         valid_uids, invalid_uids = (
             [self.metagraph.hotkeys.index(axon.hotkey) for axon in valid_axons],
             [self.metagraph.hotkeys.index(axon.hotkey) for axon in invalid_axons],
         )
 
-        bt.logging.debug(f"Valid UIDs to be queried: {valid_uids}")
-        bt.logging.debug(f"Invalid UIDs not queried: {invalid_uids}")
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Valid UIDs to be queried: {valid_uids}"
+        )
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Invalid UIDs not queried: {invalid_uids}"
+        )
 
-        bt.logging.debug(f"Selecting UIDs for target group: {self.target_group}")
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Selecting UIDs for target group: {self.target_group}"
+        )
 
         # Determine how many axons must be included in one query group
         query_group_count = int(len(valid_axons) / self.max_targets) + (
@@ -870,7 +990,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         else:
             self.target_group += 1
 
-        bt.logging.debug(f"Start index: {start_index}, end index: {end_index}")
+        self.neuron_logger(
+            severity="INFOX",
+            message=f"Start index: {start_index}, end index: {end_index}"
+        )
 
         if start_index == end_index:
             axons_to_query = valid_axons[start_index]
