@@ -27,9 +27,15 @@ def update_metagraph(validator: LLMDefenderCore.SubnetValidator) -> None:
         validator.metagraph = asyncio.run(
             validator.sync_metagraph(validator.metagraph, validator.subtensor)
         )
-        bt.logging.debug(f"Metagraph synced: {validator.metagraph}")
+        validator.neuron_logger(
+            severity="INFOX",
+            message=f"Metagraph synced: {validator.metagraph}"
+        )
     except TimeoutError as e:
-        bt.logging.error(f"Metagraph sync timed out: {e}")
+        validator.neuron_logger(
+            severity="ERROR",
+            message=f"Metagraph sync timed out: {e}"
+        )
 
 
 async def update_metagraph_async(validator: LLMDefenderCore.SubnetValidator) -> None:
@@ -39,8 +45,9 @@ async def update_metagraph_async(validator: LLMDefenderCore.SubnetValidator) -> 
 def update_and_check_hotkeys(validator: LLMDefenderCore.SubnetValidator) -> None:
     validator.check_hotkeys()
     if validator.wallet.hotkey.ss58_address not in validator.metagraph.hotkeys:
-        bt.logging.error(
-            f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}."
+        validator.neuron_logger(
+            severity="ERROR",
+            message=f"Hotkey is not registered on metagraph: {validator.wallet.hotkey.ss58_address}."
         )
 
 
@@ -127,8 +134,9 @@ def send_notification_synapse(
     data_to_sign = (
         f"{synapse_uuid}{nonce}{validator.wallet.hotkey.ss58_address}{timestamp}"
     )
-    bt.logging.trace(
-        f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}."
+    validator.neuron_logger(
+        severity="TRACEX",
+        message=f"Sent notification synapse to: {axons_with_valid_ip} with encoded prompt: {encoded_prompt} for prompt: {prompt_to_analyze}."
     )
     responses = validator.dendrite.query(
         axons_with_valid_ip,
@@ -151,12 +159,14 @@ def send_notification_synapse(
 def score_unused_axons(validator, uids_not_to_query):
     # Process UIDs we did not query (set scores to 0)
     for uid in uids_not_to_query:
-        bt.logging.trace(
-            f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
+        validator.neuron_logger(
+            severity="TRACE",
+            message=f"Setting score for not queried UID: {uid}. Old score: {validator.scores[uid]}"
         )
         validator.scores[uid] = 0.99 * validator.scores[uid]
-        bt.logging.trace(
-            f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
+        validator.neuron_logger(
+            severity="TRACE",
+            message=f"Set score for not queried UID: {uid}. New score: {validator.scores[uid]}"
         )
 
 
@@ -167,10 +177,16 @@ async def score_unused_axons_async(validator, uids_not_to_query):
 def handle_empty_responses(validator, list_of_uids):
     # This must be SYNC process, because we need to wait until the subnetwork syncs
     # Handle all responses empty
-    bt.logging.info("Received empty response from all miners")
+    validator.neuron_logger(
+        severity="INFO",
+        message="Received empty response from all miners"
+    )
     # If we receive empty responses from all axons, we can just set the scores to none for all the uids we queried
     score_unused_axons(validator, list_of_uids)
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    validator.neuron_logger(
+        severity="INFO",
+        message=f"Sleeping for: {bt.__blocktime__/3} seconds"
+    )
     time.sleep(bt.__blocktime__ / 3)
 
 
@@ -190,12 +206,16 @@ def format_responses(
 def handle_invalid_prompt(validator):
     # This must be SYNC process
     # If we cannot get a valid prompt, sleep for a moment and retry the loop
-    bt.logging.warning(
-        f"Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists."
+    validator.neuron_logger(
+        severity="WARNING",
+        message=f"Unable to get a valid query from the Prompt API, received: {validator.query}. Please report this to subnet developers if the issue persists."
     )
 
     # Sleep and retry
-    bt.logging.debug(f"Sleeping for: {bt.__blocktime__/3} seconds")
+    validator.neuron_logger(
+        severity="ERROR",
+        message=f"Sleeping for: {bt.__blocktime__/3} seconds before retrying the loop."
+    )
     time.sleep(bt.__blocktime__ / 3)
 
 
@@ -217,7 +237,10 @@ def update_weights(validator: LLMDefenderCore.SubnetValidator):
         if not validator.debug_mode:
             validator.last_updated_block = validator.subtensor.get_current_block()
     except TimeoutError as e:
-        bt.logging.error(f"Setting weights timed out: {e}")
+        validator.neuron_logger(
+            severity="ERROR", 
+            message=f"Setting weights timed out: {e}"
+        )
 
 
 async def update_weights_async(validator):
@@ -231,7 +254,10 @@ async def get_average_score_per_analyzer(validator):
     for hotkey, response_list in validator.miner_responses.items():
         
         if not response_list:
-            bt.logging.debug(f"Response list is empty: {response_list}")
+            validator.neuron_logger(
+                severity="DEBUGX",
+                message=f"Response history for miner: {hotkey} is empty: {response_list}"
+            )
             continue
         
         analyzer_scores = {}
