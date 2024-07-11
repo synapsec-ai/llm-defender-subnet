@@ -14,6 +14,7 @@ def process_response(
     validator,
     responses_invalid_uids,
     responses_valid_uids,
+    log_level
 ):
     # Get the hotkey for the response
     hotkey = validator.metagraph.hotkeys[uid]
@@ -33,9 +34,13 @@ def process_response(
 
     # Set the score for invalid responses or responses that fail nonce validation to 0.0
     if not LLMDefenderCore.sensitive_information_scoring.validate_response(
-        hotkey, response.output
+        hotkey, response.output, log_level
     ) or not validator.validate_nonce(response.output["nonce"]):
-        bt.logging.debug(f"Empty response or nonce validation failed: {response}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Empty response or nonce validation failed: {response}", 
+            log_level=log_level
+        )
         
         scored_response = LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
 
@@ -46,7 +51,7 @@ def process_response(
         response_time = response.dendrite.process_time
 
         scored_response = calculate_analyzer_score(
-            prompt, validator, response.output, target, response_time, hotkey
+            prompt, validator, response.output, target, response_time, hotkey, log_level
         )
 
         miner_response = {
@@ -72,8 +77,9 @@ def process_response(
 
         if response.output["subnet_version"]:
             if response.output["subnet_version"] > validator.subnet_version:
-                bt.logging.warning(
-                    f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.'
+                LLMDefenderBase.utils.subnet_logger(
+                    severity="WARNING",message=f'Received a response from a miner with higher subnet version ({response.output["subnet_version"]}) than yours ({validator.subnet_version}). Please update the validator.', 
+                    log_level=log_level
                 )
 
         # Populate response data
@@ -167,17 +173,23 @@ def process_response(
             for wandb_log in wandb_logs:
                 validator.wandb_handler.log(wandb_log)
 
-            bt.logging.trace(
-                f"Adding wandb logs for response data: {wandb_logs} for uid: {uid}"
+            LLMDefenderBase.utils.subnet_logger(
+                severity="TRACE",
+                message=f"Adding wandb logs for response data: {wandb_logs} for uid: {uid}", 
+                log_level=log_level
             )
 
-    bt.logging.debug(f"Processed response: {response_object}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="DEBUG",
+        message=f"Processed response: {response_object}", 
+        log_level=log_level
+    )
 
     return response_object, responses_invalid_uids, responses_valid_uids
 
 
 def calculate_analyzer_score(
-    prompt, validator, response, target: float, response_time: float, hotkey: str
+    prompt, validator, response, target: float, response_time: float, hotkey: str, log_level
 ) -> dict:
     """This function sets the score based on the response.
 
@@ -191,8 +203,10 @@ def calculate_analyzer_score(
             response, target
         )
     if distance_score is None:
-        bt.logging.debug(
-            f"Received an invalid response: {response} from hotkey: {hotkey}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Received an invalid response: {response} from hotkey: {hotkey}", 
+            log_level=log_level
         )
         distance_score = 0.0
 
@@ -202,15 +216,21 @@ def calculate_analyzer_score(
         )
     )
 
-    bt.logging.trace(f"Disance scores for hotkey: {hotkey} are: distance_score: {distance_score}, normalized_distance_score{normalized_distance_score}, binned_distance_score: {binned_distance_score}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Disance scores for hotkey: {hotkey} are: distance_score: {distance_score}, normalized_distance_score{normalized_distance_score}, binned_distance_score: {binned_distance_score}", 
+        log_level=log_level
+    )
 
     # Calculate speed score
     speed_score = LLMDefenderCore.sensitive_information_scoring.calculate_subscore_speed(
         validator.timeout, response_time
     )
     if speed_score is None:
-        bt.logging.debug(
-            f"Response time {response_time} was larger than timeout {validator.timeout} for response: {response} from hotkey: {hotkey}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Response time {response_time} was larger than timeout {validator.timeout} for response: {response} from hotkey: {hotkey}",
+            log_level=log_level
         )
         speed_score = 0.0
 
@@ -218,8 +238,10 @@ def calculate_analyzer_score(
     if not LLMDefenderBase.validate_numerical_value(
         distance_score, float, 0.0, 1.0
     ) or not LLMDefenderBase.validate_numerical_value(speed_score, float, 0.0, 1.0):
-        bt.logging.error(
-            f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="ERROR",
+            message=f"Calculated out-of-bounds individual scores (Distance: {distance_score} - Speed: {speed_score}) for the response: {response} from hotkey: {hotkey}", 
+            log_level=log_level
         )
         return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
 
@@ -228,7 +250,7 @@ def calculate_analyzer_score(
 
     # Get penalty multipliers
     distance_penalty, speed_penalty = get_response_penalties(
-        validator, response, hotkey, target
+        validator, response, hotkey, target, log_level
     )
 
     # Apply penalties to scores
@@ -237,7 +259,7 @@ def calculate_analyzer_score(
         final_distance_score,
         final_speed_score,
     ) = validator.calculate_penalized_scores(
-        score_weights, binned_distance_score, speed_score, distance_penalty, speed_penalty
+        score_weights, binned_distance_score, speed_score, distance_penalty, speed_penalty, log_level
     )
 
     # Validate individual scores
@@ -251,8 +273,10 @@ def calculate_analyzer_score(
             final_speed_score, float, 0.0, 1.0
         )
     ):
-        bt.logging.error(
-            f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="ERROR",
+            message=f"Calculated out-of-bounds individual scores (Total: {total_analyzer_raw_score} - Distance: {final_distance_score} - Speed: {final_speed_score}) for the response: {response} from hotkey: {hotkey}", 
+            log_level=log_level
         )
         return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object()
 
@@ -273,7 +297,11 @@ def calculate_analyzer_score(
         },
     }
 
-    bt.logging.debug(f"Calculated score: {score_logger}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="DEBUG",
+        message=f"Calculated score: {score_logger}",
+        log_level=log_level
+    )
 
     return LLMDefenderCore.sensitive_information_scoring.get_engine_response_object(
         normalized_distance_score=normalized_distance_score,
@@ -288,7 +316,7 @@ def calculate_analyzer_score(
     )
 
 
-def apply_penalty(validator, response, hotkey, target) -> tuple:
+def apply_penalty(validator, response, hotkey, target, log_level) -> tuple:
     """
     Applies a penalty score based on the response and previous
     responses received from the miner.
@@ -300,26 +328,28 @@ def apply_penalty(validator, response, hotkey, target) -> tuple:
     false_positive = base = duplicate = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
     false_positive += LLMDefenderCore.sensitive_information_penalty.check_false_positive_penalty(
-        response, target
+        response, target, log_level
     )
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(
-        uid, response
+        uid, response, log_level
     )
     duplicate += LLMDefenderCore.sensitive_information_penalty.check_duplicate_penalty(
-        uid, response
+        uid, response, log_level
     )
 
-    bt.logging.trace(
-        f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'"
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'", 
+        log_level=log_level
     )
     return false_positive, base, duplicate
 
 
-def get_response_penalties(validator, response, hotkey, target):
+def get_response_penalties(validator, response, hotkey, target, log_level):
     """This function resolves the penalties for the response"""
 
     false_positive_penalty, base_penalty, duplicate_penalty = apply_penalty(
-        validator, response, hotkey, target
+        validator, response, hotkey, target, log_level
     )
 
     distance_penalty_multiplier = 1.0
