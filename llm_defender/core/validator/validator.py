@@ -296,6 +296,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         validator=self,
                         responses_invalid_uids=responses_invalid_uids,
                         responses_valid_uids=responses_valid_uids,
+                        log_level=self.log_level,
                     )
                 )
             elif query["analyzer"] == "Sensitive Information":
@@ -310,6 +311,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                         validator=self,
                         responses_invalid_uids=responses_invalid_uids,
                         responses_valid_uids=responses_valid_uids,
+                        log_level=self.log_level,
                     )
                 )
             else:
@@ -426,7 +428,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         try:
             # get prompt
-            prompt = self.prompt_api.construct(analyzer=analyzer)
+            prompt = self.prompt_api.construct(analyzer=analyzer, log_level=self.log_level)
             
             # check to make sure prompt is valid
             if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
