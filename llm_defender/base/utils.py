@@ -333,34 +333,64 @@ def validate_validator_api_prompt_output(api_output):
 
     return good_output
 
-def subnet_logger(severity: str, message: str):
+def subnet_logger(severity: str, message: str, log_level: int,):
     """This method is a wrapper for the bt.logging function to add extra
     functionality around the native logging capabilities. This method is
     used together with the neuron_logger() method."""
     
-    severity_emoji = {
-        "SUCCESS": chr(0x2705),
-        "ERROR": chr(0x274C),
-        "WARNING": chr(0x1F6A8),
-        "INFO": chr(0x1F4A1),
-        "DEBUG": chr(0x1F527),
-        "TRACE": chr(0x1F50D),
-    }
+    if (isinstance(severity, str) and not isinstance(severity, bool)) and (
+        isinstance(message, str) and not isinstance(message, bool)
+    ):
+        # Do mapping of custom log levels
+        log_levels = {
+            "INFO": 0,
+            "INFOX": 1,
+            "DEBUG": 2,
+            "DEBUGX": 3,
+            "TRACE": 4,
+            "TRACEX": 5
+        }
 
-    if severity.upper() == "SUCCESS":
-        bt.logging.success(msg=message, prefix=severity_emoji["SUCCESS"])
+        bittensor_severities = {
+            "SUCCESS": "SUCCESS",
+            "WARNING": "WARNING",
+            "ERROR": "ERROR",
+            "INFO": "INFO",
+            "INFOX": "INFO",
+            "DEBUG": "DEBUG",
+            "DEBUGX": "DEBUG",
+            "TRACE": "TRACE",
+            "TRACEX": "TRACE"
+        }
 
-    elif severity.upper() == "ERROR":
-        bt.logging.error(msg=message, prefix=severity_emoji["ERROR"])
+        severity_emoji = {
+            "SUCCESS": chr(0x2705),
+            "ERROR": chr(0x274C),
+            "WARNING": chr(0x1F6A8),
+            "INFO": chr(0x1F4A1),
+            "DEBUG": chr(0x1F527),
+            "TRACE": chr(0x1F50D),
+        }
 
-    elif severity.upper() == "WARNING":
-        bt.logging.warning(msg=message, prefix=severity_emoji["WARNING"])
+         # Use utils.subnet_logger() to write the logs
+        if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or log_levels[log_level] >= log_levels[severity.upper()]:
 
-    elif severity.upper() == "INFO":
-        bt.logging.info(msg=message, prefix=severity_emoji["INFO"])
+            general_severity=bittensor_severities[severity.upper()]
 
-    elif severity.upper() == "DEBUG":
-        bt.logging.debug(msg=message, prefix=severity_emoji["DEBUG"])
+            if general_severity.upper() == "SUCCESS":
+                bt.logging.success(msg=message, prefix=severity_emoji["SUCCESS"])
 
-    if severity.upper() == "TRACE":
-        bt.logging.trace(msg=message, prefix=severity_emoji["TRACE"])
+            elif general_severity.upper() == "ERROR":
+                bt.logging.error(msg=message, prefix=severity_emoji["ERROR"])
+
+            elif general_severity.upper() == "WARNING":
+                bt.logging.warning(msg=message, prefix=severity_emoji["WARNING"])
+
+            elif general_severity.upper() == "INFO":
+                bt.logging.info(msg=message, prefix=severity_emoji["INFO"])
+
+            elif general_severity.upper() == "DEBUG":
+                bt.logging.debug(msg=message, prefix=severity_emoji["DEBUG"])
+
+            if general_severity.upper() == "TRACE":
+                bt.logging.trace(msg=message, prefix=severity_emoji["TRACE"])

@@ -180,47 +180,20 @@ class BaseNeuron:
         """This method is a wrapper for the bt.logging function to add extra
         functionality around the native logging capabilities"""
 
-        if (isinstance(severity, str) and not isinstance(severity, bool)) and (
-            isinstance(message, str) and not isinstance(message, bool)
-        ):
-            # Do mapping of custom log levels
-            log_levels = {
-                "INFO": 0,
-                "INFOX": 1,
-                "DEBUG": 2,
-                "DEBUGX": 3,
-                "TRACE": 4,
-                "TRACEX": 5
-            }
+        LLMDefenderBase.utils.subnet_logger(severity=severity, message=message, log_level=self.log_level)
 
-            bittensor_severities = {
-                "SUCCESS": "SUCCESS",
-                "WARNING": "WARNING",
-                "ERROR": "ERROR",
-                "INFO": "INFO",
-                "INFOX": "INFO",
-                "DEBUG": "DEBUG",
-                "DEBUGX": "DEBUG",
-                "TRACE": "TRACE",
-                "TRACEX": "TRACE"
-            }
+        # Append extra information to to the logs if healthcheck API is enabled
+        if self.healthcheck_api:
+            if severity.upper() in ("SUCCESS", "ERROR", "WARNING"):
 
-            # Use utils.subnet_logger() to write the logs
-            if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or log_levels[self.log_level] >= log_levels[severity.upper()]:
-                LLMDefenderBase.utils.subnet_logger(severity=bittensor_severities[severity.upper()], message=message)
+                event_severity = severity.lower()
 
-            # Append extra information to to the logs if healthcheck API is enabled
-            if self.healthcheck_api:
-                if severity.upper() in ("SUCCESS", "ERROR", "WARNING"):
+                # Metric
+                self.healthcheck_api.append_metric(
+                    metric_name=f"log_entries.{event_severity}", value=1
+                )
 
-                    event_severity = severity.lower()
-
-                    # Metric
-                    self.healthcheck_api.append_metric(
-                        metric_name=f"log_entries.{event_severity}", value=1
-                    )
-
-                    # Store event
-                    self.healthcheck_api.add_event(
-                        event_name=f"{event_severity}", event_data=message
-                    )
+                # Store event
+                self.healthcheck_api.add_event(
+                    event_name=f"{event_severity}", event_data=message
+                )
