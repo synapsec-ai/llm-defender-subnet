@@ -21,7 +21,10 @@ def main(miner: LLMDefenderCore.SubnetMiner):
 
     # Link the miner to the Axon
     axon = bt.axon(wallet=miner.wallet, config=miner.neuron_config)
-    bt.logging.info(f"Linked miner to Axon: {axon}")
+    miner.neuron_logger(
+        severity="INFO",
+        message=f"Linked miner to Axon: {axon}"
+    )
 
     # Attach the miner functions to the Axon
     axon.attach(
@@ -33,22 +36,30 @@ def main(miner: LLMDefenderCore.SubnetMiner):
         blacklist_fn=miner.metric_blacklist,
         priority_fn=miner.metric_priority
     )
-    bt.logging.info(f"Attached functions to Axon: {axon}")
+    miner.neuron_logger(
+        severity="INFO",
+        message=f"Attached functions to Axon: {axon}"
+    )
 
     # Pass the Axon information to the network
     axon.serve(netuid=miner.neuron_config.netuid, subtensor=miner.subtensor)
 
-    bt.logging.info(
-        f"Axon served on network: {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
+    miner.neuron_logger(
+        severity="INFO",
+        message=f"Axon served on network: {miner.neuron_config.subtensor.chain_endpoint} with netuid: {miner.neuron_config.netuid}"
     )
     # Activate the Miner on the network
     axon.start()
-    bt.logging.info(f"Axon started on port: {miner.neuron_config.axon.port}")
+    miner.neuron_logger(
+        severity="INFO",
+        message=f"Axon started on port: {miner.neuron_config.axon.port}"
+    )
 
     # Step 7: Keep the miner alive
     # This loop maintains the miner's operations until intentionally stopped.
-    bt.logging.info(
-        "Miner has been initialized and we are connected to the network. Start main loop."
+    miner.neuron_logger(
+        severity="INFO",
+        message="Miner has been initialized and we are connected to the network. Start main loop."
     )
 
     # Get module version
@@ -60,16 +71,18 @@ def main(miner: LLMDefenderCore.SubnetMiner):
         try:
             # Below: Periodically update our knowledge of the network graph.
             if miner.step % 600 == 0:
-                bt.logging.debug(
-                    f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
+                miner.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Syncing metagraph: {miner.metagraph} with subtensor: {miner.subtensor}"
                 )
 
                 miner.metagraph.sync(subtensor=miner.subtensor)
 
                 # Check registration status
                 if miner.wallet.hotkey.ss58_address not in miner.metagraph.hotkeys:
-                    bt.logging.error(
-                        f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}."
+                    miner.neuron_logger(
+                        severity="SUCCESS",
+                        message=f"Hotkey is not registered on metagraph: {miner.wallet.hotkey.ss58_address}."
                     )
 
                 # Save used nonces
@@ -92,10 +105,16 @@ def main(miner: LLMDefenderCore.SubnetMiner):
                     f"Emission:{miner.metagraph.E[miner.miner_uid]}"
                 )
 
-                bt.logging.info(log)
+                miner.neuron_logger(
+                    severity="INFO",
+                    message=log
+                )
 
                 # Print validator stats
-                bt.logging.debug(f"Validator stats: {miner.validator_stats}")
+                miner.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Validator stats: {miner.validator_stats}"
+                )
                 if miner.wandb_enabled:
                     wandb_logs = [
                         {
@@ -127,7 +146,10 @@ def main(miner: LLMDefenderCore.SubnetMiner):
                     miner.wandb_handler.set_timestamp()
                     for wandb_log in wandb_logs:
                         miner.wandb_handler.log(data=wandb_log)
-                    bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+                    miner.neuron_logger(
+                        severity="TRACE",
+                        message=f"Wandb logs added: {wandb_logs}"
+                    )
 
             miner.step += 1
             time.sleep(1)
@@ -135,13 +157,19 @@ def main(miner: LLMDefenderCore.SubnetMiner):
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
             axon.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
+            miner.neuron_logger(
+                severity="SUCCESS",
+                message="Miner killed by keyboard interrupt."
+            )
             if miner.wandb_handler:
                 miner.wandb_handler.wandb_run.finish()
             break
         # In case of unforeseen errors, the miner will log the error and continue operations.
         except Exception:
-            bt.logging.error(traceback.format_exc())
+            miner.neuron_logger(
+                severity="SUCCESS",
+                message=traceback.format_exc()
+            )
             continue
 
 

@@ -45,7 +45,7 @@ class SensitiveInformationAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]):
+    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str], log_level):
         output = {
             "analyzer": "Sensitive Information",
             "confidence": None,
@@ -57,7 +57,7 @@ class SensitiveInformationAnalyzer:
         token_classification_engine = LLMDefenderCore.TokenClassificationEngine(
             prompts=prompts
         )
-        token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        token_classification_engine.execute(model=self.model, tokenizer=self.tokenizer, log_level=log_level)
         token_classification_response = (
             token_classification_engine.get_response().get_dict()
         )
@@ -98,6 +98,10 @@ class SensitiveInformationAnalyzer:
             for wandb_log in wandb_logs:
                 self.wandb_handler.log(data=wandb_log)
 
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            LLMDefenderBase.utils.subnet_logger(
+                severity="TRACE",
+                message=f"Wandb logs added: {wandb_logs}",
+                log_level=log_level
+            )
 
         return output

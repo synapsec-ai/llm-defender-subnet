@@ -197,7 +197,7 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
 
         return model, tokenizer
 
-    def execute(self, model, tokenizer):
+    def execute(self, model, tokenizer, log_level):
         """Perform token-classification for the prompt.
 
         This function performs classification of the given prompt to
@@ -240,7 +240,9 @@ class TokenClassificationEngine(LLMDefenderBase.BaseEngine):
         self.output = self._populate_data(results)
         self.confidence = self._calculate_confidence()
 
-        bt.logging.debug(
-            f"Token Classification engine executed (Confidence: {self.confidence} - Output: {self.output})"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Token Classification engine executed (Confidence: {self.confidence} - Output: {self.output})",
+            log_level=log_level
         )
         return True
