@@ -69,7 +69,7 @@ class BaseNeuron:
         # Enable wandb if it has been configured
         if LLMDefenderBase.config["wandb_enabled"] is True:
             self.wandb_enabled = True
-            self.wandb_handler = LLMDefenderBase.WandbHandler()
+            self.wandb_handler = LLMDefenderBase.WandbHandler(self.log_level)
         else:
             self.wandb_enabled = False
             self.wandb_handler = None
@@ -104,8 +104,9 @@ class BaseNeuron:
             for bt_class in bt_classes:
                 bt_class.add_args(self.parser)
         except AttributeError as e:
-            bt.logging.error(
-                f"Unable to attach ArgumentParsers to Bittensor classes: {e}"
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to attach ArgumentParsers to Bittensor classes: {e}"
             )
             raise AttributeError from e
 
@@ -128,7 +129,10 @@ class BaseNeuron:
                 if os_path == self.log_path:
                     config.full_path = path.expanduser(os_path)
         except OSError as e:
-            bt.logging.error(f"Unable to create log path: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to create log path: {e}"
+            )
             raise OSError from e
         return config
 
@@ -137,14 +141,20 @@ class BaseNeuron:
 
         if len(self.used_nonces) > 1000000:
             self.used_nonces = self.used_nonces[-500000:]
-            bt.logging.info("Truncated list of used_nonces")
+            self.neuron_logger(
+                severity="INFO",
+                message="Truncated list of used_nonces"
+            )
         with open(
             f"{self.cache_path}/used_nonces.pickle",
             "wb",
         ) as pickle_file:
             pickle.dump(self.used_nonces, pickle_file)
 
-        bt.logging.info("Saved used nonces to a file")
+        self.neuron_logger(
+            severity="INFO",
+            message="Saved used nonces to a file"
+        )
 
     def load_used_nonces(self):
         """Loads used nonces from a file"""
@@ -154,10 +164,14 @@ class BaseNeuron:
                 with open(state_path, "rb") as pickle_file:
                     self.used_nonces = pickle.load(pickle_file)
 
-                bt.logging.info("Loaded used nonces from a file")
+                self.neuron_logger(
+                    severity="INFO",
+                    message="Loaded used nonces from a file"
+                )
             except Exception as e:
-                bt.logging.error(
-                    f"Used nonces reset because a failure to read the used nonces data, error: {e}"
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Used nonces reset because a failure to read the used nonces data, error: {e}"
                 )
 
                 # Rename the used nonces file if exception

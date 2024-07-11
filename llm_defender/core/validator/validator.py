@@ -266,7 +266,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.wandb_handler.set_timestamp()
 
             # Log target to wandb
-            self.wandb_handler.log(data={"Target": target})
+            self.wandb_handler.log(data={"Target": target}, log_level=self.log_level)
             self.neuron_logger(
                 severity="TRACE",
                 message=f"Adding wandb logs for target: {target}"
@@ -397,7 +397,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 ]
 
                 for wandb_log in wandb_logs:
-                    self.wandb_handler.log(wandb_log)
+                    self.wandb_handler.log(wandb_log, log_level=self.log_level)
 
         self.neuron_logger(
             severity="TRACE",

@@ -559,7 +559,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
 
         # If we encounter an unexpected error, log it for debugging.
         except RuntimeError as e:
-            bt.logging.error(e)
+            validator.neuron_logger(
+                severity="ERROR",
+                message=e
+            )
             traceback.print_exc()
 
         # If the user interrupts the program, gracefully exit.
@@ -570,7 +573,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             sys.exit()
 
         except Exception as e:
-            bt.logging.error(e)
+            validator.neuron_logger(
+                severity="ERROR",
+                message=e
+            )
             traceback.print_exc()
 
 

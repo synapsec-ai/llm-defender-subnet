@@ -171,7 +171,7 @@ def process_response(
                     },
                 )
             for wandb_log in wandb_logs:
-                validator.wandb_handler.log(wandb_log)
+                validator.wandb_handler.log(wandb_log, log_level=validator.log_level)
 
             LLMDefenderBase.utils.subnet_logger(
                 severity="TRACE",

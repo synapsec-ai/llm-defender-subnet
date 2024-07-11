@@ -96,7 +96,7 @@ class SensitiveInformationAnalyzer:
             ]
 
             for wandb_log in wandb_logs:
-                self.wandb_handler.log(data=wandb_log)
+                self.wandb_handler.log(data=wandb_log, log_level=log_level)
 
             LLMDefenderBase.utils.subnet_logger(
                 severity="TRACE",

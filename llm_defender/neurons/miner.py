@@ -145,7 +145,7 @@ def main(miner: LLMDefenderCore.SubnetMiner):
                     ]
                     miner.wandb_handler.set_timestamp()
                     for wandb_log in wandb_logs:
-                        miner.wandb_handler.log(data=wandb_log)
+                        miner.wandb_handler.log(data=wandb_log, log_level=miner.log_level)
                     miner.neuron_logger(
                         severity="TRACE",
                         message=f"Wandb logs added: {wandb_logs}"

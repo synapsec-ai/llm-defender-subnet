@@ -127,7 +127,7 @@ def check_base_penalty(uid, response, log_level):
             The total penalty score within the base category.
     """
 
-    def _check_response_validity(uid, response, penalty_name="Response Validity", log_level):
+    def _check_response_validity(uid, response, log_level, penalty_name="Response Validity"):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
         If this is the case, it applies a penalty of 20.0, and if this is not the case the penalty
@@ -193,11 +193,15 @@ def check_base_penalty(uid, response, log_level):
 
     if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
-        bt.logging.debug(f"Validation failed: {uid}, {response}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Validation failed: {uid}, {response}",
+            log_level=log_level
+        )
         return 10.0
 
     penalty = 0.0
-    penalty += _check_response_validity(uid, response, log_level)
+    penalty += _check_response_validity(uid, response, log_level=log_level)
 
     LLMDefenderBase.utils.subnet_logger(
         severity="TRACE",
