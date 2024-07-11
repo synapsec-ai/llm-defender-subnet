@@ -476,6 +476,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             hotkey=synapse.dendrite.hotkey,
             data=data,
             signature=synapse.synapse_signature,
+            log_level=self.log_level
         ):
             self.neuron_logger(
                 severity="DEBUG",

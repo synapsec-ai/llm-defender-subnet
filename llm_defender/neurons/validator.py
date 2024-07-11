@@ -113,7 +113,7 @@ def query_axons(synapse_uuid, uids_to_query, validator):
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
             synapse_signature=LLMDefenderBase.sign_data(
-                hotkey=validator.wallet.hotkey, data=data_to_sign
+                hotkey=validator.wallet.hotkey, data=data_to_sign, log_level=validator.log_level
             ),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,
@@ -144,7 +144,7 @@ def send_notification_synapse(
             subnet_version=validator.subnet_version,
             synapse_uuid=synapse_uuid,
             synapse_signature=LLMDefenderBase.sign_data(
-                hotkey=validator.wallet.hotkey, data=data_to_sign
+                hotkey=validator.wallet.hotkey, data=data_to_sign, log_level=validator.log_level
             ),
             synapse_nonce=nonce,
             synapse_timestamp=timestamp,

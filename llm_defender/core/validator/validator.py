@@ -233,7 +233,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 synapse_nonce=nonce,
                 synapse_timestamp=timestamp,
                 synapse_signature=LLMDefenderBase.sign_data(
-                    hotkey=self.wallet.hotkey, data=data_to_sign
+                    hotkey=self.wallet.hotkey, data=data_to_sign, log_level=self.log_level
                 ),
             ),
             timeout=2,
@@ -431,7 +431,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             prompt = self.prompt_api.construct(analyzer=analyzer, log_level=self.log_level)
             
             # check to make sure prompt is valid
-            if LLMDefenderBase.validate_validator_api_prompt_output(prompt):
+            if LLMDefenderBase.validate_validator_api_prompt_output(prompt, self.log_level):
                 self.neuron_logger(
                     severity="TRACEX",
                     message=f'Validated prompt: {prompt}'
@@ -564,7 +564,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 subnet_version=self.subnet_version,
                 synapse_uuid=synapse_uuid,
                 synapse_signature=LLMDefenderBase.sign_data(
-                    hotkey=self.wallet.hotkey, data=data_to_sign
+                    hotkey=self.wallet.hotkey, data=data_to_sign, log_level=self.log_level
                 ),
                 synapse_nonce=nonce,
                 synapse_timestamp=timestamp,

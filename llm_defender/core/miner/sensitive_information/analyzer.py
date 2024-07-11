@@ -76,7 +76,7 @@ class SensitiveInformationAnalyzer:
         data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign, log_level)
 
         # Wandb logging
         if self.wandb_enabled:
