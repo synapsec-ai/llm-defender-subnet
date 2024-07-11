@@ -25,4 +25,4 @@ RUN chown -R $USER_UID:$USER_GID /llm-defender-subnet \
 # Change to the user and do subnet installation
 USER $USERNAME
 
-RUN /bin/bash -c "python3 -m venv /llm-defender-subnet/.venv && source /llm-defender-subnet/.venv/bin/activate && pip3 install -e /llm-defender-subnet/.[validator]"
+RUN /bin/bash -c "python3 -m venv /llm-defender-subnet/.venv && source /llm-defender-subnet/.venv/bin/activate && pip3 install -e /llm-defender-subnet/.[validator,api]"

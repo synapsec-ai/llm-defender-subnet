@@ -1,25 +1,31 @@
 services:
   common-validator: &common-validator
-    image: ghcr.io/synapsec-ai/llm-defender-validator:latest
+    image: ghcr.io/synapsec-ai/llm-defender-validator:v0.9.0
     restart: unless-stopped
     pull_policy: always
-    user: llm-defender-validator-user
+    user: llm-defender-user
     ports:
       - "6000:6000"
     volumes:
-      - llm-defender-subnet:/home/llm-defender-validator-user/.llm-defender-subnet
-      - ${HOME}/.bittensor:/home/llm-defender-validator-user/.bittensor
+      - llm-defender-subnet:/home/llm-defender-user/.llm-defender-subnet
+      - ${HOME}/.bittensor:/home/llm-defender-user/.bittensor
   common-api: &common-api
     restart: unless-stopped
     pull_policy: always
-    image: ghcr.io/synapsec-ai/llm-defender-api:latest
+    image: ghcr.io/synapsec-ai/llm-defender-api:v0.9.0
     command: /bin/bash -c "source /llm-defender-subnet/.venv/bin/activate && python3 /llm-defender-subnet/llm_defender/subnet_api/main.py"
     ports:
       - "8080:8080"
     volumes:
-      - ${HOME}/.bittensor:/.bittensor
-    env_file:
-      - .api-env
+      - ${HOME}/.bittensor:/home/llm-defender-user/.bittensor
+    environment:
+      - NETUID=${NETUID}
+      - SUBTENSOR_CHAIN_ENDPOINT=${SUBTENSOR_CHAIN_ENDPOINT}
+      - WALLET_NAME=${VALIDATOR_WALLET}
+      - WALLET_HOTKEY=${VALIDATOR_HOTKEY}
+      - API_LOG_LEVEL=${LOG_LEVEL}
+      - TOP_AXONS_ONLY=${TOP_AXONS_ONLY}
+      - AXONS_TO_QUERY=${AXONS_TO_QUERY}
 
   llm-defender-validator-debug-mode:
     <<: *common-validator
@@ -79,11 +85,13 @@ services:
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
   
-  llm-defender-api-latest:
-    <<: *common-api
   llm-defender-api:
     <<: *common-api
-    image: ghcr.io/synapsec-ai/llm-defender-api:v0.8.2rc1
+  llm-defender-api-dev:
+    <<: *common-api
+    build:
+      context: .
+      dockerfile: api.Dockerfile
 
 volumes:
   llm-defender-subnet:

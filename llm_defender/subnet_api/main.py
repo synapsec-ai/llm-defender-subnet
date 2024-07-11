@@ -23,11 +23,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--netuid", type=str, default=os.getenv("NETUID", "14"))
-    parser.add_argument(
-        "--subtensor.network",
-        type=str,
-        default=os.getenv("SUBTENSOR_NETWORK", "finney"),
-    )
+    
     parser.add_argument(
         "--subtensor.chain_endpoint",
         type=str,
@@ -37,9 +33,6 @@ def get_parser():
     )
     parser.add_argument(
         "--wallet.name", type=str, default=os.getenv("WALLET_NAME", "validator")
-    )
-    parser.add_argument(
-        "--wallet.path", type=str, default="/.bittensor/wallets"
     )
     parser.add_argument(
         "--wallet.hotkey", type=str, default=os.getenv("WALLET_HOTKEY", "default")
