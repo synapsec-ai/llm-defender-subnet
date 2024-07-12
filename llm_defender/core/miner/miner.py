@@ -556,7 +556,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             message=f"Executing the {synapse.analyzer} analyzer"
         )
         output = self.analyzers[synapse.analyzer].execute(
-            synapse=synapse, prompts=prompts, log_level=log_level
+            synapse=synapse, prompts=prompts, log_level=self.log_level
         )
 
         self.neuron_logger(
