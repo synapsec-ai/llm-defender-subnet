@@ -32,6 +32,6 @@ class Google_API_Key:
             return invalid_prefix + key_body
         else:
             allowed_chars = string.ascii_letters + string.digits + '_-\\'
-            invalid_length = self.key_length + random.randint(-2,2) 
+            invalid_length = self.key_length + random.choice([random.randint(-2,-1),random.randint(1,2)])
             key_body = ''.join(random.choices(allowed_chars, k=invalid_length - len(self.valid_prefix)))
             return self.valid_prefix + key_body
