@@ -174,3 +174,5 @@ wandb
 
 # chromadb
 chroma
+
+datasets/*

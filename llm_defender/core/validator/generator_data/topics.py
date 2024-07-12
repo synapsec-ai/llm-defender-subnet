@@ -299,7 +299,7 @@ TOPICS = {
     "marine archaeology",
     "zoology",
     "building construction",
-    "renewable energy"
+    "renewable energy",
     "bittensor",
     "blockchain",
     "cryptocurrency",

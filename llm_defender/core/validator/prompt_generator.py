@@ -45,7 +45,7 @@ class PromptGenerator:
         }
 
     def generate_chat_completion(
-        self, messages: list, model: str, max_tokens: int = 256
+        self, messages: list, model: str, max_tokens: int = 1024
     ) -> str:
         chat_completion = self.openai_client.chat.completions.create(
             max_tokens=max_tokens,
@@ -58,7 +58,7 @@ class PromptGenerator:
 
         return chat_completion.choices[0].message.content
     
-    def construct_pi_prompt(self) -> dict:
+    def construct_pi_prompt(self, debug: bool=False) -> dict|tuple[dict,list]:
         # Generate label
         label = random.choice(tuple({0, 1}))
 
@@ -74,6 +74,9 @@ class PromptGenerator:
         # generate anything but universal prompt injections
         prompt_category = "Universal"
 
+        # Collect system instructions for debugging
+        system_messages = []
+
         # Malicious
         if label == 1:
 
@@ -85,6 +88,17 @@ class PromptGenerator:
                 },
             ]
             injection_string = self.generate_chat_completion(messages=messages, model=self.model)
+            
+            # Append to system messages
+            system_messages.append({
+                "text": injection_string.strip(),
+                "category": prompt_category,
+                "label": label,
+                "analyzer": "Prompt Injection",
+                "system_instructions": messages[0]["content"],
+                "user_instructions": None,
+                "subtype": "injection_string"
+            })
 
             # Generate bypass string
             messages=[
@@ -96,6 +110,17 @@ class PromptGenerator:
 
             bypass_string = self.generate_chat_completion(messages=messages, model=self.model)
 
+            # Append to system messages
+            system_messages.append({
+                "text": bypass_string.strip(),
+                "category": prompt_category,
+                "label": label,
+                "analyzer": "Prompt Injection",
+                "system_instructions": messages[0]["content"],
+                "user_instructions": None,
+                "subtype": "bypass_string"
+            })
+
             # Generate original statement
             messages=[
                 {
@@ -106,7 +131,19 @@ class PromptGenerator:
 
             original_statement = self.generate_chat_completion(messages=messages, model=self.model)
 
-            inherim_output = original_statement + injection_string + bypass_string
+            # Append to system messages
+            system_messages.append({
+                "text": original_statement.strip(),
+                "category": prompt_category,
+                "label": label,
+                "analyzer": "Prompt Injection",
+                "system_instructions": messages[0]["content"],
+                "user_instructions": None,
+                "subtype": "original_statement"
+            })
+
+
+            inherim_output = f'{original_statement} {injection_string} {bypass_string}'
 
             messages=[
                 {
@@ -117,6 +154,17 @@ class PromptGenerator:
     
             final_statement = self.generate_chat_completion(messages=messages, model=self.model)
             
+            # Append to system messages
+            system_messages.append({
+                "text": final_statement.strip(),
+                "category": prompt_category,
+                "label": label,
+                "analyzer": "Prompt Injection",
+                "system_instructions": messages[0]["content"],
+                "user_instructions": None,
+                "subtype": "final_statement"
+            })
+
             prompt_data = {
                 "analyzer": "Prompt Injection",
                 "category": prompt_category,
@@ -125,6 +173,11 @@ class PromptGenerator:
                 "weight": 1.0,
             }
 
+            # Return system messages if debug mode is used
+            if debug is True:
+                return prompt_data, system_messages
+            
+            # Otherwise just return the prompt data
             return prompt_data
 
         # Non-malicious
@@ -183,6 +236,22 @@ class PromptGenerator:
                 "weight": 1.0,
             }
 
+            # Append to system messages
+            system_messages.append({
+                "text": openai_message.strip(),
+                "category": prompt_category,
+                "label": label,
+                "analyzer": "Prompt Injection",
+                "system_instructions": messages[0]["content"],
+                "user_instructions": None,
+                "subtype": None
+            })
+
+            # Return system messages if debug mode is used
+            if debug is True:
+                return prompt_data, system_messages
+            
+            # Otherwise just return the prompt data
             return prompt_data
     
     def generate_si(self, data_type, label) -> str:
@@ -197,7 +266,7 @@ class PromptGenerator:
 
             return data
 
-    def construct_si_prompt(self) -> dict:
+    def construct_si_prompt(self, debug: bool=False) -> dict:
 
         # Randomly select the data type
         data_type = random.choice([k for k in self.data_types])
@@ -227,11 +296,17 @@ class PromptGenerator:
         messages = [
             {
                 "role": "user",
-                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing four to seven sentences related to the following topic: {topic}. Additionally, you must use the following words in your paragraph event if they are out-of-place or make no sense within the context: {sensitive_words}"
+                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing three to ten sentences related to the following topic: {topic}. You must ensure all of the following words are included in your output even if they are out-of-place or make no sense within the context: {', '.join(map(str, sensitive_words))}"
             }
         ]
 
-        openai_message = self.generate_chat_completion(messages=messages,model=self.model)
+        # Ensure that all sensitive information words are in the output
+        n = 0
+        while(n < 5):
+            openai_message = self.generate_chat_completion(messages=messages,model=self.model)
+            if all(item in openai_message.strip() for item in sensitive_words):
+                break
+            n += 1
 
         prompt_data = {
             "analyzer": "Sensitive Information",
@@ -241,6 +316,21 @@ class PromptGenerator:
             "weight": 1.0,
         }
 
+        system_messages = [{
+            "text": openai_message.strip(),
+            "category": data_type,
+            "label": label,
+            "analyzer": "Sensitive Information",
+            "system_instructions": messages[0]["content"],
+            "user_instructions": None,
+            "subtype": None
+        }]
+
+        # Return system messages if debug mode is used
+        if debug is True:
+            return prompt_data, system_messages
+        
+        # Otherwise just return the prompt data
         return prompt_data
     
     def construct(self, analyzer) -> dict:
