@@ -125,7 +125,7 @@ def validate_response(hotkey, response, log_level) -> bool:
     # Responses without output are not valid
     if not response or isinstance(response, bool):
         LLMDefenderBase.utils.subnet_logger(
-            everity="TRACE",
+            severity="TRACE",
             message=f"Received an response without an output: {response}",
             log_level=log_level
         )
