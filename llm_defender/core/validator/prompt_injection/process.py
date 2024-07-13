@@ -180,7 +180,11 @@ def process_response(
                 log_level=log_level
             )
 
-    LLMDefenderBase.utils.subnet_logger(severity="DEBUG",message=f"Processed response: {response_object}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="DEBUG",
+        message=f"Processed response: {response_object}", 
+        log_level=log_level
+    )
 
     return response_object, responses_invalid_uids, responses_valid_uids
 
