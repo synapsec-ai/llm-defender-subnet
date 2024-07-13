@@ -173,7 +173,7 @@ def validate_response(hotkey, response, log_level) -> bool:
         f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     )
     if not LLMDefenderBase.validate_signature(
-        hotkey=hotkey, data=data, signature=response["signature"], log_level
+        hotkey=hotkey, data=data, signature=response["signature"], log_level=log_level
     ):
         LLMDefenderBase.utils.subnet_logger(
             severity="DEBUG",
