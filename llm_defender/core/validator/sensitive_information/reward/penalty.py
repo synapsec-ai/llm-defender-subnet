@@ -128,7 +128,7 @@ def check_base_penalty(uid, response, log_level):
     """
 
     def _check_confidence_validity(
-        uid, response, penalty_name="Confidence out-of-bounds", log_level
+        uid, response, log_level, penalty_name="Confidence out-of-bounds" 
     ):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
@@ -169,7 +169,7 @@ def check_base_penalty(uid, response, log_level):
         return 10.0
 
     penalty = 0.0
-    penalty += _check_confidence_validity(uid, response)
+    penalty += _check_confidence_validity(uid, response, log_level)
 
     LLMDefenderBase.utils.subnet_logger(
         severity="TRACE",
