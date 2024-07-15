@@ -9,6 +9,8 @@ import random
 # Import custom modules
 from llm_defender.core.validator import generator_data
 from llm_defender.core.validator import data_types
+import llm_defender.base as LLMDefenderBase
+
 
 class PromptGenerator:
 
@@ -41,7 +43,12 @@ class PromptGenerator:
             'IPv6_Address': data_types.IPv6_Address(),
             'Email': data_types.Email(),
             'US_SSN': data_types.US_SSN(),
-            'GitHub_PersonalAccessToken': data_types.GitHub_PersonalAccessToken()
+            'GitHub_PersonalAccessToken': data_types.GitHub_PersonalAccessToken(),
+            'CA_SIN':data_types.CA_SIN(),
+            'PL_PESEL':data_types.PL_PESEL(),
+            'SE_PIN':data_types.SE_PIN(),
+            'Google_API_Key':data_types.Google_API_Key(),
+            'ETH_address':data_types.ETH_address(),
         }
 
     def generate_chat_completion(
@@ -333,22 +340,38 @@ class PromptGenerator:
         # Otherwise just return the prompt data
         return prompt_data
     
-    def construct(self, analyzer) -> dict:
+    def construct(self, analyzer, log_level) -> dict:
 
         # Only run if prompt generation is enabled
         if not self.prompt_generation_disabled: 
             if analyzer == "Prompt Injection":
                 try:
                     prompt = self.construct_pi_prompt()
-                    bt.logging.debug(f'Generated prompt: {prompt}')
+                    LLMDefenderBase.utils.subnet_logger(
+                        severity="DEBUG", 
+                        message=f'Generated prompt: {prompt}',
+                        log_level=log_level
+                    )
                     return prompt
                 except Exception as e:
-                    bt.logging.error(f'Failed to construct prompt: {e}')
+                    LLMDefenderBase.utils.subnet_logger(
+                        severity="ERROR",
+                        message=f'Failed to construct prompt: {e}',
+                        log_level=log_level
+                    )
             elif analyzer == "Sensitive Information":
                 try:
                     prompt = self.construct_si_prompt()
-                    bt.logging.debug(f'Generated prompt: {prompt}')
+                    LLMDefenderBase.utils.subnet_logger(
+                        severity="DEBUG",
+                        message=f'Generated prompt: {prompt}',
+                        log_level=log_level
+                    )
                     return prompt
                 except Exception as e:
-                    bt.logging.error(f'Failed to construct prompt: {e}')
+                    LLMDefenderBase.utils.subnet_logger(
+                        severity="ERROR",
+                        message=f'Failed to construct prompt: {e}',
+                        log_level=log_level
+                    )
         return {}

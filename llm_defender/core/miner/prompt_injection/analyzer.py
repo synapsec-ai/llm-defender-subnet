@@ -47,7 +47,7 @@ class PromptInjectionAnalyzer:
         else:
             self.wandb_enabled = False
 
-    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str]) -> dict:
+    def execute(self, synapse: LLMDefenderBase.SubnetProtocol, prompts: List[str], log_level) -> dict:
         # Responses are stored in a dict
         output = {"analyzer": "Prompt Injection", "confidence": None, "engines": []}
 
@@ -55,7 +55,7 @@ class PromptInjectionAnalyzer:
         text_classification_engine = LLMDefenderCore.TextClassificationEngine(
             prompts=prompts
         )
-        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer)
+        text_classification_engine.execute(model=self.model, tokenizer=self.tokenizer, log_level=log_level)
         text_classification_response = (
             text_classification_engine.get_response().get_dict()
         )
@@ -73,7 +73,7 @@ class PromptInjectionAnalyzer:
         data_to_sign = f'{output["synapse_uuid"]}{output["nonce"]}{self.wallet.hotkey.ss58_address}{output["timestamp"]}'
 
         # Generate signature for the response
-        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign)
+        output["signature"] = LLMDefenderBase.sign_data(self.wallet.hotkey, data_to_sign, log_level)
 
         # Wandb logging
         if self.wandb_enabled:
@@ -93,8 +93,12 @@ class PromptInjectionAnalyzer:
             ]
 
             for wandb_log in wandb_logs:
-                self.wandb_handler.log(data=wandb_log)
+                self.wandb_handler.log(data=wandb_log, log_level=log_level)
 
-            bt.logging.trace(f"Wandb logs added: {wandb_logs}")
+            LLMDefenderBase.utils.subnet_logger(
+                severity="TRACE",
+                message=f"Wandb logs added: {wandb_logs}",
+                log_level=log_level
+            )
 
         return output
