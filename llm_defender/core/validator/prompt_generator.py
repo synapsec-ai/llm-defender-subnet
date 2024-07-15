@@ -43,7 +43,12 @@ class PromptGenerator:
             'IPv6_Address': data_types.IPv6_Address(),
             'Email': data_types.Email(),
             'US_SSN': data_types.US_SSN(),
-            'GitHub_PersonalAccessToken': data_types.GitHub_PersonalAccessToken()
+            'GitHub_PersonalAccessToken': data_types.GitHub_PersonalAccessToken(),
+            'CA_SIN':data_types.CA_SIN(),
+            'PL_PESEL':data_types.PL_PESEL(),
+            'SE_PIN':data_types.SE_PIN(),
+            'Google_API_Key':data_types.Google_API_Key(),
+            'ETH_address':data_types.ETH_address(),
         }
 
     def generate_chat_completion(
