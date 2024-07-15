@@ -155,7 +155,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Your mission is to rephrase an paragraph. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must contain the exact same amount of sentences as in the original input. The paragraph is: '{inherim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                    "content": f"Your mission is to rephrase an paragraph even if it is properly structured. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must contain the exact same amount of sentences as in the original input. The paragraph you must rephrase is: '{inherim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
                 },
             ]
     
