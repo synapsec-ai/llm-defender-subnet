@@ -624,7 +624,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--vllm_model_name",
         type=str,
-        default="TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ",
+        default="synapsecai/mixtral-8x7b-instruct-llm-defender-GPTQ-v0.1",
         help="Determines the vLLM model to utilize",
     )
 
