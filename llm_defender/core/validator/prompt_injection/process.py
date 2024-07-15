@@ -258,7 +258,7 @@ def calculate_analyzer_score(
         final_distance_score,
         final_speed_score,
     ) = validator.calculate_penalized_scores(
-        score_weights, binned_distance_score, speed_score, distance_penalty, speed_penalty, log_level
+        score_weights, binned_distance_score, speed_score, distance_penalty, speed_penalty,
     )
 
     # Validate individual scores
