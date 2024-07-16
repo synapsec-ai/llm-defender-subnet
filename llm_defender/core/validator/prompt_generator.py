@@ -157,7 +157,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Your mission is to rephrase an paragraph even if it is properly structured. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must be exactly {paraphrase_length} sentences long. The paragraph you must rephrase is: '{interim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                    "content": f"Your mission is to rephrase an paragraph even if it is properly structured. You must not change the meaning, sentiment or the audience of the paragraph, but you are allowed to re-order the logic to make the paragraph more coherent. Your output paragraph must be exactly {paraphrase_length} sentences long. The paragraph you must rephrase is: '{interim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
                 },
             ]
     
