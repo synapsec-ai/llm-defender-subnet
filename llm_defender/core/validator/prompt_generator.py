@@ -150,14 +150,14 @@ class PromptGenerator:
             })
 
 
-            inherim_output = f'{original_statement} {injection_string} {bypass_string}'
+            interim_output = f'{original_statement} {injection_string} {bypass_string}'
 
             paraphrase_length = random.choice(['three', 'four', 'five', 'six', 'seven'])
 
             messages=[
                 {
                     "role": "user",
-                    "content": f"Your mission is to rephrase an paragraph even if it is properly structured. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must be exactly {paraphrase_length} sentences long. The paragraph you must rephrase is: '{inherim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                    "content": f"Your mission is to rephrase an paragraph even if it is properly structured. You must not change the meaning, sentiment or the audience of the paragraph. Your output paragraph must be exactly {paraphrase_length} sentences long. The paragraph you must rephrase is: '{interim_output}'. Do not change the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
                 },
             ]
     
