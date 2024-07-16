@@ -3,6 +3,8 @@ import time
 from datasets import Dataset
 import llm_defender.core.validator.prompt_generator as PromptGenerator
 
+only_pi = True 
+
 generator = PromptGenerator.PromptGenerator(
     model=os.getenv("VLLM_MODEL_NAME"),
     base_url=os.getenv("VLLM_BASE_URL"),
@@ -17,9 +19,14 @@ for n in range(0,1500):
     prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
 
-    # Sensitive Information
-    prompt,messages = generator.construct_si_prompt(debug=True)
-    system_messages += messages
+    print(f"Prompt Injection Analyzer Prompt: \n{prompt}\n Messages: {messages}")
+
+    if not only_pi:
+        # Sensitive Information
+        prompt,messages = generator.construct_si_prompt(debug=True)
+        system_messages += messages
+
+        print(f"Sensitive Information Analyzer Prompt: \n{prompt}\n Messages: {messages}")
 
     print(f"Processing count: {n}")
 
