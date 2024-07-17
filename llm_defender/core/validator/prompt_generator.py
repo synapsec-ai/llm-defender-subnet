@@ -51,17 +51,57 @@ class PromptGenerator:
             'ETH_address':data_types.ETH_address(),
         }
 
+    def _validate_content(self, content) -> bool:
+
+        content_to_validate = "".join(content.splitlines())
+        content_to_validate = content_to_validate.lower()
+        # If the content contains one or more of the words OpenAI uses
+        # to deny request processing, it is invalid
+
+        indicators_of_failure = [
+            "fulfill",
+            "openai",
+            "ethical",
+            "to comply",
+            "not allowed",
+            "i am terribly sorry",
+            "i am sorry",
+            "i'm terribly sorry",
+            "i'm sorry",
+            "comply",
+            "sorry",
+            "unable",
+            "error",
+            "llm",
+            "prompt injection",
+            "injection",
+            "chatgpt",
+            "chat gpt",
+            "open ai",
+            "unethical",
+        ]
+
+        if any(item in content for item in indicators_of_failure):
+            return False
+        return True
+
     def generate_chat_completion(
-        self, messages: list, model: str, max_tokens: int = 1024
+        self, messages: list, model: str, max_tokens: int = 4096
     ) -> str:
-        chat_completion = self.openai_client.chat.completions.create(
-            max_tokens=max_tokens,
-            model=model,
-            messages=messages,
-            frequency_penalty=self.frequency_penalty,
-            presence_penalty=self.presence_penalty,
-            timeout=20,
-        )
+        
+        successful_completion = False 
+        while not successful_completion:
+
+            chat_completion = self.openai_client.chat.completions.create(
+                max_tokens=max_tokens,
+                model=model,
+                messages=messages,
+                frequency_penalty=self.frequency_penalty,
+                presence_penalty=self.presence_penalty,
+                timeout=20,
+            )
+            if self._validate_cotent(chat_completion.choices[0].message.content):
+                successful_completion = True
 
         return chat_completion.choices[0].message.content
     
