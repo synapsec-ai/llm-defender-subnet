@@ -191,6 +191,7 @@ class PromptGenerator:
 
 
             final_statement = f'{original_statement} {injection_string} {bypass_string}'
+            interim_output = final_statement
 
             paraphrase_length = random.choice(['three', 'four', 'five', 'six', 'seven'])
 
