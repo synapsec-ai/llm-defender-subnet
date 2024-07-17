@@ -298,6 +298,7 @@ def get_response_object(
     analyzer: str,
     category: str,
     prompt: str,
+    weight,
 ) -> dict:
     """Returns the template for the response object"""
 
@@ -313,7 +314,7 @@ def get_response_object(
         "response": {},
         "scored_response": get_engine_response_object(),
         "engine_data": [],
-        "weight": 0.1,
+        "weight": weight,
     }
 
     return response
