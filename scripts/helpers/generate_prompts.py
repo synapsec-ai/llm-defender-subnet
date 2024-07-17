@@ -13,13 +13,12 @@ generator = PromptGenerator.PromptGenerator(
 system_messages = []
 
 # Generate prompts
-for n in range(0,1500):
-    
+for n in range(0,750):    
     # Prompt Injection
     prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
 
-    print(f"Processing count: {n}")
+    print(f"\n\nProcessing count: {n}")
     print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\n Messages: {messages}")
 
     if not only_pi:
