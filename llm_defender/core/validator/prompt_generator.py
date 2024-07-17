@@ -190,7 +190,7 @@ class PromptGenerator:
             })
 
 
-            interim_output = f'{original_statement} {injection_string} {bypass_string}'
+            final_statement = f'{original_statement} {injection_string} {bypass_string}'
 
             paraphrase_length = random.choice(['three', 'four', 'five', 'six', 'seven'])
 
@@ -201,7 +201,7 @@ class PromptGenerator:
                 },
             ]
     
-            final_statement = self.generate_chat_completion(messages=messages, model=self.model)
+            not_final_statement = self.generate_chat_completion(messages=messages, model=self.model)
             
             # Append to system messages
             system_messages.append({
