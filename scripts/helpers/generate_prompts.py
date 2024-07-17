@@ -18,8 +18,10 @@ for n in range(0,750):
     prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
 
-    print(f"\n\nProcessing count: {n}")
-    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\n Messages: {messages}")
+    if prompt['label'] == 1:
+
+        print(f"\n\nProcessing count: {n}")
+        print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\n Messages: {messages}")
 
     if not only_pi:
         # Sensitive Information
