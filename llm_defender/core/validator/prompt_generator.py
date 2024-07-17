@@ -100,7 +100,7 @@ class PromptGenerator:
                 presence_penalty=self.presence_penalty,
                 timeout=20,
             )
-            if self._validate_cotent(chat_completion.choices[0].message.content):
+            if self._validate_content(chat_completion.choices[0].message.content):
                 successful_completion = True
 
         return chat_completion.choices[0].message.content
