@@ -19,8 +19,8 @@ class PromptGenerator:
         api_key: str,
         base_url: str,
         model: str,
-        presence_penalty: float = 0.25,
-        frequency_penalty: float = 0.25,
+        presence_penalty: float = 0.05,
+        frequency_penalty: float = 0.05,
         prompt_generation_disabled: bool = False
     ):
 
