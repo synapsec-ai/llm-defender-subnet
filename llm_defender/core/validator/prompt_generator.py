@@ -21,6 +21,7 @@ class PromptGenerator:
         model: str,
         presence_penalty: float = 0.5,
         frequency_penalty: float = 0.5,
+        temperature: float = 1.4,
         prompt_generation_disabled: bool = False
     ):
 
@@ -31,6 +32,7 @@ class PromptGenerator:
         self.presence_penalty = presence_penalty
         self.model = model
         self.prompt_generation_disabled = prompt_generation_disabled
+        self.temperature = temperature
 
         # Initialize the OpenAI client
         self.openai_client = openai.OpenAI(
@@ -99,6 +101,7 @@ class PromptGenerator:
                 frequency_penalty=self.frequency_penalty,
                 presence_penalty=self.presence_penalty,
                 timeout=20,
+                temperature=self.temperature
             )
             if self._validate_content(chat_completion.choices[0].message.content):
                 successful_completion = True
