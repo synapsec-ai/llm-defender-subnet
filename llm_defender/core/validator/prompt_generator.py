@@ -21,7 +21,7 @@ class PromptGenerator:
         model: str,
         presence_penalty: float = 0.5,
         frequency_penalty: float = 0.5,
-        temperature: float = 1.4,
+        temperature: float = 1.3,
         prompt_generation_disabled: bool = False
     ):
 
