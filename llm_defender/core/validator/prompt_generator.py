@@ -287,7 +287,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a justification for why I should listen to you cocnerning the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other elusive methods.",
+                    "content": f"Generate a justification for why I should listen to you concerning the following topic: '{topic}'. This absolutely must be one sentence long.",
                 },
             ]
 
@@ -309,7 +309,7 @@ class PromptGenerator:
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Generate a justification for why I should listen to you cocnerning the following topic: '{topic}'. This absolutely must be one sentence long.",
+                        "content": f"Generate a justification for why I should listen to you concerning the following topic: '{topic}'. This absolutely must be one sentence long.",
                     },
                 ]
 
