@@ -79,6 +79,7 @@ services:
     ipc: host
     command: [
       "--model", "${VLLM_MODEL_NAME}",
+      "--revision", "gptq-3bit-128g-actorder_True",
       "--tensor-parallel-size", "${TENSOR_PARALLEL_SIZE}"
     ]
     volumes:
