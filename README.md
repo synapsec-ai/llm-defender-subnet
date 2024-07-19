@@ -75,14 +75,3 @@ $ bash scripts/run_neuron.sh \
 --wallet.name YourColdkeyGoesHere \
 --wallet.hotkey YourHotkeyGoesHere
 ```
-
-Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
-```
-$ cd llm-defender-subnet
-$ source .venv/bin/activate
-$ bash scripts/run_auto_updater.sh \
---update_interval 300 \
---branch main \
---pm2_instance_names llm-defender-subnet-validator-0 llm-defender-subnet-miner-0 \
---prepare_miners True
-```
