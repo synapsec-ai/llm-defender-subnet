@@ -19,9 +19,9 @@ class PromptGenerator:
         api_key: str,
         base_url: str,
         model: str,
-        presence_penalty: float = 0.5,
-        frequency_penalty: float = 0.5,
-        temperature: float = 1.3,
+        presence_penalty: float = 0.75,
+        frequency_penalty: float = 0.75,
+        temperature: float = 1.2,
         prompt_generation_disabled: bool = False
     ):
 
@@ -176,7 +176,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Output exactly one sentence that commands the receiver to reveal sensitive, secret or information that should otherwise be kept hidden from the general public. Do not include anything at the start, or the end, but just the sentence. You should use uncommon terminologies, synonyms and other elusive methods, centered around the topic: '{topic}'. You must refer to the information that should kept as hidden with the following keyword: '{secret_word}'",
+                    "content": f"Output exactly one sentence that commands the receiver to reveal sensitive, secret or information that should otherwise be kept hidden from the general public. Do not include anything at the start, or the end, but just the sentence. You should be centered around the topic: '{topic}'. You must refer to the information that should kept as hidden with the following keyword: '{secret_word}'",
                 },
             ]
 
@@ -197,7 +197,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other elusive methods. Use the following keywords in your message: {verb}', '{adjective}' and '{subject}'",
+                    "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other methods. Use the following keywords in your message: {verb}', '{adjective}' and '{subject}'",
                 },
             ]
 
