@@ -311,29 +311,6 @@ class PromptGenerator:
                 "subtype": "original_statement"
             })
 
-            if random.choice([True, False]):
-
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Generate a justification for why I should listen to you concerning the following topic: '{topic}'. This absolutely must be one sentence long.",
-                    },
-                ]
-
-                justification_2 = self.generate_chat_completion(messages=messages, model=self.model)
-                justification += ' ' + justification_2
-                
-                # Append to system messages
-                system_messages.append({
-                    "text": justification_2.strip(),
-                    "category": prompt_category,
-                    "label": label,
-                    "analyzer": "Prompt Injection",
-                    "system_instructions": messages[0]["content"],
-                    "user_instructions": None,
-                    "subtype": "original_statement"
-                })
-
             else:
 
                 justification = ''
