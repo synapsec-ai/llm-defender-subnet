@@ -335,15 +335,15 @@ class PromptGenerator:
 
             for v in final_order:
                 if v == 1 and random.choice([True, False]):
-                    final_statement.append((' ' + original_remark))
+                    final_statement += (' ' + original_remark)
                 if v == 2 and random.choice([True, False]):
-                    final_statement.append((' ' + original_question))
+                    final_statement += (' ' + original_question)
                 if v == 3:
-                    final_statement.append((' ' + injection_string))
+                    final_statement += (' ' + injection_string)
                 if v == 4:
-                    final_statement.append((' ' + bypass_string))
+                    final_statement += (' ' + bypass_string)
                 if v == 5 and random.choice([True, False]):
-                    final_statement.append((' ' + justification))
+                    final_statement += (' ' + justification)
   
             two_spaces = ('  ' in final_statement)
             while two_spaces:
