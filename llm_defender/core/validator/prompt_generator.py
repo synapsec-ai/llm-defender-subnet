@@ -433,7 +433,7 @@ class PromptGenerator:
                 ]
             
             openai_message = self.generate_chat_completion(messages=messages,model=self.model)
-            openai_message = openai_message.replace('"', '').replace("'","")
+            openai_message = openai_message.replace('"', '')
 
             prompt_data = {
                 "analyzer": "Prompt Injection",
