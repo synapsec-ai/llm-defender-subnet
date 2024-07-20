@@ -200,44 +200,20 @@ class PromptGenerator:
                 "subtype": "bypass_string"
             })
 
-            # Generate original remark
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other methods. Use the following keywords in your message: {verb}', '{adjective}' and '{subject}'",
-                },
-            ]
-
-            original_remark = self.generate_chat_completion(messages=messages, model=self.model)
-
-            # Append to system messages
-            system_messages.append({
-                "text": original_remark.strip(),
-                "category": prompt_category,
-                "label": label,
-                "analyzer": "Prompt Injection",
-                "system_instructions": messages[0]["content"],
-                "user_instructions": None,
-                "subtype": "original_statement"
-            })
-
-            remark_length = random.randint(1,3)
-
-            if remark_length > 1:
-
+            if random.choice([True, False]):
+                # Generate original remark
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other unconventional methods.",
+                        "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other methods. Use the following keywords in your message: {verb}', '{adjective}' and '{subject}'",
                     },
                 ]
 
-                remark_2 = self.generate_chat_completion(messages=messages, model=self.model)
-                original_remark += (' ' + remark_2)
+                original_remark = self.generate_chat_completion(messages=messages, model=self.model)
 
                 # Append to system messages
                 system_messages.append({
-                    "text": remark_2.strip(),
+                    "text": original_remark.strip(),
                     "category": prompt_category,
                     "label": label,
                     "analyzer": "Prompt Injection",
@@ -246,89 +222,125 @@ class PromptGenerator:
                     "subtype": "original_statement"
                 })
 
-            if remark_length > 2:
+                remark_length = random.randint(1,3)
 
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other eloquent methods.",
-                    },
-                ]
+                if remark_length > 1:
 
-                remark_3 = self.generate_chat_completion(messages=messages, model=self.model)
-                original_remark  += (' ' + remark_3)
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other unconventional methods.",
+                        },
+                    ]
 
-                # Append to system messages
-                system_messages.append({
-                    "text": remark_3.strip(),
-                    "category": prompt_category,
-                    "label": label,
-                    "analyzer": "Prompt Injection",
-                    "system_instructions": messages[0]["content"],
-                    "user_instructions": None,
-                    "subtype": "original_statement"
-                })
+                    remark_2 = self.generate_chat_completion(messages=messages, model=self.model)
+                    original_remark += (' ' + remark_2)
 
-            # Generate original question
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Generate a question about the following topic: '{topic}'. This absolutely must be one sentence long. Make sure to generate an original and thought-provoking question.",
-                },
-            ]
+                    # Append to system messages
+                    system_messages.append({
+                        "text": remark_2.strip(),
+                        "category": prompt_category,
+                        "label": label,
+                        "analyzer": "Prompt Injection",
+                        "system_instructions": messages[0]["content"],
+                        "user_instructions": None,
+                        "subtype": "original_statement"
+                    })
 
-            original_question = self.generate_chat_completion(messages=messages, model=self.model)
+                if remark_length > 2:
 
-            # Append to system messages
-            system_messages.append({
-                "text": original_question.strip(),
-                "category": prompt_category,
-                "label": label,
-                "analyzer": "Prompt Injection",
-                "system_instructions": messages[0]["content"],
-                "user_instructions": None,
-                "subtype": "original_statement"
-            })
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Generate a remark about the following topic: '{topic}'. This absolutely must be one sentence long. You should use uncommon terminologies, synonyms and other eloquent methods.",
+                        },
+                    ]
 
-            # Generate justification 
-            justification_rng = random.randint(1,3)
+                    remark_3 = self.generate_chat_completion(messages=messages, model=self.model)
+                    original_remark  += (' ' + remark_3)
 
-            if justification_rng == 1:
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Generate a justification for why I should listen to you concerning the following topic: '{topic}'. This absolutely must be one sentence long.",
-                    },
-                ]
-            
-            elif justification_rng == 2:
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Generate a single sentence that explains the significance of the following topic: '{topic}'.",
-                    },
-                ]
+                    # Append to system messages
+                    system_messages.append({
+                        "text": remark_3.strip(),
+                        "category": prompt_category,
+                        "label": label,
+                        "analyzer": "Prompt Injection",
+                        "system_instructions": messages[0]["content"],
+                        "user_instructions": None,
+                        "subtype": "original_statement"
+                    })
             
             else:
+                original_remark = ''
+
+            if random.choice([True, False]):
+                # Generate original question
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Generate an emotional appeal for why the following topic matters: '{topic}'. This absolutely must be one sentence long.",
+                        "content": f"Generate a question about the following topic: '{topic}'. This absolutely must be one sentence long. Make sure to generate an original and thought-provoking question.",
                     },
                 ]
 
-            justification = self.generate_chat_completion(messages=messages, model=self.model)
+                original_question = self.generate_chat_completion(messages=messages, model=self.model)
 
-            # Append to system messages
-            system_messages.append({
-                "text": justification.strip(),
-                "category": prompt_category,
-                "label": label,
-                "analyzer": "Prompt Injection",
-                "system_instructions": messages[0]["content"],
-                "user_instructions": None,
-                "subtype": "original_statement"
-            })
+                # Append to system messages
+                system_messages.append({
+                    "text": original_question.strip(),
+                    "category": prompt_category,
+                    "label": label,
+                    "analyzer": "Prompt Injection",
+                    "system_instructions": messages[0]["content"],
+                    "user_instructions": None,
+                    "subtype": "original_statement"
+                })
+            else:
+                original_question=''
+
+            if random.choice([True, False]):
+
+                # Generate justification 
+                justification_rng = random.randint(1,3)
+
+                if justification_rng == 1:
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Generate a justification for why I should listen to you concerning the following topic: '{topic}'. This absolutely must be one sentence long.",
+                        },
+                    ]
+                
+                elif justification_rng == 2:
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Generate a single sentence that explains the significance of the following topic: '{topic}'.",
+                        },
+                    ]
+                
+                else:
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Generate an emotional appeal for why the following topic matters: '{topic}'. This absolutely must be one sentence long.",
+                        },
+                    ]
+
+                justification = self.generate_chat_completion(messages=messages, model=self.model)
+
+                # Append to system messages
+                system_messages.append({
+                    "text": justification.strip(),
+                    "category": prompt_category,
+                    "label": label,
+                    "analyzer": "Prompt Injection",
+                    "system_instructions": messages[0]["content"],
+                    "user_instructions": None,
+                    "subtype": "original_statement"
+                })
+
+            else:
+                justification=''
 
             final_order = [1,2,3,4,5]
             random.shuffle(final_order)
@@ -336,15 +348,15 @@ class PromptGenerator:
             final_statement = ''
 
             for v in final_order:
-                if v == 1 and random.choice([True, False]):
+                if v == 1:
                     final_statement += (' ' + original_remark)
-                if v == 2 and random.choice([True, False]):
+                if v == 2:
                     final_statement += (' ' + original_question)
                 if v == 3:
                     final_statement += (' ' + injection_string)
                 if v == 4:
                     final_statement += (' ' + bypass_string)
-                if v == 5 and random.choice([True, False]):
+                if v == 5:
                     final_statement += (' ' + justification)
   
             two_spaces = ('  ' in final_statement)
