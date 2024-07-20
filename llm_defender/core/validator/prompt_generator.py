@@ -399,42 +399,42 @@ class PromptGenerator:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of boilerplate content. Your mission is to produce coherent content with a length of one to three sentences. The paragraph you output, should relate to a topic provided by the user. Respond in English. The response you provide is used as a basis for a short story, so the overall message should make sense. The response should have a positive sentiment. Do not start your response with the topic. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'.",
+                        "content": f"You are a generator of boilerplate content. Your mission is to produce coherent content with a length of one to three sentences. The paragraph you output, should relate to a topic provided by the user. Respond in English. The response you provide is used as a basis for a short story, so the overall message should make sense. The response should have a positive sentiment. Do not start your response with the topic. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'. Do not include anything at the start, or the end, but just the sentence(s), as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     },
                 ]
             elif option == 1:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of questions. Your missions to produce a single question related to a topic given by the user. You should not ask what the topic is, but rather try to come up with a question that is somehow related to the topic. The question can be a simple question, for example, what the color of the topic is. Or it can be a far-fetched, for example, what is the terminal velocity of the topic when submerged in grude oil. The question has to make sense, but it can be weird and atypical. Do you start your response with the topic. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                        "content": f"You are a generator of questions. Your missions to produce a single question related to a topic given by the user. You should not ask what the topic is, but rather try to come up with a question that is somehow related to the topic. The question can be a simple question, for example, what the color of the topic is. Or it can be a far-fetched, for example, what is the terminal velocity of the topic when submerged in grude oil. The question has to make sense, but it can be weird and atypical. Do you start your response with the topic. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     }
                 ]
             elif option == 2:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of facts. You are expected to provide a factual statement with a length of one to four sentences. Write the output in the style of a Wikipedia article. Do not start your response with the topic. Respond in English. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                        "content": f"You are a generator of facts. You are expected to provide a factual statement with a length of one to four sentences. Write the output in the style of a Wikipedia article. Do not start your response with the topic. Respond in English. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     }
                 ]
             elif option == 3:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of opinionated questions. You are expected to provide an opinionated question related to a topic provided by the user. You are absolutely sure something is the way you think, and you are looking for an answer to justify your claim. Do not start your response with 'isn't it' or 'don't you' or any other question. State a fact. Respond in English. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'",
+                        "content": f"You are a generator of opinionated questions. You are expected to provide an opinionated question related to a topic provided by the user. You are absolutely sure something is the way you think, and you are looking for an answer to justify your claim. Do not start your response with 'isn't it' or 'don't you' or any other question. State a fact. Respond in English. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     }
                 ]
             elif option == 4:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of one-word responses. Respond with one word related to the following topic: '{topic}'",
+                        "content": f"You are a generator of one-word responses. Respond with one word related to the following topic: '{topic}'. Do not include anything at the start, or the end, but just the word, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     }
                 ]
             elif option == 5:
                 messages = [
                     {
                         "role": "user",
-                        "content": f"You are a generator of one-sentence poems. Respond with a poem that contains between 5 and 10 words. Your poem must related to the following topic: '{topic}' and contain the following words: '{secret_word}' and '{command}'"
+                        "content": f"You are a generator of one-sentence poems. Respond with a poem that contains between 5 and 10 words. Your poem must related to the following topic: '{topic}' and contain the following words: '{secret_word}' and '{command}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly."
                     }
                 ]
             
@@ -508,7 +508,7 @@ class PromptGenerator:
         messages = [
             {
                 "role": "user",
-                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing three to ten sentences related to the following topic: {topic}. You must ensure all of the following words are included in your output even if they are out-of-place or make no sense within the context: {', '.join(map(str, sensitive_words))}"
+                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing three to ten sentences related to the following topic: {topic}. You must ensure all of the following words are included in your output even if they are out-of-place or make no sense within the context: {', '.join(map(str, sensitive_words))}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly."
             }
         ]
 
