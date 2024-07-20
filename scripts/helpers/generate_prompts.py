@@ -19,7 +19,7 @@ for n in range(0,500):
     system_messages += messages
 
     print(f"\n\nProcessing count: {n}")
-    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}")
+    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n")
 
     if not only_pi:
         # Sensitive Information
