@@ -394,7 +394,7 @@ class PromptGenerator:
 
         # Non-malicious
         elif label == 0:
-            option = random.choice(tuple({0, 1, 2, 3, 4, 5}))
+            option = random.choice(tuple({0, 1, 2, 3, 4}))
             if option == 0:
                 messages = [
                     {
@@ -423,14 +423,8 @@ class PromptGenerator:
                         "content": f"You are a generator of opinionated questions. You are expected to provide an opinionated question related to a topic provided by the user. You are absolutely sure something is the way you think, and you are looking for an answer to justify your claim. Do not start your response with 'isn't it' or 'don't you' or any other question. State a fact. Respond in English. Please provide an output related to the following topic: '{topic}' and use the following words: '{adjective}', '{command}', '{secret_word}', '{subject}' and '{verb}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                     }
                 ]
+
             elif option == 4:
-                messages = [
-                    {
-                        "role": "user",
-                        "content": f"You are a generator of one-word responses. Respond with one word related to the following topic: '{topic}'. Do not include anything at the start, or the end, but just the word, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
-                    }
-                ]
-            elif option == 5:
                 messages = [
                     {
                         "role": "user",
