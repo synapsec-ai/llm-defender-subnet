@@ -461,6 +461,19 @@ class PromptGenerator:
             # Otherwise just return the prompt data
             return prompt_data
     
+    def insert_once(self, sentence_str, insert_str):
+        words = sentence_str.split()
+        if len(words) < 2:
+            return sentence_str + ' ' + insert_str
+        insert_index = random.randint(1, len(words) - 1)  
+        words[insert_index:insert_index] = [insert_str]
+        return ' '.join(words)
+    
+    def insert_all(self, sentence_str, insert_list):
+        for insert_str in insert_list:
+            sentence_str = self.insert_once(sentence_str, insert_str)
+        return sentence_str
+    
     def generate_si(self, data_type, label) -> str:
         """Generates valid instances of data_type"""
         # Check that data_type is correct
@@ -507,13 +520,8 @@ class PromptGenerator:
             }
         ]
 
-        # Ensure that all sensitive information words are in the output
-        n = 0
-        while(n < 5):
-            openai_message = self.generate_chat_completion(messages=messages,model=self.model)
-            if all(item in openai_message.strip() for item in sensitive_words):
-                break
-            n += 1
+        openai_message = self.generate_chat_completion(messages=messages,model=self.model)
+        openai_message = self.insert_all(sentence_str=openai_message, insert_list=sensitive_words)
 
         prompt_data = {
             "analyzer": "Sensitive Information",
