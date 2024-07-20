@@ -364,8 +364,8 @@ class PromptGenerator:
                 final_statement = final_statement.replace('  ',' ')
                 two_spaces = ('  ' in final_statement)
 
-            final_statement = final_statement.replace('"', '').replace("'","")
-
+            final_statement = final_statement.replace('"', '')
+            
             # Append to system messages
             system_messages.append({
                 "text": final_statement.strip(),
