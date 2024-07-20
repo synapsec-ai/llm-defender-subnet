@@ -346,6 +346,7 @@ class PromptGenerator:
             random.shuffle(final_order)
 
             final_statement = ''
+            print(final_order)
 
             for v in final_order:
                 if v == 1:
