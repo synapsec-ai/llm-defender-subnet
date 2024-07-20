@@ -341,8 +341,7 @@ class PromptGenerator:
 
             else:
                 justification=''
-
-            final_order = [1,2,3,4,5]
+                
             random.shuffle(final_order)
 
             final_statement = ''
