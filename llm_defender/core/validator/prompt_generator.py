@@ -516,7 +516,7 @@ class PromptGenerator:
         messages = [
             {
                 "role": "user",
-                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing three to ten sentences related to the following topic: {topic}. You must ensure all of the following words are included in your output even if they are out-of-place or make no sense within the context: {', '.join(map(str, sensitive_words))}. Do not attempt to make sense of the words you are asked to include, just write a sentence regarding the topic and format them in. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly."
+                "content": f"You are generator of Wikipedia-style content. You must generate a paragraph containing three to ten sentences related to the following topic: {topic}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly."
             }
         ]
 
