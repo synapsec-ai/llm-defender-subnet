@@ -341,11 +341,11 @@ class PromptGenerator:
 
             else:
                 justification=''
-                
+
+            final_order = [1,2,3,4,5]
             random.shuffle(final_order)
 
             final_statement = ''
-            print(final_order)
 
             for v in final_order:
                 if v == 1:
