@@ -19,14 +19,14 @@ for n in range(0,150):
     system_messages += messages
 
     print(f"\n\nProcessing count: {n}")
-    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n")
+    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\nMessages: {messages}")
 
     if not only_pi:
         # Sensitive Information
         prompt,messages = generator.construct_si_prompt(debug=True)
         system_messages += messages
 
-        print(f"Sensitive Information Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}")
+        print(f"Sensitive Information Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\nMessages: {messages}")
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
     dict_of_lists = {}
