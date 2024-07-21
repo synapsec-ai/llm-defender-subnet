@@ -13,7 +13,7 @@ generator = PromptGenerator.PromptGenerator(
 system_messages = []
 
 # Generate prompts
-for n in range(0,50):    
+for n in range(0,150):    
     # Prompt Injection
     prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
