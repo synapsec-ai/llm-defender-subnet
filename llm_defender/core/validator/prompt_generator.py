@@ -510,6 +510,8 @@ class PromptGenerator:
             for _ in range (2,n):
                 buffer_label = random.choice([0,1])
                 sensitive_words.append(self.generate_si(data_type=data_type, label=buffer_label))
+
+        print(f"SENSITIVE WORDS: {sensitive_words}")
         
         # Generate prompt using LLM
         topic = (random.choice(tuple(generator_data.TOPICS))).lower()
