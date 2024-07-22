@@ -3,6 +3,8 @@ import time
 from datasets import Dataset
 import llm_defender.core.validator.prompt_generator as PromptGenerator
 
+only_pi = False
+
 generator = PromptGenerator.PromptGenerator(
     model=os.getenv("VLLM_MODEL_NAME"),
     base_url=os.getenv("VLLM_BASE_URL"),
@@ -11,17 +13,20 @@ generator = PromptGenerator.PromptGenerator(
 system_messages = []
 
 # Generate prompts
-for n in range(0,1500):
-    
+for n in range(0,150):    
     # Prompt Injection
     prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
 
-    # Sensitive Information
-    prompt,messages = generator.construct_si_prompt(debug=True)
-    system_messages += messages
+    print(f"\n\nProcessing count: {n}")
+    print(f"Prompt Injection Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\nMessages: {messages}\n\n")
 
-    print(f"Processing count: {n}")
+    if not only_pi:
+        # Sensitive Information
+        prompt,messages = generator.construct_si_prompt(debug=True)
+        system_messages += messages
+
+        print(f"Sensitive Information Analyzer Prompt (label: {prompt['label']}): \n{prompt['prompt']}\n\nMessages: {messages}")
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
     dict_of_lists = {}
