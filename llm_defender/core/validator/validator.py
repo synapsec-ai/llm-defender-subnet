@@ -328,6 +328,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             # Send FeedbackSynapse
             if response_object['response']:
+                self.neuron_logger(
+                    severity='DEBUG',
+                    message=f"Sending FeedbackSynapse to uid: {processed_uids[i]}"
+                )
                 task = asyncio.create_task(self.send_metrics_synapse(response_object, synapse_uuid, processed_uids[i]))
                 background_tasks.add(task)
                 task.add_done_callback(background_tasks.discard)
