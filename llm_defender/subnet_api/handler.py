@@ -81,7 +81,7 @@ class Handler:
         raw_axons = self.metagraph.axons
 
         # Remove invalid axons
-        valid_axons = self.validator.determine_valid_axons(axons=axons_to_query)
+        valid_axons = self.validator.determine_valid_axons(axons=raw_axons)
         bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
 
         axons_to_query = []
