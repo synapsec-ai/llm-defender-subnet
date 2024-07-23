@@ -236,7 +236,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     hotkey=self.wallet.hotkey, data=data_to_sign, log_level=self.log_level
                 ),
             ),
-            timeout=2,
+            timeout=12,
             deserialize=False
         )
 
