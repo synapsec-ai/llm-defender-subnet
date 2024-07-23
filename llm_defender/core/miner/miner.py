@@ -455,6 +455,10 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         for prompt in synapse.synapse_prompts:
             if not self.validate_incoming_prompt(hotkey=hotkey, prompt=prompt):
+                self.neuron_logger(
+                    severity="WARNING",
+                    message=f"Duplicate validation for prompt: {prompt} has failed."
+                )
                 return synapse
 
         # Validate that nonce has not been reused
