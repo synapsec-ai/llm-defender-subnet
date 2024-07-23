@@ -50,9 +50,9 @@ def check_false_positive_penalty(response, target, log_level):
     return penalty
 
 
-def check_duplicate_penalty(uid, response, log_level):
+def check_formatting_penalty(uid, response, log_level):
     """
-    This function checks the total penalty score within duplicate category.
+    This function checks the total penalty score within the formatting category.
 
     A penalty of 20.0 is added if any of the inputs (uid, miner_responses,
     or response) is not inputted.

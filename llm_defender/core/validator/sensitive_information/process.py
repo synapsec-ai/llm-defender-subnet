@@ -333,7 +333,7 @@ def apply_penalty(validator, response, hotkey, target, log_level) -> tuple:
     base += LLMDefenderCore.sensitive_information_penalty.check_base_penalty(
         uid, response, log_level
     )
-    duplicate += LLMDefenderCore.sensitive_information_penalty.check_duplicate_penalty(
+    formatting += LLMDefenderCore.sensitive_information_penalty.check_formatting_penalty(
         uid, response, log_level
     )
 
@@ -342,27 +342,27 @@ def apply_penalty(validator, response, hotkey, target, log_level) -> tuple:
         message=f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'", 
         log_level=log_level
     )
-    return false_positive, base, duplicate
+    return false_positive, base, formatting
 
 
 def get_response_penalties(validator, response, hotkey, target, log_level):
     """This function resolves the penalties for the response"""
 
-    false_positive_penalty, base_penalty, duplicate_penalty = apply_penalty(
+    false_positive_penalty, base_penalty, formatting_penalty = apply_penalty(
         validator, response, hotkey, target, log_level
     )
 
     distance_penalty_multiplier = 1.0
-    speed_penalty = 1.0
+    speed_penalty_multiplier = 1.0
 
     if sum([base_penalty, false_positive_penalty]) >= 20:
         distance_penalty_multiplier = 0.0
     elif sum([base_penalty, false_positive_penalty]) > 0.0:
         distance_penalty_multiplier = 1 - (sum([base_penalty, false_positive_penalty]) / 20.0)
 
-    if duplicate_penalty >= 20:
-        speed_penalty = 0.0
-    elif duplicate_penalty > 0.0:
-        speed_penalty = 1 - (duplicate_penalty / 20.0)
+    if formatting_penalty >= 20:
+        speed_penalty_multiplier = 0.0
+    elif formatting_penalty > 0.0:
+        speed_penalty_multiplier = 1 - (formatting_penalty / 20.0)
 
-    return distance_penalty_multiplier, speed_penalty
+    return distance_penalty_multiplier, speed_penalty_multiplier

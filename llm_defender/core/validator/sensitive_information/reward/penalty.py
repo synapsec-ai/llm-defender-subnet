@@ -53,7 +53,7 @@ def check_false_positive_penalty(response, target, log_level):
     return penalty
 
 
-def check_duplicate_penalty(uid, response, log_level):
+def check_formatting_penalty(uid, response, log_level):
     """
     This function checks the total penalty score within duplicate category.
 
