@@ -282,6 +282,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         responses_invalid_uids = []
         responses_valid_uids = []
 
+        background_tasks = set()
+
         # Check each response
         for i, response in enumerate(responses):
             if query["analyzer"] == "Prompt Injection":
@@ -323,6 +325,11 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
             # Handle response
             response_data.append(response_object)
+
+            # Send FeedbackSynapse
+            task = asyncio.create_task(self.send_metrics_synapse(response_object, synapse_uuid, processed_uids[i]))
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
 
         self.neuron_logger(
             severity="INFO",
