@@ -324,7 +324,7 @@ def apply_penalty(validator, response, hotkey, target, log_level) -> tuple:
     # Get UID
     uid = validator.metagraph.hotkeys.index(hotkey)
 
-    false_positive = base = duplicate = 0.0
+    false_positive = base = formatting = 0.0
     # penalty_score -= confidence.check_penalty(validator.miner_responses["hotkey"], response)
     false_positive += LLMDefenderCore.prompt_injection_penalty.check_false_positive_penalty(
         response, target, log_level
@@ -338,7 +338,7 @@ def apply_penalty(validator, response, hotkey, target, log_level) -> tuple:
 
     LLMDefenderBase.utils.subnet_logger(
         severity="TRACE",
-        message=f"Penalty score {[false_positive, base, duplicate]} for response '{response}' from UID '{uid}'",
+        message=f"Penalty score {[false_positive, base, formatting]} for response '{response}' from UID '{uid}'",
         log_level=log_level
     )
     return false_positive, base, formatting
