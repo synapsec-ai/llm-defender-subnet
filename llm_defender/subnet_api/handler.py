@@ -93,7 +93,7 @@ class Handler:
                 f"Adding the following axon based on incentive rank: {raw_axons[sorted_incentive]}"
             )
             axons_to_query.append(raw_axons[sorted_incentive])
-
+        
         # Additionally get one axon per coldkey
         if not top_axons_only:
             coldkeys = set()
@@ -103,8 +103,14 @@ class Handler:
                         f"Adding the following axon based on coldkey: {raw_axon}"
                     )
                     axons_to_query.append(raw_axon)
-
+            bt.logging.trace(f'Axons to query based on incentive rank and coldkeys: {axons_to_query}')
+            bt.logging.trace(f'Coldkeys included in the query: {coldkeys}')
+        else:
+            bt.logging.trace(f'Axons to query based on incentive rank: {axons_to_query}')
+        
         valid_axons = self.validator.determine_valid_axons(axons=axons_to_query)
+
+        bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
 
         return valid_axons
 
@@ -162,11 +168,15 @@ class Handler:
                 top_axons_only=top_axons_only,
                 query_count=int(os.getenv("AXONS_TO_QUERY", "12")),
             )
+
+            bt.logging.trace(f'Sending query to uids: {uids_to_query}')
+
             responses = asyncio.run(
                 self.query_miners(
                     uids_to_query=uids_to_query, prompt=prompt, analyzer=analyzer
                 )
             )
+            bt.logging.trace(f'Received responses: {responses}')
             bt.logging.trace(f"Processing prompt: {prompt}")
 
             # Determine response
