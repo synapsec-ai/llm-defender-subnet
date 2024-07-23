@@ -61,7 +61,7 @@ class BaseNeuron:
         self.cache_path = None
         self.log_path = None
         self.healthcheck_api = None
-        self.log_level = 0
+        self.log_level = "INFO"
 
         # Load used nonces if they exists
         self.load_used_nonces()

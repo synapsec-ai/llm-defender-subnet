@@ -351,7 +351,7 @@ def validate_validator_api_prompt_output(api_output, log_level):
 
     return good_output
 
-def subnet_logger(severity: str, message: str, log_level: int,):
+def subnet_logger(severity: str, message: str, log_level: int):
     """This method is a wrapper for the bt.logging function to add extra
     functionality around the native logging capabilities. This method is
     used together with the neuron_logger() method."""
@@ -390,7 +390,7 @@ def subnet_logger(severity: str, message: str, log_level: int,):
             "TRACE": chr(0x1F50D),
         }
 
-         # Use utils.subnet_logger() to write the logs
+        # Use utils.subnet_logger() to write the logs
         if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or log_levels[log_level] >= log_levels[severity.upper()]:
 
             general_severity=bittensor_severities[severity.upper()]
