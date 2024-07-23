@@ -81,10 +81,6 @@ class Handler:
         raw_axons = self.metagraph.axons
         bt.logging.trace(f'Raw axons to filter from: {raw_axons}')
 
-        # Remove invalid axons
-        valid_axons = self.validator.determine_valid_axons(axons=raw_axons)
-        bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
-
         axons_to_query = []
         
         # Get the best axons available
@@ -95,14 +91,14 @@ class Handler:
             if len(axons_to_query) >= query_count:
                 break
             bt.logging.trace(
-                f"Adding the following axon based on incentive rank: {valid_axons[sorted_incentive]}"
+                f"Adding the following axon based on incentive rank: {raw_axons[sorted_incentive]}"
             )
-            axons_to_query.append(valid_axons[sorted_incentive])
+            axons_to_query.append(raw_axons[sorted_incentive])
         
         # Additionally get one axon per coldkey
         if not top_axons_only:
             coldkeys = set()
-            for _, raw_axon in enumerate(valid_axons):
+            for _, raw_axon in enumerate(raw_axons):
                 if raw_axon.coldkey not in coldkeys:
                     bt.logging.trace(
                         f"Adding the following axon based on coldkey: {raw_axon}"
@@ -112,6 +108,10 @@ class Handler:
             bt.logging.trace(f'Coldkeys included in the query: {coldkeys}')
         else:
             bt.logging.trace(f'Axons to query based on incentive rank: {axons_to_query}')
+
+        # Remove invalid axons
+        valid_axons = self.validator.determine_valid_axons(axons=raw_axons)
+        bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
 
         return valid_axons
 

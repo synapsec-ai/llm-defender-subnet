@@ -925,10 +925,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         """This function determines valid axon to send the query to--
         they must have valid ips """
         # Clear axons that do not have an IP
-        bt.logging.trace(f'Raw axons: {axons}')
         axons_with_valid_ip = [axon for axon in axons if axon.ip != "0.0.0.0"]
 
-        bt.logging.trace(f'Filtered axons: {axons_with_valid_ip}')
         # Clear axons with duplicate IP/Port 
         axon_ips = set()
         filtered_axons = [
@@ -937,14 +935,10 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             if axon.ip_str() not in axon_ips and not axon_ips.add(axon.ip_str())
         ]
 
-        bt.logging.trace(f'Deduplicated axons: {filtered_axons}')
-
         self.neuron_logger(
             severity="TRACEX",
             message=f"Filtered out axons. Original list: {len(axons)}, filtered list: {len(filtered_axons)}"
         )
-
-        bt.logging.trace(f'Returning axons: {filtered_axons}')
 
         return filtered_axons
 
