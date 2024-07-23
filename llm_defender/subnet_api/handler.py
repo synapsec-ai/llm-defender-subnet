@@ -110,7 +110,7 @@ class Handler:
             bt.logging.trace(f'Axons to query based on incentive rank: {axons_to_query}')
 
         # Remove invalid axons
-        valid_axons = self.validator.determine_valid_axons(axons=raw_axons)
+        valid_axons = self.validator.determine_valid_axons(axons=axons_to_query)
         bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
 
         return valid_axons
