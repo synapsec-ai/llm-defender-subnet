@@ -126,6 +126,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host=os.getenv("UVICORN_HOST", "0.0.0.0"),
-        port=os.getenv("UVICORN_PORT", 8080),
+        port=os.getenv("UVICORN_PORT", 8000),
         log_level=os.getenv("UVICORN_LOG_LEVEL", "info"),
     )
