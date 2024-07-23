@@ -10,10 +10,11 @@ Typical example usage:
 """
 
 from argparse import ArgumentParser
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Tuple
 import sys
 import bittensor as bt
+import hashlib
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -100,6 +101,8 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
 
         self.validator_min_stake = args.validator_min_stake
+
+        self.recieved_messages = OrderedDict()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
@@ -396,6 +399,24 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         
         return synapse
     
+    def validate_incoming_prompt(self, hotkey: str, prompt: str):
+        """Validates incoming prompt"""
+        # truncate existing logs to max length of 100
+        if len(self.recieved_messages.keys()) > 100:
+            self.recieved_messages.popitem(last=False)
+
+        # encode prompt and append to logs
+        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+        # check if duplicate exists for any prompt, if so then return False     
+        if prompt_hash in self.recieved_messages.keys():
+            if self.recieved_messages[prompt_hash] == hotkey:
+                return True 
+            return False
+        
+        self.recieved_messages[prompt_hash] = hotkey
+        return True
+
     def analysis_forward(
         self, synapse: LLMDefenderBase.SubnetProtocol
     ) -> LLMDefenderBase.SubnetProtocol:
@@ -417,37 +438,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
-        is_notification_message = (
-            synapse.synapse_prompts is None and synapse.synapse_hash is not None
-        )
-
-        # synapse_hash = synapse.synapse_hash
         hotkey = synapse.dendrite.hotkey
-        # synapse_uuid = synapse.synapse_uuid
-
-        # if is_notification_message:
-            # If it's a notification synapse we can just ignore it
-            # self.neuron_logger(severity="DEBUG",message="Received notification synapse. Ignoring.")
-            # return synapse
-        #     self.neuron_logger(severity="DEBUG",message=f"Processing notification synapse: {synapse}")
-        #     self._update_validator_stats(hotkey, "received_notification_synapse_count")
-        #     if synapse_hash in self.notification_synapses:
-        #         self.notification_synapses[synapse_hash]["validator_hotkeys"].append(
-        #             hotkey
-        #         )
-        #     else:
-        #         self.notification_synapses[synapse_hash] = {
-        #             "synapse_uuid": synapse_uuid,
-        #             "validator_hotkeys": [hotkey],
-        #         }
-
-        #     self.neuron_logger(severity="SUCCESS",message=
-        #         f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
-        #     )
-
-        #     self._update_validator_stats(hotkey, "processed_notification_synapse_count")
-        #     synapse.output = {"outcome": True}
-        #     return synapse
 
         self._update_validator_stats(hotkey, "received_payload_synapse_count")
 
@@ -461,6 +452,10 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
                 severity="WARNING",
                 message=f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
             )
+
+        for prompt in synapse.synapse_prompts:
+            if not self.validate_incoming_prompt(hotkey=hotkey, prompt=prompt):
+                return synapse
 
         # Validate that nonce has not been reused
         if not self.validate_nonce(synapse.synapse_nonce):
@@ -589,3 +584,4 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         self._update_validator_stats(hotkey, "processed_payload_synapse_count")
 
         return synapse
+
