@@ -93,7 +93,7 @@ def check_formatting_penalty(uid, response, log_level):
 
     LLMDefenderBase.utils.subnet_logger(
         severity="TRACE",
-        message=f"Duplicate penalty score: {penalty}",
+        message=f"Formatting penalty score: {penalty}",
         log_level=log_level
     )
 

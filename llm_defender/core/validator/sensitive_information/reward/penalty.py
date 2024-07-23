@@ -55,7 +55,7 @@ def check_false_positive_penalty(response, target, log_level):
 
 def check_formatting_penalty(uid, response, log_level):
     """
-    This function checks the total penalty score within duplicate category.
+    This function checks the total penalty score within the formatting category.
 
     A penalty of 20.0 is also added if any of the inputs (uid, miner_responses,
     or response) is not inputted.
@@ -92,7 +92,7 @@ def check_formatting_penalty(uid, response, log_level):
     
     LLMDefenderBase.utils.subnet_logger(
         severity="TRACE",
-        message=f"Dupicate penalty score: {penalty}", 
+        message=f"Formatting penalty score: {penalty}", 
         log_level=log_level
     )
 
