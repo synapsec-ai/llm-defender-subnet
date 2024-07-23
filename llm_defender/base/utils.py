@@ -351,13 +351,13 @@ def validate_validator_api_prompt_output(api_output, log_level):
 
     return good_output
 
-def subnet_logger(severity: str, message: str, log_level: int):
+def subnet_logger(severity: str, message: str, log_level: str):
     """This method is a wrapper for the bt.logging function to add extra
     functionality around the native logging capabilities. This method is
     used together with the neuron_logger() method."""
     
     if (isinstance(severity, str) and not isinstance(severity, bool)) and (
-        isinstance(message, str) and not isinstance(message, bool)
+        isinstance(message, str) and not isinstance(message, bool) and (isinstance(log_level, str) and not isinstance(log_level, bool))
     ):
         # Do mapping of custom log levels
         log_levels = {
