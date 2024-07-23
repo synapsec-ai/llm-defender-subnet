@@ -79,6 +79,7 @@ class Handler:
         
         # All Axons
         raw_axons = self.metagraph.axons
+        bt.logging.trace(f'Raw axons to filter from: {raw_axons}')
 
         # Remove invalid axons
         valid_axons = self.validator.determine_valid_axons(axons=raw_axons)
