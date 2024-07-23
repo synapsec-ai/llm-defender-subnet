@@ -9,7 +9,7 @@ services:
     volumes:
       - llm-defender-subnet:/home/llm-defender-user/.llm-defender-subnet
       - ${HOME}/.bittensor:/home/llm-defender-user/.bittensor
-  common-api: &common-api
+  llm-defender-api: &llm-defender-api
     restart: unless-stopped
     pull_policy: always
     image: ghcr.io/synapsec-ai/llm-defender-api:v0.9.0
@@ -83,11 +83,9 @@ services:
     ]
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
-  
-  llm-defender-api:
-    <<: *common-api
+
   llm-defender-api-dev:
-    <<: *common-api
+    <<: *llm-defender-api
     build:
       context: .
       dockerfile: api.Dockerfile
