@@ -485,7 +485,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         for prompt in synapse.synapse_prompts:
 
-            bt.neuron_logger(
+            self.neuron_logger(
                 severity="INFO",
                 message=f"Commencing duplicate prompt validation for prompt: {prompt}"
             )
