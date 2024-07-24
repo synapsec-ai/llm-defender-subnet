@@ -45,7 +45,9 @@ If you are not familiar with Bittensor, you should first perform the following a
 > [!NOTE]  
 > Validators need to establish an internet connection with the miner. This requires ensuring that the port specified in --axon.port is reachable on the virtual machine via the internet. This involves either opening the port on the firewall or configuring port forwarding.
 
-Run miner (if you run multiple miners, make sure the name and axon.port are unique):
+## Running Miner/Validator
+
+Run the following to boot up a miner (if you run multiple miners, make sure the name and axon.port are unique):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -61,17 +63,4 @@ $ bash scripts/run_neuron.sh \
 --axon.port 15000 \
 ```
 
-Run validator (if you run multiple validators, make sure the name is unique):
-```
-$ cd llm-defender-subnet
-$ source .venv/bin/activate
-$ bash scripts/run_neuron.sh \
---name llm-defender-subnet-validator-0 \
---install_only 0 \
---max_memory_restart 5G \
---branch main \
---netuid 14 \
---profile validator \
---wallet.name YourColdkeyGoesHere \
---wallet.hotkey YourHotkeyGoesHere
-```
+Please reference our [docs](https://docs.synapsec.ai/Validating/running_validator/) for running a validator. 
