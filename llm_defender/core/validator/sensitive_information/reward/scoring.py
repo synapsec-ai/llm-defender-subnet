@@ -1,6 +1,5 @@
 """This module processes the incoming response from the miner"""
 
-from bittensor import logging
 from copy import deepcopy
 from numpy import cbrt, log, ndarray
 
@@ -33,7 +32,7 @@ def calculate_distance_score(target: float, engine_response: dict) -> float:
     ):
         return 1.0
 
-    distance = abs(target - engine_response["confidence"])
+    distance = abs(int(target) - engine_response["confidence"])
 
     return distance
 
@@ -111,7 +110,7 @@ def calculate_subscore_speed(timeout, response_time):
     return speed_score
 
 
-def validate_response(hotkey, response) -> bool:
+def validate_response(hotkey, response, log_level) -> bool:
     """This method validates the individual response to ensure it has
     been format correctly
 
@@ -125,12 +124,20 @@ def validate_response(hotkey, response) -> bool:
     """
     # Responses without output are not valid
     if not response or isinstance(response, bool):
-        logging.trace(f"Received an response without an output: {response}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Received an response without an output: {response}",
+            log_level=log_level
+        )
         return False
 
     # Check for type
     if not isinstance(response, dict):
-        logging.trace(f"Received an response with incorrect type: {response}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Received an response with incorrect type: {response}",
+            log_level=log_level
+        )
         return False
 
     # Check for mandatory keys
@@ -144,16 +151,20 @@ def validate_response(hotkey, response) -> bool:
         "timestamp",
     ]
     if not all(key in response for key in mandatory_keys):
-        logging.trace(
-            f"One or more mandatory keys: {mandatory_keys} missing from response: {response}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"One or more mandatory keys: {mandatory_keys} missing from response: {response}",
+            log_level=log_level
         )
         return False
 
     # Check that the values are not empty
     for key in mandatory_keys:
         if response[key] is None:
-            logging.trace(
-                f"One or more mandatory keys: {mandatory_keys} are empty in: {response}"
+            LLMDefenderBase.utils.subnet_logger(
+                severity="TRACE",
+                message=f"One or more mandatory keys: {mandatory_keys} are empty in: {response}",
+                log_level=log_level
             )
             return False
 
@@ -162,32 +173,46 @@ def validate_response(hotkey, response) -> bool:
         f'{response["synapse_uuid"]}{response["nonce"]}{hotkey}{response["timestamp"]}'
     )
     if not LLMDefenderBase.validate_signature(
-        hotkey=hotkey, data=data, signature=response["signature"]
+        hotkey=hotkey, data=data, signature=response["signature"], log_level=log_level
     ):
-        logging.debug(
-            f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f'Failed to validate signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}',
+            log_level=log_level
         )
         return False
     else:
-        logging.debug(
-            f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}'
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f'Succesfully validated signature for the response. Hotkey: {hotkey}, data: {data}, signature: {response["signature"]}',
+            log_level=log_level
         )
 
     # Check the validity of the confidence score
     if isinstance(response["confidence"], bool) or not isinstance(
         response["confidence"], (float, int)
     ):
-        logging.trace(f"Confidence is not correct type: {response['confidence']}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Confidence is not correct type: {response['confidence']}",
+            log_level=log_level
+        )
         return False
 
     if not 0.0 <= float(response["confidence"]) <= 1.0:
-        logging.trace(
-            f"Confidence is out-of-bounds for response: {response['confidence']}"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Confidence is out-of-bounds for response: {response['confidence']}", 
+            log_level=log_level
         )
         return False
 
     # The response has passed the validation
-    logging.trace(f"Validation succeeded for response: {response}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Validation succeeded for response: {response}", 
+        log_level=log_level
+    )
     return True
 
 def get_normalized_and_binned_scores(total_analyzer_raw_score):
@@ -272,6 +297,7 @@ def get_response_object(
     analyzer: str,
     category: str,
     prompt: str,
+    weight,
 ) -> dict:
     """Returns the template for the response object"""
 
@@ -287,7 +313,7 @@ def get_response_object(
         "response": {},
         "scored_response": get_engine_response_object(),
         "engine_data": [],
-        "weight": 0.1
+        "weight": weight,
     }
 
     return response

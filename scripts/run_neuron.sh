@@ -116,9 +116,6 @@ install_packages() {
         if [ "$profile" == "miner" ]; then
             echo "Installing python package with pip with miner and wandb extras"
             pip install -e .[wandb,miner]
-        elif [ "$profile" == "validator" ]; then
-            echo "Installing python package with pip with validator and wandb extras"
-            pip install -e .[wandb,validator]
         else
             echo "Unable to determine profile. Exiting."
             exit 1
@@ -127,9 +124,6 @@ install_packages() {
         if [ "$profile" == "miner" ]; then
             echo "Installing python package with pip with miner extras"
             pip install -e .[miner]
-        elif [ "$profile" == "validator" ]; then
-            echo "Installing python package with pip with validator extras"
-            pip install -e .[validator]
         else
             echo "Unable to determine profile. Exiting."
             exit 1

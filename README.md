@@ -1,5 +1,5 @@
 <h1 align="center">LLM Defender Subnet (SN14)</h1>
-<h4 align="center">| <a href="https://docs.synapsec.ai">Documentation</a> | <a href="https://metrics.synapsec.ai"> Subnet Metrics</a> | </h4>
+<h4 align="center">| <a href="https://docs.synapsec.ai">Documentation</a> | </h4>
 
 # Introduction
 This repository contains the source code for the LLM Defender subnet running on top of [Bittensor](https://github.com/opentensor/bittensor). The LLM Defender subnet provides Large Language Model (LLM) developers a way to decentralize the computing required to detect and prevent various attacks and exploits against LLM applications. 
@@ -45,7 +45,9 @@ If you are not familiar with Bittensor, you should first perform the following a
 > [!NOTE]  
 > Validators need to establish an internet connection with the miner. This requires ensuring that the port specified in --axon.port is reachable on the virtual machine via the internet. This involves either opening the port on the firewall or configuring port forwarding.
 
-Run miner (if you run multiple miners, make sure the name and axon.port are unique):
+## Running Miner/Validator
+
+Run the following to boot up a miner (if you run multiple miners, make sure the name and axon.port are unique):
 ```
 $ cd llm-defender-subnet
 $ source .venv/bin/activate
@@ -61,28 +63,4 @@ $ bash scripts/run_neuron.sh \
 --axon.port 15000 \
 ```
 
-Run validator (if you run multiple validators, make sure the name is unique):
-```
-$ cd llm-defender-subnet
-$ source .venv/bin/activate
-$ bash scripts/run_neuron.sh \
---name llm-defender-subnet-validator-0 \
---install_only 0 \
---max_memory_restart 5G \
---branch main \
---netuid 14 \
---profile validator \
---wallet.name YourColdkeyGoesHere \
---wallet.hotkey YourHotkeyGoesHere
-```
-
-Run auto-updater (only one instance needs to be running even if you have multiple PM2 instances active on the same machine):
-```
-$ cd llm-defender-subnet
-$ source .venv/bin/activate
-$ bash scripts/run_auto_updater.sh \
---update_interval 300 \
---branch main \
---pm2_instance_names llm-defender-subnet-validator-0 llm-defender-subnet-miner-0 \
---prepare_miners True
-```
+Please reference our [docs](https://docs.synapsec.ai/Validating/running_validator/) for running a validator. 

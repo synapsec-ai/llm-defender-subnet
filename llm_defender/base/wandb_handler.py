@@ -6,10 +6,12 @@ from bittensor import logging
 import wandb
 import time
 
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
 
 class WandbHandler:
 
-    def __init__(self):
+    def __init__(self, log_level):
         # Get the required variables in order to initialize the wandb connection
         load_dotenv()
         key = environ.get("WANDB_KEY")
@@ -29,7 +31,11 @@ class WandbHandler:
             wandb.login(key=key, verify=True)
             self.wandb_run = wandb.init(project=project, entity=entity)
         except Exception as e:
-            logging.error(f"Unable to init wandb connectivity: {e}")
+            LLMDefenderBase.utils.subnet_logger(
+                severity="ERROR",
+                message=f"Unable to init wandb connectivity: {e}",
+                log_level=log_level
+            )
             raise RuntimeError(f"Unable to init wandb connectivity: {e}") from e
 
         # Define class variables
@@ -39,7 +45,7 @@ class WandbHandler:
         """Sets the timestamp to be used as the step"""
         self.log_timestamp = int(time.time())
 
-    def log(self, data):
+    def log(self, data, log_level):
         """Logs data to wandb
 
         Arguments:
@@ -49,7 +55,11 @@ class WandbHandler:
         try:
             self.wandb_run.log(data, self.log_timestamp)
         except Exception as e:
-            logging.error(f"Unable to log into wandb: {e}")
+            LLMDefenderBase.utils.subnet_logger(
+                severity="ERROR",
+                message=f"Unable to log into wandb: {e}",
+                log_level=log_level
+            )
 
     def custom_wandb_metric(self, data, **kwargs):
         """

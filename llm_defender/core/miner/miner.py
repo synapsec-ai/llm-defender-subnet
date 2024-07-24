@@ -10,10 +10,11 @@ Typical example usage:
 """
 
 from argparse import ArgumentParser
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Tuple
 import sys
 import bittensor as bt
+import hashlib
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
@@ -46,7 +47,9 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             This function defines the priority based on which the validators are
             selected. Higher priority value means the input from the validator is
             processed faster.
-        forward():
+        feedback_forward():
+            This function is executed when a metric synapse is received from a validator.
+        analysis_forward():
             The function is executed once the data from the validator has been
             deserialized, which means we can utilize the data to control the behavior
             of this function.
@@ -76,19 +79,30 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         # Read command line arguments and perform actions based on them
         args = parser.parse_args()
-
+        self.log_level = args.log_level
+        
         # Setup logging
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
-        if args.log_level == "DEBUG":
+        if args.log_level in ("DEBUG", "DEBUGX"):
             bt.logging.enable_debug()
-        elif args.log_level == "TRACE":
+        elif args.log_level in ("TRACE", "TRACEX"):
             bt.logging.enable_trace()
         else:
             bt.logging.enable_default()
+            
+        # Enable healthcheck API if it is to be enabled
+        if not args.disable_healthcheck:
+            self.healthcheck_api = LLMDefenderBase.HealthCheckAPI(
+                host=args.healthcheck_host, port=args.healthcheck_port
+            )
 
+            # Run healthcheck API
+            self.healthcheck_api.run()
 
 
         self.validator_min_stake = args.validator_min_stake
+
+        self.recieved_messages = OrderedDict()
 
         self.wallet, self.subtensor, self.metagraph, self.miner_uid = self.setup()
 
@@ -133,24 +147,29 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         if self.used_prompt_hashes:
 
-            bt.logging.debug(
-                f"Cleaning up local knowledge of used hashes. Old length: {len(self.used_prompt_hashes)}"
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Cleaning up local knowledge of used hashes. Old length: {len(self.used_prompt_hashes)}"
             )
-            bt.logging.trace(
-                f"First known hash before truncate: {self.used_prompt_hashes[0]}"
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"First known hash before truncate: {self.used_prompt_hashes[0]}"
             )
 
             self.used_prompt_hashes = self.used_prompt_hashes[-100:]
 
-            bt.logging.debug(
-                f"Cleaned up local knowledge of used hashes. New length: {len(self.used_prompt_hashes)}"
+            self.neuron_logger(
+                severity="DEBUG",
+                message="Cleaned up local knowledge of used hashes. New length: {len(self.used_prompt_hashes)}"
             )
-            bt.logging.trace(
-                f"First known hash after truncate: {self.used_prompt_hashes[0]}"
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"First known hash after truncate: {self.used_prompt_hashes[0]}"
             )
         else:
-            bt.logging.debug(
-                f"No hashes in local database to clean: {self.used_prompt_hashes}"
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"No hashes in local database to clean: {self.used_prompt_hashes}"
             )
 
     def clean_local_storage(self):
@@ -183,8 +202,9 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
                 The AttributeError is raised if wallet, subtensor & metagraph cannot be logged.
         """
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
-        bt.logging.info(
-            f"Initializing miner for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Initializing miner for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config:\n {self.neuron_config}"
         )
 
         # Setup the bittensor objects
@@ -193,24 +213,32 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             subtensor = bt.subtensor(config=self.neuron_config)
             metagraph = subtensor.metagraph(self.neuron_config.netuid)
         except AttributeError as e:
-            bt.logging.error(f"Unable to setup bittensor objects: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to setup bittensor objects: {e}"
+            )
             sys.exit()
 
-        bt.logging.info(
-            f"Bittensor objects initialized:\nMetagraph: {metagraph}\
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Bittensor objects initialized:\nMetagraph: {metagraph}\
             \nSubtensor: {subtensor}\nWallet: {wallet}"
         )
 
         # Validate that our hotkey can be found from metagraph
         if wallet.hotkey.ss58_address not in metagraph.hotkeys:
-            bt.logging.error(
-                f"Your miner: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Your miner: {wallet} is not registered to chain connection: {subtensor}. Run btcli register and try again"
             )
             sys.exit()
 
         # Get the unique identity (UID) from the network
         miner_uid = metagraph.hotkeys.index(wallet.hotkey.ss58_address)
-        bt.logging.info(f"Miner is running with UID: {miner_uid}")
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Miner is running with UID: {miner_uid}"
+        )
 
         return wallet, subtensor, metagraph, miner_uid
 
@@ -240,8 +268,8 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             return True
 
         return False
-
-    def blacklist(self, synapse: LLMDefenderBase.SubnetProtocol) -> Tuple[bool, str]:
+    
+    def blacklist_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.FeedbackProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -267,12 +295,18 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         # Check whitelisted hotkeys (queries should always be allowed)
         if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
-            bt.logging.info(f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey})")
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey})"
+            )
             return (False, f"Accepted whitelisted hotkey: {synapse.dendrite.hotkey}")
 
         # Blacklist entities that have not registered their hotkey
         if synapse.dendrite.hotkey not in self.metagraph.hotkeys:
-            bt.logging.info(f"Blacklisted unknown hotkey: {synapse.dendrite.hotkey}")
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Blacklisted unknown hotkey: {synapse.dendrite.hotkey}"
+            )
             return (
                 True,
                 f"Hotkey {synapse.dendrite.hotkey} was not found from metagraph.hotkeys",
@@ -281,14 +315,18 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         # Blacklist entities that are not validators
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         if not self.metagraph.validator_permit[uid]:
-            bt.logging.info(f"Blacklisted non-validator: {synapse.dendrite.hotkey}")
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Blacklisted non-validator: {synapse.dendrite.hotkey}"
+            )
             return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
 
         # Blacklist entities that have insufficient stake
         stake = float(self.metagraph.S[uid])
         if stake < self.validator_min_stake:
-            bt.logging.info(
-                f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Blacklisted validator {synapse.dendrite.hotkey} with insufficient stake: {stake}"
             )
             return (
                 True,
@@ -296,12 +334,29 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             )
 
         # Allow all other entities
-        bt.logging.info(
-            f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
+    
+    def metric_blacklist(self, synapse: LLMDefenderBase.FeedbackProtocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
 
-    def priority(self, synapse: LLMDefenderBase.SubnetProtocol) -> float:
+    def analysis_blacklist(self, synapse: LLMDefenderBase.SubnetProtocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
+
+    def metric_priority(self, synapse: LLMDefenderBase.FeedbackProtocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+
+    def analysis_priority(self, synapse: LLMDefenderBase.SubnetProtocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+
+    def priority_fn(self, synapse: LLMDefenderBase.SubnetProtocol | LLMDefenderBase.FeedbackProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -325,13 +380,69 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
         stake = float(self.metagraph.S[uid])
 
-        bt.logging.debug(
-            f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
         )
 
         return stake
+    
+    def feedback_forward(self, synapse: LLMDefenderBase.FeedbackProtocol) -> LLMDefenderBase.FeedbackProtocol:
+        """Forward function that accepts the metrics synapse."""
 
-    def forward(
+        self.neuron_logger(
+            severity="INFO",
+            message=f'Received response object from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} for the synapse_uuid: {synapse.synapse_uuid}. Response object: {synapse.response_object}'
+        )
+
+        # Miners should add custom code here if they want to collect or post-process the metrics.
+        
+        return synapse
+    
+    def validate_incoming_prompt(self, hotkey: str, prompt: str):
+        """Validates incoming prompt"""
+        # truncate existing logs to max length of 100
+        if len(self.recieved_messages.keys()) > 100:
+            self.recieved_messages.popitem(last=False)
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Recieved messages: {self.recieved_messages}"
+        )
+
+        # encode prompt and append to logs
+        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Prompt hash: {prompt_hash}"
+        )
+
+        # check if duplicate exists for any prompt, if so then return False     
+        if prompt_hash in self.recieved_messages.keys():
+            if self.recieved_messages[prompt_hash] == hotkey:
+                self.neuron_logger(
+                    severity="TRACE",
+                    message="Duplicate prompt validation successful."
+                )
+                return True 
+            self.neuron_logger(
+                severity="TRACE",
+                message="Duplicate prompt validation failed."
+            )
+            return False
+        
+        self.recieved_messages[prompt_hash] = hotkey
+        self.neuron_logger(
+            severity="TRACE",
+            message="Duplicate prompt validation successful."
+        )
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Recieved messages: {self.recieved_messages}"
+        )
+        return True
+
+    def analysis_forward(
         self, synapse: LLMDefenderBase.SubnetProtocol
     ) -> LLMDefenderBase.SubnetProtocol:
         """
@@ -352,53 +463,45 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
                 (from llm_defender/base/protocol.py)
         """
 
-        is_notification_message = (
-            synapse.synapse_prompts is None and synapse.synapse_hash is not None
-        )
-
-        # synapse_hash = synapse.synapse_hash
         hotkey = synapse.dendrite.hotkey
-        # synapse_uuid = synapse.synapse_uuid
-
-        if is_notification_message:
-            # If it's a notification synapse we can just ignore it
-            bt.logging.debug("Received notification synapse. Ignoring.")
-            return synapse
-        #     bt.logging.debug(f"Processing notification synapse: {synapse}")
-        #     self._update_validator_stats(hotkey, "received_notification_synapse_count")
-        #     if synapse_hash in self.notification_synapses:
-        #         self.notification_synapses[synapse_hash]["validator_hotkeys"].append(
-        #             hotkey
-        #         )
-        #     else:
-        #         self.notification_synapses[synapse_hash] = {
-        #             "synapse_uuid": synapse_uuid,
-        #             "validator_hotkeys": [hotkey],
-        #         }
-
-        #     bt.logging.success(
-        #         f"Processed notification synapse from hotkey: {hotkey} with UUID: {synapse.synapse_uuid} and hash: {synapse_hash}"
-        #     )
-
-        #     self._update_validator_stats(hotkey, "processed_notification_synapse_count")
-        #     synapse.output = {"outcome": True}
-        #     return synapse
 
         self._update_validator_stats(hotkey, "received_payload_synapse_count")
 
         # Print version information and perform version checks
-        bt.logging.debug(
-            f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
         )
         if synapse.subnet_version > self.subnet_version:
-            bt.logging.warning(
-                f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
+            self.neuron_logger(
+                severity="WARNING",
+                message=f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
             )
+
+        self.neuron_logger(
+            severity='TRACE',
+            message=f"Commencing duplicate prompt validation for prompts: {synapse.synapse_prompts}."
+        )
+
+        for prompt in synapse.synapse_prompts:
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Commencing duplicate prompt validation for prompt: {prompt}"
+            )
+
+            if not self.validate_incoming_prompt(hotkey=hotkey, prompt=prompt):
+                self.neuron_logger(
+                    severity="WARNING",
+                    message=f"Duplicate validation for prompt: {prompt} from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} has failed."
+                )
+                return synapse
 
         # Validate that nonce has not been reused
         if not self.validate_nonce(synapse.synapse_nonce):
-            bt.logging.warning(
-                f"Received a synapse with previous used nonce: {synapse}"
+            self.neuron_logger(
+                severity="WARNING",
+                message=f"Received a synapse with previous used nonce: {synapse}"
             )
             return synapse
 
@@ -408,17 +511,23 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             hotkey=synapse.dendrite.hotkey,
             data=data,
             signature=synapse.synapse_signature,
+            log_level=self.log_level
         ):
-            bt.logging.debug(
-                f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Failed to validate signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
             )
             return synapse
-        bt.logging.debug(
-            f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Succesfully validated signature for the synapse. Hotkey: {synapse.dendrite.hotkey}, data: {data}, signature: {synapse.synapse_signature}"
         )
 
         if not (prompts := synapse.synapse_prompts):
-            bt.logging.warning(f"Received a synapse without prompts: {synapse}")
+            self.neuron_logger(
+                severity="WARNING",
+                message=f"Received a synapse without prompts: {synapse}"
+            )
             return synapse
 
         # encoded_prompt = prompt.encode("utf-8")
@@ -429,17 +538,17 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         #     or self.notification_synapses[prompt_hash]["synapse_uuid"]
         #     != synapse.synapse_uuid
         # ):
-        #     bt.logging.warning(
+        #     self.neuron_logger(severity="WARNING",message=
         #         f"Notification synapse not found from hotkey: {synapse.dendrite.hotkey}. UUID: {synapse.synapse_uuid} - SHA256: {prompt_hash}"
         #     )
-        #     bt.logging.debug(f"Notification synapses: {self.notification_synapses}")
+        #     self.neuron_logger(severity="DEBUG",message=f"Notification synapses: {self.notification_synapses}")
         #     return synapse
 
         # if prompt_hash in self.used_prompt_hashes:
-        #     bt.logging.warning(
+        #     self.neuron_logger(severity="WARNING",message=
         #         f"Received a prompt with recently used hash: {prompt_hash} originating from hotkey: {synapse.dendrite.hotkey}"
         #     )
-        #     bt.logging.debug(f"List of recent hashes: {self.used_prompt_hashes}")
+        #     self.neuron_logger(severity="DEBUG",message=f"List of recent hashes: {self.used_prompt_hashes}")
         #     return synapse
 
         # validator_hotkey_to_reply = synapse.dendrite.hotkey
@@ -447,7 +556,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         #     "validator_hotkeys"
         # ]
         # if len(registered_hotkeys) > 1:
-        #     bt.logging.warning(
+        #     self.neuron_logger(severity="WARNING",message=
         #         f"The same prompt: {prompt_hash} was sent by different validators: {registered_hotkeys}"
         #     )
         #     # Find the validator with the highest amount of stake
@@ -461,7 +570,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         # # If this validator doesn't have the highest amount fo stake, discard the message
         # if validator_hotkey_to_reply != synapse.dendrite.hotkey:
-        #     bt.logging.warning(
+        #     self.neuron_logger(severity="WARNING",message=
         #         f"Discard message: {synapse} for validator: {synapse.dendrite.hotkey}, duplicated prompt"
         #     )
         #     return synapse
@@ -471,36 +580,48 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         # Execute the correct analyzer
         if not LLMDefenderCore.SupportedAnalyzers.is_valid(synapse.analyzer):
-            bt.logging.error(
-                f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to process synapse: {synapse} due to invalid analyzer: {synapse.analyzer}"
             )
             return synapse
 
-        bt.logging.debug(f"Executing the {synapse.analyzer} analyzer")
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Executing the {synapse.analyzer} analyzer"
+        )
         output = self.analyzers[synapse.analyzer].execute(
-            synapse=synapse, prompts=prompts
+            synapse=synapse, prompts=prompts, log_level=self.log_level
         )
 
-        bt.logging.debug(f"Setting synapse.output to: {output}")
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Setting synapse.output to: {output}"
+        )
         synapse.output = output
 
         # Remove the message from the notification field
         # self.notification_synapses.pop(prompt_hash, None)
-        bt.logging.debug(
-            f'Processed prompt "{prompts}" with analyzer: {output["analyzer"]}'
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f'Processed prompt "{prompts}" with analyzer: {output["analyzer"]}'
         )
-        bt.logging.debug(
-            f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f'Engine data for {output["analyzer"]} analyzer: {output["engines"]}'
         )
         if self.check_whitelist(hotkey=synapse.dendrite.hotkey):
-            bt.logging.success(
-                f'Processed payload synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            self.neuron_logger(
+                severity="SUCCESS",
+                message=f'Processed payload synapse from whitelisted hotkey: {synapse.dendrite.hotkey} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
             )
         else:
-            bt.logging.success(
-                f'Processed payload synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
+            self.neuron_logger(
+                severity="SUCCESS",
+                message=f'Processed payload synapse from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} - Confidence: {output["confidence"]} - UUID: {output["synapse_uuid"]}'
             )
 
         self._update_validator_stats(hotkey, "processed_payload_synapse_count")
 
         return synapse
+

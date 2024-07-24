@@ -2,7 +2,7 @@ import bittensor as bt
 import llm_defender.base as LLMDefenderBase
 
 
-def check_false_positive_penalty(response, target):
+def check_false_positive_penalty(response, target, log_level):
     """
     This function checks the total penalty score within the false positive category.
 
@@ -41,14 +41,18 @@ def check_false_positive_penalty(response, target):
 
     penalty += _check_for_false_positives(response, target)
 
-    bt.logging.trace(f"False positive penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"False positive penalty score: {penalty}",
+        log_level=log_level
+    )
 
     return penalty
 
 
-def check_duplicate_penalty(uid, response):
+def check_formatting_penalty(uid, response, log_level):
     """
-    This function checks the total penalty score within duplicate category.
+    This function checks the total penalty score within the formatting category.
 
     A penalty of 20.0 is added if any of the inputs (uid, miner_responses,
     or response) is not inputted.
@@ -87,12 +91,16 @@ def check_duplicate_penalty(uid, response):
     # penalty += _find_identical_reply(uid, miner_responses, response, "prompt_injection:text_classification",)
     # penalty += _calculate_duplicate_percentage(uid, miner_responses, "prompt_injection:text_classification",)
 
-    bt.logging.trace(f"Duplicate penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Formatting penalty score: {penalty}",
+        log_level=log_level
+    )
 
     return penalty
 
 
-def check_base_penalty(uid, response):
+def check_base_penalty(uid, response, log_level):
     """
     This function checks the total penalty score within the base category.
 
@@ -119,7 +127,7 @@ def check_base_penalty(uid, response):
             The total penalty score within the base category.
     """
 
-    def _check_response_validity(uid, response, penalty_name="Response Validity"):
+    def _check_response_validity(uid, response, log_level, penalty_name="Response Validity"):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
         If this is the case, it applies a penalty of 20.0, and if this is not the case the penalty
@@ -150,7 +158,13 @@ def check_base_penalty(uid, response):
 
         # Validate engine responses
         if "engines" not in response.keys():
-            bt.logging.trace(f"No engines key in response: {response}")
+
+            LLMDefenderBase.utils.subnet_logger(
+                severity="TRACE",
+                message=f"No engines key in response: {response}",
+                log_level=log_level
+            )
+            
             penalty = 20.0
         else:
             for entry in response["engines"]:
@@ -159,24 +173,40 @@ def check_base_penalty(uid, response):
                 if "confidence" not in entry.keys() or (
                     entry["confidence"] > 1.0 or entry["confidence"] < 0.0
                 ):
-                    bt.logging.trace(f"Confidence out-of-bounds or missing: {response}")
+                    
+                    LLMDefenderBase.utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Confidence out-of-bounds or missing: {response}",
+                        log_level=log_level
+                    )
+                    
                     penalty = 20.0
                     break
 
-        bt.logging.trace(
-            f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'",
+            log_level=log_level
         )
 
         return penalty
 
     if not LLMDefenderBase.validate_uid(uid) or not response:
         # Apply penalty if invalid values are provided to the function
-        bt.logging.debug(f"Validation failed: {uid}, {response}")
+        LLMDefenderBase.utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Validation failed: {uid}, {response}",
+            log_level=log_level
+        )
         return 10.0
 
     penalty = 0.0
-    penalty += _check_response_validity(uid, response)
+    penalty += _check_response_validity(uid, response, log_level=log_level)
 
-    bt.logging.trace(f"Base penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Base penalty score: {penalty}",
+        log_level=log_level
+    )
 
     return penalty

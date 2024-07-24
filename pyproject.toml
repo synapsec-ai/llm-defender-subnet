@@ -4,8 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm_defender"
-version = "0.8.2"
-
+version = "0.9.0"
 description = "This project implements the llm-defender subnet for Bittensor"
 authors = [
     { name = "synapsec.ai", email = "contact@synapsec.ai" }
@@ -29,8 +28,7 @@ classifiers = [
 requires-python = ">=3.10,<3.12"
 
 dependencies = [
-    "bittensor==7.2.0",
-    "gitpython==3.1.43",
+    "bittensor==7.3.0",
     "python-dotenv==1.0.1",
 ]
 
@@ -39,8 +37,8 @@ homepage = "https://github.com/synapsec-ai/llm-defender-subnet"
 
 [project.optional-dependencies]
 wandb = ["wandb==0.17.0"]
-miner = ["transformers==4.41.2", "datasets==2.19.1", "torch==2.3.0"]
-validator = ["scikit-learn==1.5.0", "numpy==1.26.4", "wonderwords==2.2.0", "english-words==2.0.1"]
+miner = ["transformers==4.41.2", "torch==2.3.0"]
+validator = ["scikit-learn==1.5.0", "numpy==1.26.4", "english-words==2.0.1", "openai==1.34.0", "datasets==2.20.0"]
 api = ["fastapi==0.110.1", "uvicorn==0.22.0", "python-multipart==0.0.9"]
 
 [tool.setuptools.packages.find]

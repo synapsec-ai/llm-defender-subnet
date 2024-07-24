@@ -6,7 +6,6 @@ features and their engines.
 import asyncio
 import bittensor as bt
 
-
 class EngineResponse:
     """
     This class implements a consistent way of representing different
@@ -193,7 +192,7 @@ def validate_response_data(engine_response: dict) -> bool:
     return True
 
 
-def validate_signature(hotkey: str, data: str, signature: str) -> bool:
+def validate_signature(hotkey: str, data: str, signature: str, log_level) -> bool:
     """Validates that the given hotkey has been used to generate the
     signature for data
 
@@ -213,23 +212,29 @@ def validate_signature(hotkey: str, data: str, signature: str) -> bool:
         outcome = bt.Keypair(ss58_address=hotkey).verify(data, bytes.fromhex(signature))
         return outcome
     except AttributeError as e:
-        bt.logging.error(
-            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        subnet_logger(
+            severity="ERROR",
+            message=f"Failed to validate signature: {signature} for data: {data} with error: {e}",
+            log_level=log_level
         )
         return False
     except TypeError as e:
-        bt.logging.error(
-            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        subnet_logger(
+            severity="ERROR",
+            message=f"Failed to validate signature: {signature} for data: {data} with error: {e}",
+            log_level=log_level
         )
         return False
     except ValueError as e:
-        bt.logging.error(
-            f"Failed to validate signature: {signature} for data: {data} with error: {e}"
+        subnet_logger(
+            severity="ERROR",
+            message=f"Failed to validate signature: {signature} for data: {data} with error: {e}",
+            log_level=log_level
         )
         return False
 
 
-def sign_data(hotkey: bt.Keypair, data: str) -> str:
+def sign_data(hotkey: bt.Keypair, data: str, log_level) -> str:
     """Signs the given data with the wallet hotkey
 
     Arguments:
@@ -246,13 +251,17 @@ def sign_data(hotkey: bt.Keypair, data: str) -> str:
         signature = hotkey.sign(data.encode()).hex()
         return signature
     except TypeError as e:
-        bt.logging.error(
-            f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}"
+        subnet_logger(
+            severity="ERROR",
+            message=f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}",
+            log_level=log_level
         )
         raise TypeError from e
     except AttributeError as e:
-        bt.logging.error(
-            f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}"
+        subnet_logger(
+            severity="ERROR",
+            message=f"Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}",
+            log_level=log_level
         )
         raise AttributeError from e
 
@@ -300,7 +309,7 @@ def validate_prompt(prompt_dict):
     return True
 
 
-def validate_validator_api_prompt_output(api_output):
+def validate_validator_api_prompt_output(api_output, log_level):
     """
     Returns a boolean for whether or not the validator's output from the prompt API is valid
 
@@ -328,8 +337,78 @@ def validate_validator_api_prompt_output(api_output):
             good_output = False
 
     if not good_output:
-        bt.logging.trace("Prompt API query validation failed.")
+        subnet_logger(
+            severity="TRACE",
+            message="Prompt API query validation failed.",
+            log_level=log_level
+        )
     else:
-        bt.logging.trace("Prompt API query validation succeeded.")
+        subnet_logger(
+            severity="TRACE",
+            message="Prompt API query validation succeeded.",
+            log_level=log_level
+        )
 
     return good_output
+
+def subnet_logger(severity: str, message: str, log_level: str):
+    """This method is a wrapper for the bt.logging function to add extra
+    functionality around the native logging capabilities. This method is
+    used together with the neuron_logger() method."""
+    
+    if (isinstance(severity, str) and not isinstance(severity, bool)) and (
+        isinstance(message, str) and not isinstance(message, bool) and (isinstance(log_level, str) and not isinstance(log_level, bool))
+    ):
+        # Do mapping of custom log levels
+        log_levels = {
+            "INFO": 0,
+            "INFOX": 1,
+            "DEBUG": 2,
+            "DEBUGX": 3,
+            "TRACE": 4,
+            "TRACEX": 5
+        }
+
+        bittensor_severities = {
+            "SUCCESS": "SUCCESS",
+            "WARNING": "WARNING",
+            "ERROR": "ERROR",
+            "INFO": "INFO",
+            "INFOX": "INFO",
+            "DEBUG": "DEBUG",
+            "DEBUGX": "DEBUG",
+            "TRACE": "TRACE",
+            "TRACEX": "TRACE"
+        }
+
+        severity_emoji = {
+            "SUCCESS": chr(0x2705),
+            "ERROR": chr(0x274C),
+            "WARNING": chr(0x1F6A8),
+            "INFO": chr(0x1F4A1),
+            "DEBUG": chr(0x1F527),
+            "TRACE": chr(0x1F50D),
+        }
+
+        # Use utils.subnet_logger() to write the logs
+        if severity.upper() in ("SUCCESS", "ERROR", "WARNING") or log_levels[log_level] >= log_levels[severity.upper()]:
+
+            general_severity=bittensor_severities[severity.upper()]
+
+            if general_severity.upper() == "SUCCESS":
+                bt.logging.success(msg=message, prefix=severity_emoji["SUCCESS"])
+
+            elif general_severity.upper() == "ERROR":
+                bt.logging.error(msg=message, prefix=severity_emoji["ERROR"])
+
+            elif general_severity.upper() == "WARNING":
+                bt.logging.warning(msg=message, prefix=severity_emoji["WARNING"])
+
+            elif general_severity.upper() == "INFO":
+                bt.logging.info(msg=message, prefix=severity_emoji["INFO"])
+
+            elif general_severity.upper() == "DEBUG":
+                bt.logging.debug(msg=message, prefix=severity_emoji["DEBUG"])
+
+            if general_severity.upper() == "TRACE":
+                bt.logging.trace(msg=message, prefix=severity_emoji["TRACE"])

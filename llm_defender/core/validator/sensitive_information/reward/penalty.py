@@ -2,7 +2,10 @@ import bittensor as bt
 from llm_defender.base import validate_uid
 import bittensor as bt
 
-def check_false_positive_penalty(response, target):
+# Import custom modules
+import llm_defender.base as LLMDefenderBase
+
+def check_false_positive_penalty(response, target, log_level):
     """
     This function checks the total penalty score within the false positive category.
 
@@ -41,14 +44,18 @@ def check_false_positive_penalty(response, target):
 
     penalty += _check_for_false_positives(response, target)
     
-    bt.logging.trace(f"False positive penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"False positive penalty score: {penalty}", 
+        log_level=log_level
+    )
 
     return penalty
 
 
-def check_duplicate_penalty(uid, response):
+def check_formatting_penalty(uid, response, log_level):
     """
-    This function checks the total penalty score within duplicate category.
+    This function checks the total penalty score within the formatting category.
 
     A penalty of 20.0 is also added if any of the inputs (uid, miner_responses,
     or response) is not inputted.
@@ -83,11 +90,15 @@ def check_duplicate_penalty(uid, response):
         # Apply penalty if invalid values are provided to the function
         return 20.0
     
-    bt.logging.trace(f"Dupicate penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Formatting penalty score: {penalty}", 
+        log_level=log_level
+    )
 
     return penalty
 
-def check_base_penalty(uid, response):
+def check_base_penalty(uid, response, log_level):
     """
     This function checks the total penalty score within the base category.
 
@@ -117,7 +128,7 @@ def check_base_penalty(uid, response):
     """
 
     def _check_confidence_validity(
-        uid, response, penalty_name="Confidence out-of-bounds"
+        uid, response, log_level, penalty_name="Confidence out-of-bounds" 
     ):
         """
         This method checks whether a confidence value is out of bounds (below 0.0, or above 1.0).
@@ -146,8 +157,10 @@ def check_base_penalty(uid, response):
         penalty = 0.0
         if response["confidence"] > 1.0 or response["confidence"] < 0.0:
             penalty = 20.0
-        bt.logging.trace(
-            f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'"
+        LLMDefenderBase.utils.subnet_logger(
+            severity="TRACE",
+            message=f"Applied penalty score '{penalty}' from rule '{penalty_name}' for UID: '{uid}'", 
+            log_level=log_level
         )
         return penalty
 
@@ -156,8 +169,12 @@ def check_base_penalty(uid, response):
         return 10.0
 
     penalty = 0.0
-    penalty += _check_confidence_validity(uid, response)
+    penalty += _check_confidence_validity(uid, response, log_level)
 
-    bt.logging.trace(f"Base penalty score: {penalty}")
+    LLMDefenderBase.utils.subnet_logger(
+        severity="TRACE",
+        message=f"Base penalty score: {penalty}",
+        log_level=log_level
+    )
 
     return penalty

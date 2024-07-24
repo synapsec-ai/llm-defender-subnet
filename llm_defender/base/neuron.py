@@ -15,15 +15,12 @@ from os import path, makedirs, rename
 from datetime import datetime
 import bittensor as bt
 import numpy as np
-
-import requests
-import secrets
 import pickle
-import time
-import json
+
 
 # Import custom modules
 import llm_defender.base as LLMDefenderBase
+
 
 def convert_data(data):
     if isinstance(data, dict):
@@ -36,6 +33,7 @@ def convert_data(data):
         return float(data.item()) if data.size == 1 else data.tolist()
     else:
         return data
+
 
 class BaseNeuron:
     """Summary of the class
@@ -62,6 +60,8 @@ class BaseNeuron:
         self.used_nonces = []
         self.cache_path = None
         self.log_path = None
+        self.healthcheck_api = None
+        self.log_level = "INFO"
 
         # Load used nonces if they exists
         self.load_used_nonces()
@@ -69,10 +69,12 @@ class BaseNeuron:
         # Enable wandb if it has been configured
         if LLMDefenderBase.config["wandb_enabled"] is True:
             self.wandb_enabled = True
-            self.wandb_handler = LLMDefenderBase.WandbHandler()
+            self.wandb_handler = LLMDefenderBase.WandbHandler(self.log_level)
         else:
             self.wandb_enabled = False
             self.wandb_handler = None
+
+        self.healthcheck_api = None
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.
@@ -102,8 +104,9 @@ class BaseNeuron:
             for bt_class in bt_classes:
                 bt_class.add_args(self.parser)
         except AttributeError as e:
-            bt.logging.error(
-                f"Unable to attach ArgumentParsers to Bittensor classes: {e}"
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to attach ArgumentParsers to Bittensor classes: {e}"
             )
             raise AttributeError from e
 
@@ -122,104 +125,53 @@ class BaseNeuron:
                 full_path = path.expanduser(os_path)
                 if not path.exists(full_path):
                     makedirs(full_path, exist_ok=True)
-                
+
                 if os_path == self.log_path:
                     config.full_path = path.expanduser(os_path)
         except OSError as e:
-            bt.logging.error(f"Unable to create log path: {e}")
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Unable to create log path: {e}"
+            )
             raise OSError from e
-        
-
         return config
-    def remote_logger(self, hotkey, message: dict) -> bool:
-        """This function is responsible for sending validation metrics
-        and miner response data to centralized log repository.
-
-        The data is used to construct a dashboard to measure the
-        performance of the subnet. It is important for all validators to
-        send out the metrics towards the centralized logger.
-
-        You may opt-out from the data collection by setting the
-        --disable_remote_logging argument in the validator pm2 file.
-        """
-
-        nonce = str(secrets.token_hex(24))
-        timestamp = str(int(time.time()))
-
-        signature = LLMDefenderBase.sign_data(hotkey=hotkey, data=f"{nonce}-{timestamp}")
-
-        headers = {
-            "X-Hotkey": hotkey.ss58_address,
-            "X-Signature": signature,
-            "X-Nonce": nonce,
-            "X-Timestamp": timestamp,
-            "X-API-Key": hotkey.ss58_address,
-        }
-
-        data = message
-
-        res = self.requests_post(
-            url="https://logger.synapsec.ai/logger", headers=headers, data=data
-        )
-
-        if res:
-            return True
-        return False
-
-    def requests_post(self, url, headers: dict, data: dict, timeout: int = 12) -> dict:
-
-        try:
-            serializable_data = convert_data(data)
-            serialized_data = json.dumps(serializable_data)
-            # get prompt
-            res = requests.post(
-                url=url, headers=headers, data=serialized_data, timeout=timeout
-            )
-            # check for correct status code
-            if res.status_code == 200:
-                return res.json()
-
-            bt.logging.warning(
-                f"Unable to connect to remote host: {url}: HTTP/{res.status_code} - {res.json()}"
-            )
-            return {}
-        except requests.exceptions.ReadTimeout as e:
-            bt.logging.error(f"Remote API request timed out: {e}")
-        except requests.exceptions.JSONDecodeError as e:
-            bt.logging.error(f"Unable to read the response from the remote API: {e}")
-        except requests.exceptions.ConnectionError as e:
-            bt.logging.error(f"Unable to connect to the remote API: {e}")
-        except Exception as e:
-            bt.logging.error(f"Generic error during request: {e}")
 
     def save_used_nonces(self):
         """Saves used nonces to a local file"""
 
         if len(self.used_nonces) > 1000000:
             self.used_nonces = self.used_nonces[-500000:]
-            bt.logging.info("Truncated list of used_nonces")
+            self.neuron_logger(
+                severity="INFO",
+                message="Truncated list of used_nonces"
+            )
         with open(
             f"{self.cache_path}/used_nonces.pickle",
             "wb",
         ) as pickle_file:
             pickle.dump(self.used_nonces, pickle_file)
 
-        bt.logging.info("Saved used nonces to a file")
+        self.neuron_logger(
+            severity="INFO",
+            message="Saved used nonces to a file"
+        )
 
     def load_used_nonces(self):
         """Loads used nonces from a file"""
-        state_path = (
-            f"{self.cache_path}used_nonces.pickle"
-        )
+        state_path = f"{self.cache_path}used_nonces.pickle"
         if path.exists(state_path):
             try:
                 with open(state_path, "rb") as pickle_file:
                     self.used_nonces = pickle.load(pickle_file)
 
-                bt.logging.info("Loaded used nonces from a file")
+                self.neuron_logger(
+                    severity="INFO",
+                    message="Loaded used nonces from a file"
+                )
             except Exception as e:
-                bt.logging.error(
-                    f"Used nonces reset because a failure to read the used nonces data, error: {e}"
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Used nonces reset because a failure to read the used nonces data, error: {e}"
                 )
 
                 # Rename the used nonces file if exception
@@ -237,3 +189,24 @@ class BaseNeuron:
             self.used_nonces.append(nonce)
             return True
         return False
+
+    def neuron_logger(self, severity: str, message: str):
+        """This method is a wrapper for the bt.logging function to add extra
+        functionality around the native logging capabilities"""
+
+        LLMDefenderBase.utils.subnet_logger(severity=severity, message=message, log_level=self.log_level)
+
+        # Append extra information to to the logs if healthcheck API is enabled
+        if self.healthcheck_api and severity.upper() in ("SUCCESS", "ERROR", "WARNING"):
+
+            event_severity = severity.lower()
+
+            # Metric
+            self.healthcheck_api.append_metric(
+                metric_name=f"log_entries.{event_severity}", value=1
+            )
+
+            # Store event
+            self.healthcheck_api.add_event(
+                event_name=f"{event_severity}", event_data=message
+            )

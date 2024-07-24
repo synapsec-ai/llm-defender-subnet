@@ -5,7 +5,11 @@ import numpy as np
 import os
 import asyncio
 import time
+import logging
 
+class SuppressPydanticFrozenFieldFilter(logging.Filter):
+    def filter(self, record):
+        return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
 
 class Handler:
     """This class implements the handler for the llm-defender-subnet
@@ -29,6 +33,7 @@ class Handler:
         self.neuron_config = self.validator.config(
             bt_classes=[bt.subtensor, bt.logging, bt.wallet]
         )
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
 
         self.wallet, self.subtensor, self.dendrite, self.metagraph = (
             self.validator.setup_bittensor_objects(self.neuron_config)
@@ -40,7 +45,7 @@ class Handler:
     def _check_metagraph_update(self):
 
         # Update metagraph if updated more than 10 minutes ago
-        if self.metagraph_updated < (time.time() + 60*10):
+        if (time.time() - self.metagraph_updated) > 600:
             bt.logging.info(
                 f"Updating metagraph. Current block: {self.metagraph.block}"
             )
@@ -59,6 +64,10 @@ class Handler:
 
     async def _refresh_metagraph(self):
         loop = asyncio.get_event_loop()
+        
+        # Store metagraph last-update timestamp
+        self.metagraph_updated = time.time()
+
         return loop.run_in_executor(None, self.metagraph.sync)
 
     def get_uids_to_query(
@@ -67,14 +76,15 @@ class Handler:
 
         # Check if metagraph needs to be updated
         self._check_metagraph_update()
-    
+        
         # All Axons
         raw_axons = self.metagraph.axons
-        
-        axons_to_query = []
+        bt.logging.trace(f'Raw axons to filter from: {raw_axons}')
 
+        axons_to_query = []
+        
         # Get the best axons available
-        sorted_incentives = np.argsort(self.metagraph.I)
+        sorted_incentives = np.argsort(self.metagraph.I)[::-1]
         for _, sorted_incentive in enumerate(sorted_incentives):
 
             # If we have enough axons to query we can end the iteration
@@ -84,7 +94,7 @@ class Handler:
                 f"Adding the following axon based on incentive rank: {raw_axons[sorted_incentive]}"
             )
             axons_to_query.append(raw_axons[sorted_incentive])
-
+        
         # Additionally get one axon per coldkey
         if not top_axons_only:
             coldkeys = set()
@@ -94,25 +104,54 @@ class Handler:
                         f"Adding the following axon based on coldkey: {raw_axon}"
                     )
                     axons_to_query.append(raw_axon)
+            bt.logging.trace(f'Axons to query based on incentive rank and coldkeys: {axons_to_query}')
+            bt.logging.trace(f'Coldkeys included in the query: {coldkeys}')
+        else:
+            bt.logging.trace(f'Axons to query based on incentive rank: {axons_to_query}')
 
+        # Remove invalid axons
         valid_axons = self.validator.determine_valid_axons(axons=axons_to_query)
+        bt.logging.trace(f'Valid axons selected for query: {valid_axons}')
 
         return valid_axons
 
+    
     async def query_miners(
         self, uids_to_query: list, prompt: str, analyzer: str
     ) -> list:
-
+        
+        # Helper for collecting the responses
+        async def collect_response(uid):
+            response = await self.validator.send_payload_message(
+                synapse_uuid=synapse_uuid,
+                uids_to_query=uid,
+                prompt_to_analyze=prompt_to_analyze,
+                timeout=6
+            )
+            return response
+        
         prompt_to_analyze = {"prompt": prompt, "analyzer": analyzer}
         synapse_uuid = str(uuid.uuid4())
+        miners_to_query =  int(os.getenv("AXONS_TO_QUERY", "12"))
+
+        bt.logging.info(f"Querying {miners_to_query} miners using the following analyzer: {analyzer}")
         
-        bt.logging.info("Querying miners")
-        responses = await self.validator.send_payload_message(
-            synapse_uuid=synapse_uuid,
-            uids_to_query=uids_to_query,
-            prompt_to_analyze=prompt_to_analyze,
-            timeout=2
-        )
+        # Collect responses until enough responses have been received
+        min_response_count = miners_to_query/2
+        
+        tasks = [collect_response(uid) for uid in uids_to_query]
+
+        responses = []
+        for future in asyncio.as_completed(tasks):
+            response = await future
+
+            # Only take response with an output into account
+            if response.output is not None:
+                responses.append(response)
+            if len(responses) >= min_response_count:
+                break
+        
+        bt.logging.info(f'Received {len(responses)} replies from the miners')
 
         return responses
 
@@ -130,11 +169,15 @@ class Handler:
                 top_axons_only=top_axons_only,
                 query_count=int(os.getenv("AXONS_TO_QUERY", "12")),
             )
+
+            bt.logging.trace(f'Sending query to uids: {uids_to_query}')
+
             responses = asyncio.run(
                 self.query_miners(
                     uids_to_query=uids_to_query, prompt=prompt, analyzer=analyzer
                 )
             )
+            bt.logging.trace(f'Received responses: {responses}')
             bt.logging.trace(f"Processing prompt: {prompt}")
 
             # Determine response
