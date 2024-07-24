@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm_defender"
-version = "0.9.0"
+version = "0.9.1"
 description = "This project implements the llm-defender subnet for Bittensor"
 authors = [
     { name = "synapsec.ai", email = "contact@synapsec.ai" }
