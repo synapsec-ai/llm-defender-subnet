@@ -478,7 +478,18 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
                 message=f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
             )
 
+        self.neuron_logger(
+            severity='INFO',
+            message="Commencing duplicate prompt validation."
+        )
+
         for prompt in synapse.synapse_prompts:
+
+            bt.neuron_logger(
+                severity="INFO",
+                message=f"Commencing duplicate prompt validation for prompt: {prompt}"
+            )
+
             if not self.validate_incoming_prompt(hotkey=hotkey, prompt=prompt):
                 self.neuron_logger(
                     severity="WARNING",
