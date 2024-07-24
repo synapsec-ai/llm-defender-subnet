@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y podman
 
       - name: Build Podman image
-        run: podman build -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest -f Dockerfile_API
+        run: podman build -t ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest -f api.Dockerfile
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
