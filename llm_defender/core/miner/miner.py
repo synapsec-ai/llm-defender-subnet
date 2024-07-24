@@ -406,14 +406,14 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             self.recieved_messages.popitem(last=False)
 
         self.neuron_logger(
-            severity="INFO",
+            severity="TRACE",
             message=f"Recieved messages: {self.recieved_messages}"
         )
 
         # encode prompt and append to logs
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         self.neuron_logger(
-            severity="INFO",
+            severity="TRACE",
             message=f"Prompt hash: {prompt_hash}"
         )
 
