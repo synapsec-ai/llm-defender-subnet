@@ -405,14 +405,14 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         if len(self.recieved_messages.keys()) > 100:
             self.recieved_messages.popitem(last=False)
 
-        self.neuron_logging(
+        self.neuron_logger(
             severity="INFO",
             message=f"Recieved messages: {self.recieved_messages}"
         )
 
         # encode prompt and append to logs
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
-        self.neuron_logging(
+        self.neuron_logger(
             severity="INFO",
             message=f"Prompt hash: {prompt_hash}"
         )
@@ -420,23 +420,23 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         # check if duplicate exists for any prompt, if so then return False     
         if prompt_hash in self.recieved_messages.keys():
             if self.recieved_messages[prompt_hash] == hotkey:
-                self.neuron_logging(
+                self.neuron_logger(
                     severity="INFO",
                     message="Duplicate prompt validation successful."
                 )
                 return True 
-            self.neuron_logging(
+            self.neuron_logger(
                 severity="INFO",
                 message="Duplicate prompt validation failed."
             )
             return False
         
         self.recieved_messages[prompt_hash] = hotkey
-        self.neuron_logging(
+        self.neuron_logger(
             severity="INFO",
             message="Duplicate prompt validation successful."
         )
-        self.neuron_logging(
+        self.neuron_logger(
             severity="INFO",
             message=f"Recieved messages: {self.recieved_messages}"
         )
