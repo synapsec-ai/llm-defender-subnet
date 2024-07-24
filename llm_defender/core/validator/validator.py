@@ -28,9 +28,14 @@ import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
 
 
-class SuppressPydanticFrozenFieldFilter(logging.Filter):
+class SuppressPydanticFrozenFieldFilterSubnetProtocol(logging.Filter):
     def filter(self, record):
         return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
+
+class SuppressPydanticFrozenFieldFilterFeedbackProtocol(logging.Filter):
+    def filter(self, record):
+        return 'Ignoring error when setting attribute: 1 validation error for FeedbackProtocol' not in record.getMessage()
+
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -158,7 +163,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.healthcheck_api.run()
 
         # Suppress specific validation errors from pydantic
-        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilterSubnetProtocol())
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilterFeedbackProtocol())
         
         self.neuron_logger(
             severity="INFO",
