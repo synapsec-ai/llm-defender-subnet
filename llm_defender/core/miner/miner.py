@@ -392,7 +392,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
 
         self.neuron_logger(
             severity="INFO",
-            message=f'Received response object for the synapse_uuid: {synapse.synapse_uuid}. Response object: {synapse.response_object}'
+            message=f'Received response object from UID: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} for the synapse_uuid: {synapse.synapse_uuid}. Response object: {synapse.response_object}'
         )
 
         # Miners should add custom code here if they want to collect or post-process the metrics.
