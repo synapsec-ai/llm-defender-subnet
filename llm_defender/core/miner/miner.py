@@ -421,23 +421,23 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
         if prompt_hash in self.recieved_messages.keys():
             if self.recieved_messages[prompt_hash] == hotkey:
                 self.neuron_logger(
-                    severity="INFO",
+                    severity="TRACE",
                     message="Duplicate prompt validation successful."
                 )
                 return True 
             self.neuron_logger(
-                severity="INFO",
+                severity="TRACE",
                 message="Duplicate prompt validation failed."
             )
             return False
         
         self.recieved_messages[prompt_hash] = hotkey
         self.neuron_logger(
-            severity="INFO",
+            severity="TRACE",
             message="Duplicate prompt validation successful."
         )
         self.neuron_logger(
-            severity="INFO",
+            severity="TRACE",
             message=f"Recieved messages: {self.recieved_messages}"
         )
         return True
@@ -479,14 +479,14 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             )
 
         self.neuron_logger(
-            severity='INFO',
+            severity='TRACE',
             message=f"Commencing duplicate prompt validation for prompts: {synapse.synapse_prompts}."
         )
 
         for prompt in synapse.synapse_prompts:
 
             self.neuron_logger(
-                severity="INFO",
+                severity="TRACE",
                 message=f"Commencing duplicate prompt validation for prompt: {prompt}"
             )
 
