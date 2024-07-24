@@ -493,7 +493,7 @@ class SubnetMiner(LLMDefenderBase.BaseNeuron):
             if not self.validate_incoming_prompt(hotkey=hotkey, prompt=prompt):
                 self.neuron_logger(
                     severity="WARNING",
-                    message=f"Duplicate validation for prompt: {prompt} has failed."
+                    message=f"Duplicate validation for prompt: {prompt} from uid: {self.metagraph.hotkeys.index(synapse.dendrite.hotkey)} has failed."
                 )
                 return synapse
 
