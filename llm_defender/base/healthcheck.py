@@ -53,10 +53,11 @@ class HealthCheckAPI:
 
         # Status variables
         self.health_metrics = {
-            "start_time": str(datetime.datetime.now()),
+            "start_time": datetime.datetime.now().timestamp(),
             "neuron_running": False,
             "iterations": 0,
             "prompts.total_count": 0,
+            "prompts.generated_per_second":0.0,
             "prompts.sensitive_information.count": 0,
             "prompts.sensitive_information.total_generated": 0,
             "prompts.sensitive_information.total_fallback": 0,
@@ -68,10 +69,14 @@ class HealthCheckAPI:
             "log_entries.error": 0,
             "axons.total_filtered_axons": 0,
             "axons.total_queried_axons": 0,
+            "axons.queries_per_second":0.0,
             "responses.total_valid_responses": 0,
             "responses.total_invalid_responses": 0,
+            "responses.valid_responses_per_second":0.0,
+            "responses.invalid_responses_per_second":0.0,
             "weights.targets": 0,
             "weights.last_set_timestamp": None,
+            "weights.total_count":0,
         }
         self.healthy = True
         self.health_events = {
@@ -154,7 +159,7 @@ class HealthCheckAPI:
             health_status = False
         
         # If more than 20% of the prompts issued by the validator are from dataset, set health status to false
-        elif (fallback_prompts > 0) and (fallback_prompts/(fallback_prompts + generated_prompts) > 0.20):
+        elif (fallback_prompts > 0) and (fallback_prompts/(fallback_prompts + generated_prompts) > 0.50):
             health_checks["is_llm_used"] = False
             health_status = False
 
@@ -210,3 +215,21 @@ class HealthCheckAPI:
             return False
 
         return True
+
+    def update_rates(self):
+
+        current_time = datetime.datetime.now().timestamp()
+        start_time = self.health_metrics['start_time']
+        time_passed = current_time - start_time
+
+        # Calculate prompts per second 
+        self.health_metrics['prompts.generated_per_second'] = self.health_metrics['prompts.total_count'] / time_passed
+
+        # Calculate queries per second 
+        self.health_metrics['axons.queries_per_second'] = self.health_metrics['axons.total_queried_axons'] / time_passed
+
+        # Calculate valid responses per second 
+        self.health_metrics['responses.valid_responses_per_second'] = self.health_metrics['responses.total_valid_responses'] / time_passed
+
+        # Calculate invalid responses per second 
+        self.health_metrics['responses.invalid_responses_per_second'] = self.health_metrics['responses.total_invalid_responses'] / time_passed
