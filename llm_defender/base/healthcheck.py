@@ -102,7 +102,7 @@ class HealthCheckAPI:
     def _healthcheck(self):
         try:
             # Update health status when the /healthcheck API is invoked
-            self.healthy, checks = self._get_health()
+            self.healthy, checks = self.get_health()
 
             # Return status
             return {"status": self.healthy, "checks": checks, "timestamp": str(datetime.datetime.now())}
@@ -129,18 +129,33 @@ class HealthCheckAPI:
         except Exception:
             return {"status": False, "timestamp": str(datetime.datetime.now())}
 
-    def _get_health(self) -> tuple[bool,dict]:
+    def get_health(self) -> tuple[bool,dict]:
         """This method is responsible for updating the health status based on the metrics"""
         
         # By default everything is healthy
         health_checks = {
-            "is_neuron_running": True
+            "is_neuron_running": True,
+            "is_llm_used": True,
         }
         health_status = True
 
         # Is Neuron running?
         if self.health_metrics["neuron_running"] is not True:
             health_checks["is_neuron_running"] = False
+            health_status = False
+        
+        # Does the validator use LLM to generate prompts?
+        fallback_prompts = self.health_metrics["prompts.prompt_injection.total_fallback"] + self.health_metrics["prompts.sensitive_information.total_fallback"]
+        generated_prompts = self.health_metrics["prompts.prompt_injection.total_generated"] + self.health_metrics["prompts.sensitive_information.total_generated"]
+
+        # If the validator doesnt generate prompts, set health status to false
+        if generated_prompts == 0:
+            health_checks["is_llm_used"] = False
+            health_status = False
+        
+        # If more than 20% of the prompts issued by the validator are from dataset, set health status to false
+        elif (fallback_prompts > 0) and (fallback_prompts/(fallback_prompts + generated_prompts) > 0.20):
+            health_checks["is_llm_used"] = False
             health_status = False
 
         # If all checks passed we can conclude the neuron is healthy

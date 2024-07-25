@@ -232,10 +232,18 @@ def attach_response_to_validator(validator, response_data):
 def update_weights(validator: LLMDefenderCore.SubnetValidator):
     # Periodically update the weights on the Bittensor blockchain.
     try:
-        asyncio.run(validator.set_weights())
-        # Update validators knowledge of the last updated block
-        if not validator.debug_mode:
-            validator.last_updated_block = validator.subtensor.get_current_block()
+        is_validator_healthy, health_data = validator.healthcheck_api.get_health()
+        if not is_validator_healthy:
+            validator.neuron_logger(
+                severity="ERROR",
+                message=f'Validator is not healthy. Cant set weights. Health data: {health_data}'
+            )
+        else:
+            asyncio.run(validator.set_weights())
+
+            # Update validators knowledge of the last updated block
+            if not validator.debug_mode:
+                validator.last_updated_block = validator.subtensor.get_current_block()
     except TimeoutError as e:
         validator.neuron_logger(
             severity="ERROR", 

@@ -513,12 +513,29 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 A dict instance
         """
 
+        # Determine metric name
+        if analyzer == "Prompt Injection":
+            metric_name = "prompt_injection"
+        elif analyzer == "Sensitive Information":
+            metric_name = "sensitive_information"
+        else:
+            metric_name = "unknown"
+
         # Load prompt from the prompt API
         entry = self.get_api_prompt(analyzer=analyzer)
 
         # Fallback to dataset if prompt loading from the API failed
         if not entry:
             entry = self.get_prompt_from_dataset(analyzer=analyzer)
+
+            # Append metrics
+            self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.total_fallback', value=1)
+        else:
+            # Append metrics
+            self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.total_generated', value=1)
+
+        # Append metrics
+        self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.count', value=1)
         
         self.prompt = entry
 
