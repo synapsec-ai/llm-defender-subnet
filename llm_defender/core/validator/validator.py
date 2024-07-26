@@ -536,6 +536,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
 
         # Append metrics
         self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.count', value=1)
+
+        self.healthcheck_api.append_metric(metric_name="prompts.total_count", value=1)
         
         self.prompt = entry
 
@@ -901,6 +903,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 return [(x/max_value) for x in result_list]
             else:
                 return [(x/max(result_list)) for x in result_list]
+            
+        self.healthcheck_api.update_metric(metric_name='weights.targets', value=np.count_nonzero(self.scores))
 
         if np.all(self.scores == 0.0):
             power_weights = self.scores 
@@ -933,6 +937,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     severity="SUCCESS",
                     message="Successfully set weights."
                 )
+                weight_set_time = time.strftime("%H:%M:%S", time.localtime())
+                self.healthcheck_api.update_metric(metric_name='weights.last_set_timestamp', value=weight_set_time)
+                self.healthcheck_api.append_metric(metric_name="weights.total_count", value=1)
             else:
                 self.neuron_logger(
                     severity="ERROR",

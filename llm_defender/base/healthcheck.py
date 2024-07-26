@@ -77,6 +77,7 @@ class HealthCheckAPI:
             "weights.targets": 0,
             "weights.last_set_timestamp": None,
             "weights.total_count":0,
+            "weights.set_per_second":0.0
         }
         self.healthy = True
         self.health_events = {
@@ -215,21 +216,38 @@ class HealthCheckAPI:
             return False
 
         return True
+    
+    def update_metric(self, metric_name: str, value: str | int | float):
+        """This method updates a value for a metric that renews every iteration."""
+        if metric_name in self.health_metric.keys():
+            self.health_metrics[metric_name] = value 
+            return True 
+        else: 
+            return False
 
     def update_rates(self):
+        """This method updates the rate-based parameters within the 
+        healthcheck API--prompts generated per second, axons queried per
+        second, valid responses per second and invalid responses per second."""
 
-        current_time = datetime.datetime.now().timestamp()
-        start_time = self.health_metrics['start_time']
-        time_passed = current_time - start_time
+        time_passed = datetime.datetime.now().timestamp() - self.health_metrics['start_time']
 
-        # Calculate prompts per second 
-        self.health_metrics['prompts.generated_per_second'] = self.health_metrics['prompts.total_count'] / time_passed
+        if time_passed > 0:
+            # Calculate prompts per second 
+            self.health_metrics['prompts.generated_per_second'] = self.health_metrics['prompts.total_count'] / time_passed
 
-        # Calculate queries per second 
-        self.health_metrics['axons.queries_per_second'] = self.health_metrics['axons.total_queried_axons'] / time_passed
+            # Calculate queries per second 
+            self.health_metrics['axons.queries_per_second'] = self.health_metrics['axons.total_queried_axons'] / time_passed
 
-        # Calculate valid responses per second 
-        self.health_metrics['responses.valid_responses_per_second'] = self.health_metrics['responses.total_valid_responses'] / time_passed
+            # Calculate valid responses per second 
+            self.health_metrics['responses.valid_responses_per_second'] = self.health_metrics['responses.total_valid_responses'] / time_passed
 
-        # Calculate invalid responses per second 
-        self.health_metrics['responses.invalid_responses_per_second'] = self.health_metrics['responses.total_invalid_responses'] / time_passed
+            # Calculate invalid responses per second 
+            self.health_metrics['responses.invalid_responses_per_second'] = self.health_metrics['responses.total_invalid_responses'] / time_passed
+
+            # Calculate weight set events per second 
+            self.health_metrics['weights.set_per_second'] = self.health_metrics['weights.total_count'] / time_passed
+            return True
+        
+        else:
+            return False

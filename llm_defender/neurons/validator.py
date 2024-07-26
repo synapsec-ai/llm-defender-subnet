@@ -551,6 +551,8 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
                 await update_weights_async(validator)
 
             # End the current step and prepare for the next iteration.
+            validator.healthcheck_api.update_rates()
+            validator.healthcheck_api.append_metric(metric_name='iterations', value=1)
 
             validator.neuron_logger(
                 severity="SUCCESS", 
