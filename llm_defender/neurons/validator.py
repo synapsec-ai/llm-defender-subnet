@@ -468,6 +468,10 @@ async def main(validator: LLMDefenderCore.SubnetValidator):
             (uids_to_query, list_of_uids, uids_not_to_query) = (
                 await validator.get_uids_to_query_async(all_axons=all_axons)
             )
+
+            validator.healthcheck_api.append_metric(metric_name="axons.total_filtered_axons", value = len(uids_not_to_query))
+            validator.healthcheck_api.append_metric(metric_name="axons.total_queried_axons", value = len(uids_to_query))
+
             if not uids_to_query:
                 validator.neuron_logger(
                     severity="WARNING",
