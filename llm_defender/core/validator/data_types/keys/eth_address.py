@@ -31,12 +31,3 @@ class ETH_address:
             invalid_address += out_str
         return invalid_address
     
-if __name__ == '__main__':
-    import time 
-    e=ETH_address()
-    while True:
-        v = e.generate_valid()
-        print(f"valid: {v} valid check: {eth_utils.is_checksum_formatted_address(v)}")
-        i = e.generate_invalid()
-        print(f"invalid: {i} invalid check: {eth_utils.is_checksum_formatted_address(i)}")
-        time.sleep(5)
