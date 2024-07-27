@@ -31,3 +31,14 @@ class ETH_address:
             invalid_address += out_str
         return invalid_address
     
+if __name__ == '__main__':
+    import time 
+    e=ETH_address()
+    while True:
+        v = e.generate_valid()
+        print("valid:")
+        print(v)
+        i = e.generate_invalid()
+        print("invalid:")
+        print(i)
+        time.sleep(5)
