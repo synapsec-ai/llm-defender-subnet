@@ -219,7 +219,7 @@ class HealthCheckAPI:
     
     def update_metric(self, metric_name: str, value: str | int | float):
         """This method updates a value for a metric that renews every iteration."""
-        if metric_name in self.health_metric.keys():
+        if metric_name in self.health_metrics.keys():
             self.health_metrics[metric_name] = value 
             return True 
         else: 
