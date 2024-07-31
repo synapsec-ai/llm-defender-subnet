@@ -738,7 +738,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             message="Saving validator state."
         )
 
-        if self.step and self.scores.any() and self.prompt_injection_scores.any() and self.sensitive_information_scores.any() and self.hotkeys.any() and self.last_updated_block:
+        if self.step and self.scores.any() and self.prompt_injection_scores.any() and self.sensitive_information_scores.any() and self.hotkeys and self.last_updated_block:
 
             # Save the state of the validator to file.
             np.savez_compressed(
