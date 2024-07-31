@@ -1,6 +1,5 @@
 import eth_utils
 import sha3
-
 from wonderwords import RandomSentence
 
 class ETH_address:
