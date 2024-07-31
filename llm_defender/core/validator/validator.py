@@ -738,22 +738,24 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             message="Saving validator state."
         )
 
-        # Save the state of the validator to file.
-        np.savez_compressed(
-            f"{self.cache_path}/state.npz",
-            step=self.step,
-            scores=self.scores,
-            prompt_injection_scores=self.prompt_injection_scores,
-            sensitive_information_scores=self.sensitive_information_scores,
-            hotkeys=self.hotkeys,
-            last_updated_block=self.last_updated_block,
-        )
+        if self.step and self.scores and self.prompt_injection_scores and self.sensitive_information_scores and self.hotkeys and self.last_updated_block:
 
-        filename = f"{self.cache_path}/state.npz"
-        self.neuron_logger(
-            severity="INFOX",
-            message=f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
-        )
+            # Save the state of the validator to file.
+            np.savez_compressed(
+                f"{self.cache_path}/state.npz",
+                step=self.step,
+                scores=self.scores,
+                prompt_injection_scores=self.prompt_injection_scores,
+                sensitive_information_scores=self.sensitive_information_scores,
+                hotkeys=self.hotkeys,
+                last_updated_block=self.last_updated_block,
+            )
+
+            filename = f"{self.cache_path}/state.npz"
+            self.neuron_logger(
+                severity="INFOX",
+                message=f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            )
 
     def init_default_scores(self) -> None:
         """Validators without previous validation knowledge should start
