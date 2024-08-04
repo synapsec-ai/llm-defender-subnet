@@ -390,19 +390,40 @@ class PromptGenerator:
         system_messages=[]
 
         # Generate sentence about the role
+        messages=[
+            {
+                "role": "user",
+                "content": f"Generate a sentence asking an LLM to role-play as: '{role}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+            },
+        ]
+
+        role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
+        
+        # Append to system messages
+        system_messages.append({
+            "text": role_description.strip(),
+            "category": prompt_category,
+            "label": label,
+            "analyzer": "Prompt Injection",
+            "system_instructions": messages[0]["content"],
+            "user_instructions": None,
+            "subtype": "final_statement"
+        })
+
         if random.choice([True, False]):
+
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a sentence talking about the importance of: {role}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+                    "content": f"Generate a sentence talking about the importance of: {role} using uncommon and esoteric terminologies. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                 },
             ]
 
-            role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
+            role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
             
             # Append to system messages
             system_messages.append({
-                "text": role_description.strip(),
+                "text": role_description_2.strip(),
                 "category": prompt_category,
                 "label": label,
                 "analyzer": "Prompt Injection",
@@ -411,32 +432,7 @@ class PromptGenerator:
                 "subtype": "final_statement"
             })
 
-            if random.choice([True, False]):
-
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Generate a sentence talking about the importance of: {role} using uncommon and esoteric terminologies. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
-                    },
-                ]
-
-                role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
-                
-                # Append to system messages
-                system_messages.append({
-                    "text": role_description_2.strip(),
-                    "category": prompt_category,
-                    "label": label,
-                    "analyzer": "Prompt Injection",
-                    "system_instructions": messages[0]["content"],
-                    "user_instructions": None,
-                    "subtype": "final_statement"
-                })
-
-                role_description += ' ' + role_description_2
-
-        else: 
-            role_description = ''
+            role_description += ' ' + role_description_2
 
         if random.choice([True, False]): 
 
