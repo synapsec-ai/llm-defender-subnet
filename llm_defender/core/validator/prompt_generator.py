@@ -398,7 +398,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
+            role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
             
             # Append to system messages
             system_messages.append({
@@ -420,7 +420,7 @@ class PromptGenerator:
                     },
                 ]
 
-                role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
+                role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
                 
                 # Append to system messages
                 system_messages.append({
@@ -449,7 +449,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
+            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
             
             # Append to system messages
             system_messages.append({
@@ -474,7 +474,7 @@ class PromptGenerator:
             },
         ]
 
-        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
+        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75)
         
         # Append to system messages
         system_messages.append({
