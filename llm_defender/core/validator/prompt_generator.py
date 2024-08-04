@@ -393,7 +393,7 @@ class PromptGenerator:
         messages=[
             {
                 "role": "user",
-                "content": f"Generate a sentence asking an LLM to role-play as: '{role}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+                "content": f"Generate a sentence asking me to role-play as: '{role}'. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
             },
         ]
 
