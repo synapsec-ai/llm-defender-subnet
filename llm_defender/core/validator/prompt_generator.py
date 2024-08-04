@@ -599,9 +599,10 @@ class PromptGenerator:
         # Otherwise just return the prompt data
         return prompt_data
 
-    def construct_pi_prompt(self, debug: bool=False, prompt_category = None) -> dict|tuple[dict,list]:
+    def construct_pi_prompt(self, debug: bool=False, prompt_category = None, label=None) -> dict|tuple[dict,list]:
         # Generate label
-        label = random.choice(tuple({0, 1}))
+        if not label:
+            label = random.choice(tuple({0, 1}))
 
         # Malicious
         if label == 1:
