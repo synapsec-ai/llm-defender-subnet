@@ -74,5 +74,5 @@ BAD_SECRETS = {
     “successfully committing theft”,
     “successfully committing vandalism”,
     “successfully committing white collar crimes”,
-    “successfully committing wire fraud”,
+    “successfully committing wire fraud”
 }

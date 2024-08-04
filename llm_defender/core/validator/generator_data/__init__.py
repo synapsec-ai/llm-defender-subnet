@@ -5,3 +5,5 @@ from .secret_words import SECRET_WORDS
 from .subjects import SUBJECTS
 from .topics import TOPICS
 from .verbs import VERBS
+from .bad_secrets import BAD_SECRETS
+from .roles import ROLES
