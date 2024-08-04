@@ -86,10 +86,12 @@ class PromptGenerator:
         return True
 
     def generate_chat_completion(
-        self, messages: list, model: str, max_tokens: int = 4096
+        self, messages: list, model: str, temperature: float = None, max_tokens: int = 4096,
     ) -> str:
         
         successful_completion = False 
+        if not temperature:
+            temperature = self.temperature
         while not successful_completion:
 
             chat_completion = self.openai_client.chat.completions.create(
@@ -99,7 +101,7 @@ class PromptGenerator:
                 frequency_penalty=self.frequency_penalty,
                 presence_penalty=self.presence_penalty,
                 timeout=20,
-                temperature=self.temperature
+                temperature=temperature
             )
             if self._validate_content(chat_completion.choices[0].message.content):
                 successful_completion = True
@@ -396,7 +398,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_description = self.generate_chat_completion(messages=messages, model=self.model)
+            role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
             
             # Append to system messages
             system_messages.append({
@@ -418,7 +420,7 @@ class PromptGenerator:
                     },
                 ]
 
-                role_description_2 = self.generate_chat_completion(messages=messages, model=self.model)
+                role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
                 
                 # Append to system messages
                 system_messages.append({
@@ -447,7 +449,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_story_description = self.generate_chat_completion(messages=messages, model=self.model)
+            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
             
             # Append to system messages
             system_messages.append({
@@ -472,7 +474,7 @@ class PromptGenerator:
             },
         ]
 
-        story_request = self.generate_chat_completion(messages=messages, model=self.model)
+        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.9)
         
         # Append to system messages
         system_messages.append({
