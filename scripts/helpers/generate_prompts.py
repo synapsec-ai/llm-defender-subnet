@@ -3,7 +3,7 @@ import time
 from datasets import Dataset
 import llm_defender.core.validator.prompt_generator as PromptGenerator
 
-only_pi = False
+only_pi = True
 
 generator = PromptGenerator.PromptGenerator(
     model=os.getenv("VLLM_MODEL_NAME"),
@@ -15,7 +15,7 @@ system_messages = []
 # Generate prompts
 for n in range(0,150):    
     # Prompt Injection
-    prompt,messages = generator.construct_pi_prompt(debug=True)
+    prompt,messages = generator.construct_pi_prompt(debug=True, prompt_category="Role-playing")
     system_messages += messages
 
     print(f"\n\nProcessing count: {n}")
