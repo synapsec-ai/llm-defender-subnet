@@ -441,7 +441,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a sentence talking about a time that a {role} told you a story, or otherwise recounted a particular detail{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+                    "content": f"Generate a sentence talking about a time that {role} told you a story, or otherwise recounted a particular detail{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                 },
             ]
 
@@ -653,7 +653,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a sentence talking about a time that a {role} told you a story, or otherwise recounted a particular detail{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+                    "content": f"Generate a sentence talking about a time that {role} told you a story, or otherwise recounted a particular detail{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                 },
             ]
 
@@ -680,7 +680,7 @@ class PromptGenerator:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Generate a sentence that asks for a story, or a recounting of a tale that a {role} would have likely encountered{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
+                    "content": f"Generate a sentence that asks for a story, or a recounting of a tale that {role} would have likely encountered{uncommon_request}. Do not include anything at the start, or the end, but just the sentence, as your reply will be formatted into a larger block of text and it needs to flow smoothly.",
                 },
             ]
 
