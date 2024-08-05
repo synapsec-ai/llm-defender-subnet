@@ -765,7 +765,7 @@ class PromptGenerator:
             if prompt_category == "Universal":
                 return self.construct_safe_universal_pi_prompt(debug=debug, prompt_category=prompt_category,label=label)
             else:
-                return self.contruct_safe_role_playing_pi_prompt(debug=debug, prompt_category=prompt_category, label=label)
+                return self.construct_safe_role_playing_pi_prompt(debug=debug, prompt_category=prompt_category, label=label)
     
     def insert_once(self, sentence_str, insert_str):
         words = sentence_str.split()
