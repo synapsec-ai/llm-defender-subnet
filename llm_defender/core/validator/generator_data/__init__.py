@@ -6,4 +6,5 @@ from .subjects import SUBJECTS
 from .topics import TOPICS
 from .verbs import VERBS
 from .bad_secrets import BAD_SECRETS
+from .good_secrets import GOOD_SECRETS
 from .roles import ROLES
