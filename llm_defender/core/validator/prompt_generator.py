@@ -595,7 +595,7 @@ class PromptGenerator:
         # Otherwise just return the prompt data
         return prompt_data
 
-    def construct_role_playing_pi_prompt(self, debug, label, prompt_category):
+    def construct_safe_role_playing_pi_prompt(self, debug, label, prompt_category):
         # These are used to change the context of the prompt generated with OpenAI
         good_secret = (random.choice(tuple(generator_data.GOOD_SECRETS))).lower()
         role = (random.choice(tuple(generator_data.ROLES))).lower()
