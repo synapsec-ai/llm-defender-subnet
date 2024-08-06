@@ -108,7 +108,16 @@ class PromptGenerator:
             "[",
             "]",
             "LLM",
-            "inappropriate"
+            "inappropriate",
+            "note",
+            "Note",
+            "controversial",
+            "I'm just a model",
+            "I'm just an AI",
+            "I'm just an LLM",
+            "data:image",
+            "Please note",
+            "please note"
         ]
 
         if any(item in content for item in indicators_of_failure):
