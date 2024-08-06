@@ -53,10 +53,11 @@ class HealthCheckAPI:
 
         # Status variables
         self.health_metrics = {
-            "start_time": str(datetime.datetime.now()),
+            "start_time": datetime.datetime.now().timestamp(),
             "neuron_running": False,
             "iterations": 0,
             "prompts.total_count": 0,
+            "prompts.generated_per_second":0.0,
             "prompts.sensitive_information.count": 0,
             "prompts.sensitive_information.total_generated": 0,
             "prompts.sensitive_information.total_fallback": 0,
@@ -68,10 +69,15 @@ class HealthCheckAPI:
             "log_entries.error": 0,
             "axons.total_filtered_axons": 0,
             "axons.total_queried_axons": 0,
+            "axons.queries_per_second":0.0,
             "responses.total_valid_responses": 0,
             "responses.total_invalid_responses": 0,
+            "responses.valid_responses_per_second":0.0,
+            "responses.invalid_responses_per_second":0.0,
             "weights.targets": 0,
             "weights.last_set_timestamp": None,
+            "weights.total_count":0,
+            "weights.set_per_second":0.0
         }
         self.healthy = True
         self.health_events = {
@@ -102,7 +108,7 @@ class HealthCheckAPI:
     def _healthcheck(self):
         try:
             # Update health status when the /healthcheck API is invoked
-            self.healthy, checks = self._get_health()
+            self.healthy, checks = self.get_health()
 
             # Return status
             return {"status": self.healthy, "checks": checks, "timestamp": str(datetime.datetime.now())}
@@ -129,18 +135,33 @@ class HealthCheckAPI:
         except Exception:
             return {"status": False, "timestamp": str(datetime.datetime.now())}
 
-    def _get_health(self) -> tuple[bool,dict]:
+    def get_health(self) -> tuple[bool,dict]:
         """This method is responsible for updating the health status based on the metrics"""
         
         # By default everything is healthy
         health_checks = {
-            "is_neuron_running": True
+            "is_neuron_running": True,
+            "is_llm_used": True,
         }
         health_status = True
 
         # Is Neuron running?
         if self.health_metrics["neuron_running"] is not True:
             health_checks["is_neuron_running"] = False
+            health_status = False
+        
+        # Does the validator use LLM to generate prompts?
+        fallback_prompts = self.health_metrics["prompts.prompt_injection.total_fallback"] + self.health_metrics["prompts.sensitive_information.total_fallback"]
+        generated_prompts = self.health_metrics["prompts.prompt_injection.total_generated"] + self.health_metrics["prompts.sensitive_information.total_generated"]
+
+        # If the validator doesnt generate prompts, set health status to false
+        if generated_prompts == 0:
+            health_checks["is_llm_used"] = False
+            health_status = False
+        
+        # If more than 20% of the prompts issued by the validator are from dataset, set health status to false
+        elif (fallback_prompts > 0) and (fallback_prompts/(fallback_prompts + generated_prompts) > 0.50):
+            health_checks["is_llm_used"] = False
             health_status = False
 
         # If all checks passed we can conclude the neuron is healthy
@@ -195,3 +216,38 @@ class HealthCheckAPI:
             return False
 
         return True
+    
+    def update_metric(self, metric_name: str, value: str | int | float):
+        """This method updates a value for a metric that renews every iteration."""
+        if metric_name in self.health_metrics.keys():
+            self.health_metrics[metric_name] = value 
+            return True 
+        else: 
+            return False
+
+    def update_rates(self):
+        """This method updates the rate-based parameters within the 
+        healthcheck API--prompts generated per second, axons queried per
+        second, valid responses per second and invalid responses per second."""
+
+        time_passed = datetime.datetime.now().timestamp() - self.health_metrics['start_time']
+
+        if time_passed > 0:
+            # Calculate prompts per second 
+            self.health_metrics['prompts.generated_per_second'] = self.health_metrics['prompts.total_count'] / time_passed
+
+            # Calculate queries per second 
+            self.health_metrics['axons.queries_per_second'] = self.health_metrics['axons.total_queried_axons'] / time_passed
+
+            # Calculate valid responses per second 
+            self.health_metrics['responses.valid_responses_per_second'] = self.health_metrics['responses.total_valid_responses'] / time_passed
+
+            # Calculate invalid responses per second 
+            self.health_metrics['responses.invalid_responses_per_second'] = self.health_metrics['responses.total_invalid_responses'] / time_passed
+
+            # Calculate weight set events per second 
+            self.health_metrics['weights.set_per_second'] = self.health_metrics['weights.total_count'] / time_passed
+            return True
+        
+        else:
+            return False

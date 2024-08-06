@@ -3,7 +3,7 @@ import random
 class SE_PIN:
     def calculate_checksum(self, digits):
         """Calculates the checksum"""
-        weights = [1, 2] * 5 
+        weights = [2, 1] * 5 
         total = 0
         for i, digit in enumerate(digits):
             product = int(digit) * weights[i]

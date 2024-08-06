@@ -1,11 +1,20 @@
-import os
 import eth_utils
+import sha3
+from wonderwords import RandomSentence
 
 class ETH_address:
+    def __init__(self):
+        self.rs = RandomSentence()
+
+    def keccak256_hash(self):
+        input_string = self.rs.sentence()
+        k = sha3.keccak_256()
+        k.update(input_string.encode('utf-8'))
+        return ("0x" + k.hexdigest()[-40:])
 
     def generate_valid(self):
         """Generates a valid Ethereum address with EIP-55 checksum."""
-        raw_address = os.urandom(20).hex()
+        raw_address = self.keccak256_hash()
         checksum_address = eth_utils.to_checksum_address(raw_address)
         return checksum_address
 
@@ -20,3 +29,15 @@ class ETH_address:
                 out_str = str_iter 
             invalid_address += out_str
         return invalid_address
+    
+if __name__ == '__main__':
+    import time 
+    e=ETH_address()
+    while True:
+        v = e.generate_valid()
+        print("valid:")
+        print(v)
+        i = e.generate_invalid()
+        print("invalid:")
+        print(i)
+        time.sleep(5)

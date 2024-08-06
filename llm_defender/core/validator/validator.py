@@ -28,9 +28,14 @@ import llm_defender.base as LLMDefenderBase
 import llm_defender.core.validator as LLMDefenderCore
 
 
-class SuppressPydanticFrozenFieldFilter(logging.Filter):
+class SuppressPydanticFrozenFieldFilterSubnetProtocol(logging.Filter):
     def filter(self, record):
         return 'Ignoring error when setting attribute: 1 validation error for SubnetProtocol' not in record.getMessage()
+
+class SuppressPydanticFrozenFieldFilterFeedbackProtocol(logging.Filter):
+    def filter(self, record):
+        return 'Ignoring error when setting attribute: 1 validation error for FeedbackProtocol' not in record.getMessage()
+
 
 class SubnetValidator(LLMDefenderBase.BaseNeuron):
     """Summary of the class
@@ -158,7 +163,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             self.healthcheck_api.run()
 
         # Suppress specific validation errors from pydantic
-        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilter())
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilterSubnetProtocol())
+        bt.logging._logger.addFilter(SuppressPydanticFrozenFieldFilterFeedbackProtocol())
         
         self.neuron_logger(
             severity="INFO",
@@ -507,12 +513,31 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 A dict instance
         """
 
+        # Determine metric name
+        if analyzer == "Prompt Injection":
+            metric_name = "prompt_injection"
+        elif analyzer == "Sensitive Information":
+            metric_name = "sensitive_information"
+        else:
+            metric_name = "unknown"
+
         # Load prompt from the prompt API
         entry = self.get_api_prompt(analyzer=analyzer)
 
         # Fallback to dataset if prompt loading from the API failed
         if not entry:
             entry = self.get_prompt_from_dataset(analyzer=analyzer)
+
+            # Append metrics
+            self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.total_fallback', value=1)
+        else:
+            # Append metrics
+            self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.total_generated', value=1)
+
+        # Append metrics
+        self.healthcheck_api.append_metric(metric_name=f'prompts.{metric_name}.count', value=1)
+
+        self.healthcheck_api.append_metric(metric_name="prompts.total_count", value=1)
         
         self.prompt = entry
 
@@ -713,22 +738,24 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             message="Saving validator state."
         )
 
-        # Save the state of the validator to file.
-        np.savez_compressed(
-            f"{self.cache_path}/state.npz",
-            step=self.step,
-            scores=self.scores,
-            prompt_injection_scores=self.prompt_injection_scores,
-            sensitive_information_scores=self.sensitive_information_scores,
-            hotkeys=self.hotkeys,
-            last_updated_block=self.last_updated_block,
-        )
+        if self.step and self.scores.any() and self.prompt_injection_scores.any() and self.sensitive_information_scores.any() and self.hotkeys and self.last_updated_block:
 
-        filename = f"{self.cache_path}/state.npz"
-        self.neuron_logger(
-            severity="INFOX",
-            message=f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
-        )
+            # Save the state of the validator to file.
+            np.savez_compressed(
+                f"{self.cache_path}/state.npz",
+                step=self.step,
+                scores=self.scores,
+                prompt_injection_scores=self.prompt_injection_scores,
+                sensitive_information_scores=self.sensitive_information_scores,
+                hotkeys=self.hotkeys,
+                last_updated_block=self.last_updated_block,
+            )
+
+            filename = f"{self.cache_path}/state.npz"
+            self.neuron_logger(
+                severity="INFOX",
+                message=f"Saved the following state to file: {filename} step: {self.step}, scores: {self.scores}, prompt_injection_scores: {self.prompt_injection_scores}, sensitive_information_scores: {self.sensitive_information_scores}, hotkeys: {self.hotkeys}, last_updated_block: {self.last_updated_block}"
+            )
 
     def init_default_scores(self) -> None:
         """Validators without previous validation knowledge should start
@@ -878,6 +905,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 return [(x/max_value) for x in result_list]
             else:
                 return [(x/max(result_list)) for x in result_list]
+            
+        self.healthcheck_api.update_metric(metric_name='weights.targets', value=np.count_nonzero(self.scores))
 
         if np.all(self.scores == 0.0):
             power_weights = self.scores 
@@ -910,6 +939,9 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                     severity="SUCCESS",
                     message="Successfully set weights."
                 )
+                weight_set_time = time.strftime("%H:%M:%S", time.localtime())
+                self.healthcheck_api.update_metric(metric_name='weights.last_set_timestamp', value=weight_set_time)
+                self.healthcheck_api.append_metric(metric_name="weights.total_count", value=1)
             else:
                 self.neuron_logger(
                     severity="ERROR",
