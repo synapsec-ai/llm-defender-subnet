@@ -138,7 +138,9 @@ class PromptGenerator:
         if not presence_penalty:
             presence_penalty = self.presence_penalty 
 
-        while not successful_completion:
+        retry_count = 0
+
+        while not successful_completion or retry_count < 10:
 
             chat_completion = self.openai_client.chat.completions.create(
                 max_tokens=max_tokens,
@@ -151,6 +153,8 @@ class PromptGenerator:
             )
             if self._validate_content(chat_completion.choices[0].message.content):
                 successful_completion = True
+
+            retry_count+=1
 
         return chat_completion.choices[0].message.content
 
