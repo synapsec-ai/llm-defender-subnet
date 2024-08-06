@@ -516,7 +516,7 @@ class PromptGenerator:
             },
         ]
 
-        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
+        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=1.1, frequency_penalty=1.1, presence_penalty=1.1)
         
         # Append to system messages
         system_messages.append({
