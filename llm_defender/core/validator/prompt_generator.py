@@ -404,7 +404,7 @@ class PromptGenerator:
             },
         ]
 
-        role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+        role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
         
         # Append to system messages
         system_messages.append({
@@ -426,7 +426,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+            role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
             
             # Append to system messages
             system_messages.append({
@@ -452,7 +452,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
             
             # Append to system messages
             system_messages.append({
@@ -477,7 +477,7 @@ class PromptGenerator:
             },
         ]
 
-        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+        story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
         
         # Append to system messages
         system_messages.append({
@@ -616,7 +616,7 @@ class PromptGenerator:
             },
         ]
 
-        role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+        role_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
         
         # Append to system messages
         system_messages.append({
@@ -638,7 +638,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+            role_description_2 = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
             
             # Append to system messages
             system_messages.append({
@@ -664,7 +664,7 @@ class PromptGenerator:
                 },
             ]
 
-            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+            role_story_description = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
             
             # Append to system messages
             system_messages.append({
@@ -691,7 +691,7 @@ class PromptGenerator:
                 },
             ]
 
-            story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)
+            story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)
         
         else:
 
@@ -702,7 +702,7 @@ class PromptGenerator:
                 },
             ]
 
-            story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=0.95, presence_penalty=0.95)            
+            story_request = self.generate_chat_completion(messages=messages, model=self.model, temperature=0.75, frequency_penalty=1.1, presence_penalty=1.1)            
         
         # Append to system messages
         system_messages.append({
