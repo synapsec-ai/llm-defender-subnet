@@ -15,7 +15,7 @@ system_messages = []
 # Generate prompts
 for n in range(0,150):    
     # Prompt Injection
-    prompt,messages = generator.construct_pi_prompt(debug=True, prompt_category="Role-playing")
+    prompt,messages = generator.construct_pi_prompt(debug=True)
     system_messages += messages
 
     print(f"\n\nProcessing count: {n}")
