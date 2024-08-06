@@ -795,10 +795,11 @@ class PromptGenerator:
         if not label:
             label = random.choice(tuple({0, 1}))
 
+        if not prompt_category or prompt_category not in ["Universal", "Role-playing"]:
+            prompt_category = random.choice(["Universal", "Role-playing"])
+
         # Malicious
         if label == 1:
-            if not prompt_category or prompt_category not in ["Universal", "Role-playing"]:
-                prompt_category = random.choice(["Universal", "Role-playing"])
             # construct universal prompt injection
             if prompt_category == "Universal":
                 return self.construct_universal_pi_prompt(debug=debug, label=label, prompt_category=prompt_category)
