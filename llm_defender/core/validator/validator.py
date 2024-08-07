@@ -68,6 +68,7 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
         self.debug_mode = True
         self.prompt_api = None
         self.prompt_generation_disabled = True
+        self.weights_objects = []
 
     def apply_config(self, bt_classes) -> bool:
         """This method applies the configuration to specified bittensor classes"""
@@ -914,6 +915,8 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             power_weights = power_scaling(self.scores)
 
         weights = get_weights_list(power_weights)
+        salt=secrets.randbelow(2**16)
+        block = self.subtensor.get_current_block()
         
         self.neuron_logger(
             severity="INFO",
@@ -926,22 +929,32 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
             )
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-            result = self.subtensor.set_weights(
+            result, msg = self.subtensor.set_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
                 uids=self.metagraph.uids,  # Uids of the miners to set weights for.
                 weights=weights,  # Weights to set for the miners.
                 wait_for_inclusion=False,
                 version_key=self.subnet_version,
+                salt=[salt]
+
             )
             if result:
                 self.neuron_logger(
                     severity="SUCCESS",
-                    message="Successfully set weights."
+                    message=f"Successfully committed weights: {weights}. Message: {msg}"
                 )
                 weight_set_time = time.strftime("%H:%M:%S", time.localtime())
                 self.healthcheck_api.update_metric(metric_name='weights.last_set_timestamp', value=weight_set_time)
                 self.healthcheck_api.append_metric(metric_name="weights.total_count", value=1)
+
+                self._store_weight_metadata(
+                    salt=salt,
+                    uids=self.metagraph.uids,
+                    weights=weights
+                    block=block
+                )
+
             else:
                 self.neuron_logger(
                     severity="ERROR",
@@ -952,6 +965,53 @@ class SubnetValidator(LLMDefenderBase.BaseNeuron):
                 severity="INFO",
                 message=f"Skipped setting weights due to debug mode"
             )
+
+    def _store_weight_metadata(self, salt, uids, weights, block):
+        
+        # Construct weight object
+        data = {
+            "salt": salt,
+            "uids": uids,
+            "weights": weights,
+            "block": block
+        }
+
+        # Store weight object
+        self.weight_objects.append(data)
+
+    def reveal_weights(self, weight_object):
+
+        status, msg = self.subtensor.reveal_weights(
+            wallet=self.wallet,
+            netuid=38,
+            uids=weight_object["uids"],
+            weights=weight_object["weights"],
+            salt=[weight_object["salt"]],
+            max_retries=1
+        )
+
+        self.neuron_logger(
+            severity="INFO",
+            message=f'Weight reveal status: {status} - Status message: {msg}'
+        )
+
+        return status
+    
+    def reveal_weights_in_queue(self):
+
+        current_block = self.subtensor.get_current_block()
+        commit_reveal_weights_interval = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).commit_reveal_weights_interval
+        new_weights_objects = []
+
+        for weight_object in self.weights_objects:
+            if (current_block - weight_object['block']) > commit_reveal_weights_interval:
+                status = self.reveal_weights(weight_object=weight_object)
+                if not status: 
+                    new_weights_objects.append(weight_object)
+            else:
+                new_weights_objects.append(weight_object)
+        
+        self.weights_objects = new_weights_objects
 
     def determine_valid_axons(self, axons):
         """This function determines valid axon to send the query to--
